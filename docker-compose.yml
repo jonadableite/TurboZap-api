@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  turbozap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turbozap-api
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - API_KEY=${API_KEY:-your-api-key-here}
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/turbozap?sslmode=disable
+      - WHATSAPP_DEBUG=${WHATSAPP_DEBUG:-false}
+      - WHATSAPP_AUTO_RECONNECT=${WHATSAPP_AUTO_RECONNECT:-true}
+      - WEBHOOK_TIMEOUT=${WEBHOOK_TIMEOUT:-30}
+      - WEBHOOK_RETRY_COUNT=${WEBHOOK_RETRY_COUNT:-3}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - turbozap-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: turbozap-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=turbozap
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - turbozap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  turbozap-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
