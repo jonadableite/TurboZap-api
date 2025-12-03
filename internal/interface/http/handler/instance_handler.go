@@ -158,14 +158,10 @@ func (h *InstanceHandler) GetQRCode(c *fiber.Ctx) error {
 
 	// Check if already connected (no QR code needed)
 	if h.waManager.IsConnected(instance.ID) {
-		phone, profileName, profilePic, _ := h.waManager.GetConnectionInfo(instance.ID)
 		return response.Success(c, dto.QRCodeResponse{
 			Name:   instance.Name,
 			Status: "connected",
 		})
-		_ = phone
-		_ = profileName
-		_ = profilePic
 	}
 
 	// Get QR code

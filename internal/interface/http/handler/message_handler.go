@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jonadableite/turbozap-api/internal/application/dto"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
@@ -96,6 +97,7 @@ func (h *MessageHandler) SendText(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -179,6 +181,7 @@ func (h *MessageHandler) SendMedia(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -240,6 +243,7 @@ func (h *MessageHandler) SendAudio(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -298,6 +302,7 @@ func (h *MessageHandler) SendSticker(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -328,6 +333,7 @@ func (h *MessageHandler) SendLocation(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -373,6 +379,7 @@ func (h *MessageHandler) SendContact(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -407,6 +414,7 @@ func (h *MessageHandler) SendReaction(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -450,6 +458,7 @@ func (h *MessageHandler) SendPoll(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -491,6 +500,7 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -543,6 +553,7 @@ func (h *MessageHandler) SendList(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -594,6 +605,7 @@ func (h *MessageHandler) SendCarousel(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: lastMsgID,
 		Status:    "sent",
 		Timestamp: time.Now(),
@@ -672,6 +684,7 @@ func (h *MessageHandler) SendStory(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, dto.MessageResponse{
+		ID:        uuid.New(),
 		MessageID: msgID,
 		Status:    "sent",
 		Timestamp: time.Now(),

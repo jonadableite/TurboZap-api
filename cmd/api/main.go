@@ -54,6 +54,7 @@ func main() {
 
 	// Initialize webhook dispatcher
 	webhookDispatcher := webhook.NewDispatcher(cfg.Webhook, logger)
+	webhookDispatcher.SetWebhookRepository(webhookRepo)
 
 	// Initialize WhatsApp manager
 	waManager := whatsapp.NewManager(cfg, db, logger, webhookDispatcher)
