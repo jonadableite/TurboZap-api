@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jonadableite/turbozap-api/internal/application/dto"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
@@ -75,6 +77,19 @@ func (h *InstanceHandler) List(c *fiber.Ctx) error {
 		return response.InternalServerError(c, "Failed to list instances")
 	}
 
+	// Update status from WhatsApp Manager for each instance
+	for _, instance := range instances {
+		if h.waManager.IsLoggedIn(instance.ID) {
+			phone, profileName, profilePic, _ := h.waManager.GetConnectionInfo(instance.ID)
+			instance.SetConnected(phone, profileName, profilePic)
+		} else if h.waManager.IsConnected(instance.ID) {
+			// Connected to websocket but not logged in - pending QR scan
+			instance.Status = "connecting"
+		} else {
+			instance.SetDisconnected()
+		}
+	}
+
 	return response.Success(c, dto.ToListInstancesResponse(instances))
 }
 
@@ -114,7 +129,8 @@ func (h *InstanceHandler) GetStatus(c *fiber.Ctx) error {
 	}
 
 	// Update status from WhatsApp manager
-	if h.waManager.IsConnected(instance.ID) {
+	// Use IsLoggedIn to check if authenticated (not just WebSocket connected)
+	if h.waManager.IsLoggedIn(instance.ID) {
 		phone, profileName, profilePic, _ := h.waManager.GetConnectionInfo(instance.ID)
 		instance.SetConnected(phone, profileName, profilePic)
 	}
@@ -139,36 +155,48 @@ func (h *InstanceHandler) GetQRCode(c *fiber.Ctx) error {
 	}
 
 	// Check if client exists, create if not
-	client, exists := h.waManager.GetClient(instance.ID)
+	_, exists := h.waManager.GetClient(instance.ID)
 	if !exists {
-		client, err = h.waManager.CreateClient(instance)
+		_, err = h.waManager.CreateClient(instance)
 		if err != nil {
 			h.logger.Error("Failed to create WhatsApp client", zap.Error(err))
 			return response.InternalServerError(c, "Failed to create WhatsApp client")
 		}
 	}
 
-	// Connect to get QR code
-	if !client.WAClient.IsConnected() {
-		if err := h.waManager.Connect(c.Context(), instance.ID); err != nil {
-			h.logger.Error("Failed to connect", zap.Error(err))
-			return response.InternalServerError(c, "Failed to connect to WhatsApp")
-		}
-	}
-
-	// Check if already connected (no QR code needed)
-	if h.waManager.IsConnected(instance.ID) {
+	// Check if already logged in (authenticated/paired) - no QR code needed
+	if h.waManager.IsLoggedIn(instance.ID) {
+		phone, profileName, profilePic, _ := h.waManager.GetConnectionInfo(instance.ID)
+		instance.SetConnected(phone, profileName, profilePic)
 		return response.Success(c, dto.QRCodeResponse{
 			Name:   instance.Name,
 			Status: "connected",
 		})
 	}
 
+	// Connect to get QR code (this will trigger QR code generation via GetQRChannel)
+	if err := h.waManager.Connect(c.Context(), instance.ID); err != nil {
+		h.logger.Error("Failed to connect", zap.Error(err))
+		return response.InternalServerError(c, "Failed to connect to WhatsApp")
+	}
+
+	// Wait a short time for QR code to be generated (the QR channel is async)
+	// The QR code is generated in a goroutine after Connect()
+	time.Sleep(500 * time.Millisecond)
+
 	// Get QR code
 	code, qrImage, err := h.waManager.GetQRCode(instance.ID)
 	if err != nil {
 		h.logger.Error("Failed to get QR code", zap.Error(err))
 		return response.InternalServerError(c, "Failed to get QR code")
+	}
+
+	// If no QR code available yet, return a pending status
+	if code == "" && qrImage == "" {
+		return response.Success(c, dto.QRCodeResponse{
+			Name:   instance.Name,
+			Status: "pending",
+		})
 	}
 
 	return response.Success(c, dto.QRCodeResponse{
@@ -316,4 +344,3 @@ func (h *InstanceHandler) Delete(c *fiber.Ctx) error {
 		"message": "Instance deleted successfully",
 	})
 }
-

@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jonadableite/turbozap-api/internal/application/dto"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
 	"github.com/jonadableite/turbozap-api/pkg/config"
@@ -99,6 +100,7 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 
 	// Create event handler
 	handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher)
+	handler.SetWAClient(waClient)
 
 	client := &Client{
 		Instance: instance,
@@ -166,12 +168,30 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 		return fmt.Errorf("client not found")
 	}
 
-	client.mu.Lock()
-	defer client.mu.Unlock()
+	// Check if already connected (without holding lock during connect)
+	client.mu.RLock()
+	isConnected := client.WAClient.IsConnected()
+	hasSession := client.WAClient.Store.ID != nil
+	client.mu.RUnlock()
 
-	// Check if already connected
-	if client.WAClient.IsConnected() {
+	if isConnected {
 		return nil
+	}
+
+	// If not logged in (no session), we need to get QR codes
+	if !hasSession {
+		// GetQRChannel MUST be called BEFORE Connect() to receive QR codes
+		qrChan, err := client.WAClient.GetQRChannel(ctx)
+		if err != nil {
+			// If GetQRChannel fails (e.g., already called), just proceed with connect
+			m.logger.Warn("Failed to get QR channel, proceeding with connect",
+				zap.Error(err),
+				zap.String("instance", client.Instance.Name),
+			)
+		} else {
+			// Start goroutine to handle QR codes
+			go m.handleQRChannel(client, qrChan)
+		}
 	}
 
 	// Connect
@@ -181,6 +201,58 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 	}
 
 	return nil
+}
+
+// handleQRChannel handles QR code events from the channel
+func (m *Manager) handleQRChannel(client *Client, qrChan <-chan whatsmeow.QRChannelItem) {
+	for evt := range qrChan {
+		switch evt.Event {
+		case "code":
+			m.logger.Info("QR code received from channel",
+				zap.String("instance", client.Instance.Name),
+			)
+			// Generate QR code image
+			generator := NewQRCodeGenerator()
+			qrImage, err := generator.Generate(evt.Code, 256)
+			if err != nil {
+				m.logger.Error("Failed to generate QR code image", zap.Error(err))
+				continue
+			}
+			// Update client with QR code
+			client.mu.Lock()
+			client.QRCode = evt.Code
+			client.QRCodeImage = qrImage
+			client.mu.Unlock()
+
+			// Dispatch webhook
+			m.dispatcher.Dispatch(client.Instance.ID, entity.WebhookEventQRCodeUpdated, dto.QRCodeUpdateData{
+				QRCode: qrImage,
+				Code:   evt.Code,
+			})
+		case "success":
+			m.logger.Info("QR code pairing successful",
+				zap.String("instance", client.Instance.Name),
+			)
+			client.mu.Lock()
+			client.Connected = true
+			client.QRCode = ""
+			client.QRCodeImage = ""
+			client.mu.Unlock()
+		case "timeout":
+			m.logger.Warn("QR code timeout",
+				zap.String("instance", client.Instance.Name),
+			)
+			client.mu.Lock()
+			client.QRCode = ""
+			client.QRCodeImage = ""
+			client.mu.Unlock()
+		case "error":
+			m.logger.Error("QR code error",
+				zap.String("instance", client.Instance.Name),
+				zap.Error(evt.Error),
+			)
+		}
+	}
 }
 
 // Disconnect disconnects a client from WhatsApp
@@ -297,7 +369,7 @@ func (m *Manager) GetQRCode(instanceID uuid.UUID) (string, string, error) {
 	return client.QRCode, client.QRCodeImage, nil
 }
 
-// IsConnected checks if a client is connected
+// IsConnected checks if a client is connected to the WebSocket
 func (m *Manager) IsConnected(instanceID uuid.UUID) bool {
 	client, exists := m.GetClient(instanceID)
 	if !exists {
@@ -308,6 +380,20 @@ func (m *Manager) IsConnected(instanceID uuid.UUID) bool {
 	defer client.mu.RUnlock()
 
 	return client.WAClient.IsConnected()
+}
+
+// IsLoggedIn checks if a client is authenticated/paired (has a valid session)
+func (m *Manager) IsLoggedIn(instanceID uuid.UUID) bool {
+	client, exists := m.GetClient(instanceID)
+	if !exists {
+		return false
+	}
+
+	client.mu.RLock()
+	defer client.mu.RUnlock()
+
+	// Store.ID is set when the device is successfully paired
+	return client.WAClient.Store.ID != nil
 }
 
 // GetConnectionInfo returns connection information

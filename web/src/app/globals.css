@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0 }
+    to { height: var(--radix-accordion-content-height) }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height) }
+    to { height: 0 }
+  }
+}
+
+@layer base {
+  :root {
+    /* Rocketseat-inspired Dark Theme converted to HSL for Shadcn compatibility */
+    
+    /* Background: #09090a */
+    --background: 240 5% 4%;
+    /* Foreground: #e1e1e6 */
+    --foreground: 240 5% 89%;
+
+    /* Card: #121214 */
+    --card: 240 6% 7%;
+    --card-foreground: 240 5% 89%;
+
+    /* Popover: #121214 */
+    --popover: 240 6% 7%;
+    --popover-foreground: 240 5% 89%;
+
+    /* Primary: #8257e5 (Rocketseat Purple) */
+    --primary: 258 71% 62%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: #202024 */
+    --secondary: 240 6% 13%;
+    --secondary-foreground: 240 5% 89%;
+
+    /* Muted: #202024 */
+    --muted: 240 6% 13%;
+    --muted-foreground: 240 5% 64%; /* #a9a9b2 */
+
+    /* Accent: #202024 */
+    --accent: 240 6% 13%;
+    --accent-foreground: 240 5% 89%;
+
+    /* Destructive: #f75a68 */
+    --destructive: 355 89% 66%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border: #29292e */
+    --border: 240 6% 17%;
+    /* Input: #121214 */
+    --input: 240 6% 17%;
+    /* Ring: #8257e5 */
+    --ring: 258 71% 62%;
+
+    --radius: 0.5rem;
+
+    /* Custom Rocketseat Palette Variables (Backward Compatibility) */
+    --rocket-purple-light: #996dff;
+    --rocket-purple: #8257e5;
+    --rocket-purple-dark: #633bbc;
+    --rocket-purple-darker: #4b2e91;
+    
+    --rocket-green-light: #1ef7a3;
+    --rocket-green: #04d361;
+    --rocket-green-dark: #03a84e;
+    
+    --rocket-gray-900: #09090a;
+    --rocket-gray-800: #121214;
+    --rocket-gray-700: #202024;
+    --rocket-gray-600: #29292e;
+    --rocket-gray-500: #323238;
+    --rocket-gray-400: #7c7c8a;
+    --rocket-gray-300: #8d8d99;
+    --rocket-gray-200: #a9a9b2;
+    --rocket-gray-100: #c4c4cc;
+    --rocket-gray-50: #e1e1e6;
+    
+    --rocket-danger: #f75a68;
+    --rocket-warning: #fba94c;
+    --rocket-info: #81d8f7;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Animations from previous config */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px var(--rocket-purple), 0 0 10px var(--rocket-purple); }
+  50% { box-shadow: 0 0 10px var(--rocket-purple), 0 0 20px var(--rocket-purple); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up { animation: slideUp 0.4s ease-out; }
+.animate-slide-down { animation: slideDown 0.4s ease-out; }
+.animate-pulse-glow { animation: pulse-glow 2s infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(130, 87, 229, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Utility Classes */
+.glass {
+  background: rgba(18, 18, 20, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(130, 87, 229, 0.1);
+}

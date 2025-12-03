@@ -1,11 +1,13 @@
 package whatsapp
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jonadableite/turbozap-api/internal/application/dto"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -18,6 +20,7 @@ type EventHandler struct {
 	instanceName string
 	logger       *zap.Logger
 	dispatcher   WebhookDispatcher
+	waClient     *whatsmeow.Client
 	onQRCode     func(string)
 	onConnected  func(string, string, string)
 	onDisconnect func()
@@ -51,6 +54,11 @@ func (h *EventHandler) SetConnectedHandler(handler func(string, string, string))
 // SetDisconnectHandler sets the disconnect callback
 func (h *EventHandler) SetDisconnectHandler(handler func()) {
 	h.onDisconnect = handler
+}
+
+// SetWAClient sets the WhatsApp client reference
+func (h *EventHandler) SetWAClient(client *whatsmeow.Client) {
+	h.waClient = client
 }
 
 // Handle processes WhatsApp events
@@ -112,6 +120,26 @@ func (h *EventHandler) handleQR(evt *events.QR) {
 func (h *EventHandler) handleConnected(evt *events.Connected) {
 	h.logger.Info("Connected to WhatsApp", zap.String("instance", h.instanceName))
 
+	// Get connection info from client
+	var phone, name, pic string
+	if h.waClient != nil && h.waClient.Store.ID != nil {
+		jid := h.waClient.Store.ID
+		phone = jid.User
+		name = h.waClient.Store.PushName
+
+		// Get profile picture
+		ctx := context.Background()
+		picInfo, err := h.waClient.GetProfilePictureInfo(ctx, jid.ToNonAD(), &whatsmeow.GetProfilePictureParams{})
+		if err == nil && picInfo != nil {
+			pic = picInfo.URL
+		}
+	}
+
+	// Call connected handler to update client state
+	if h.onConnected != nil {
+		h.onConnected(phone, name, pic)
+	}
+
 	// Dispatch webhook
 	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventConnectionUpdate, dto.ConnectionUpdateData{
 		Status: "connected",
@@ -155,11 +183,11 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 
 	// Build message event data
 	msgEvent := dto.MessageReceivedEvent{
-		MessageID:   evt.Info.ID,
-		From:        evt.Info.Sender.String(),
-		To:          evt.Info.Chat.String(),
-		IsGroup:     evt.Info.IsGroup,
-		Timestamp:   evt.Info.Timestamp,
+		MessageID: evt.Info.ID,
+		From:      evt.Info.Sender.String(),
+		To:        evt.Info.Chat.String(),
+		IsGroup:   evt.Info.IsGroup,
+		Timestamp: evt.Info.Timestamp,
 	}
 
 	// Get sender name
@@ -333,4 +361,3 @@ func extractTextFromMessage(msg *waE2E.Message) string {
 
 	return ""
 }
-
