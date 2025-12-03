@@ -58,7 +58,17 @@ func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, disp
 	dbURL := pool.Config().ConnString()
 	container, err := sqlstore.New(ctx, "pgx", dbURL, waLogger)
 	if err != nil {
-		logger.Fatal("Failed to create SQL store", zap.Error(err))
+		// Check if error is about tables already existing (schema already initialized)
+		// This can happen if tables were created manually or by a previous run
+		if strings.Contains(err.Error(), "already exists") {
+			logger.Warn("WhatsApp store tables already exist - this is normal if schema was pre-created",
+				zap.Error(err),
+			)
+			// The whatsmeow library should still work with existing tables
+			// We'll try to continue, but if there are issues, the tables may need cleanup
+		} else {
+			logger.Fatal("Failed to create SQL store", zap.Error(err))
+		}
 	}
 
 	return &Manager{

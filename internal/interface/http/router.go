@@ -118,6 +118,18 @@ func NewRouter(
 	// Webhook events list (public info)
 	api.Get("/webhook/events", webhookHandler.ListWebhookEvents)
 
+	// Legacy routes (without /api prefix) for backwards compatibility and easier manual testing
+	legacy := app.Group("/instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacy.Post("/create", instanceHandler.Create)
+	legacy.Get("/list", instanceHandler.List)
+	legacy.Get("/:name", instanceHandler.Get)
+	legacy.Get("/:name/status", instanceHandler.GetStatus)
+	legacy.Get("/:name/qrcode", instanceHandler.GetQRCode)
+	legacy.Post("/:name/connect", instanceHandler.Connect)
+	legacy.Put("/:name/restart", instanceHandler.Restart)
+	legacy.Post("/:name/logout", instanceHandler.Logout)
+	legacy.Delete("/:name", instanceHandler.Delete)
+
 	return app
 }
 
@@ -151,4 +163,3 @@ func errorHandler(c *fiber.Ctx, err error) error {
 		},
 	})
 }
-
