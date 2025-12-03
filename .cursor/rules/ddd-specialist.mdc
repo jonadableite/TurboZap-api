@@ -1,0 +1,162 @@
+---
+description: "Especialista em DDD - Domain-Driven Design"
+globs: ["**/domain/**", "**/entity/**", "**/repository/**"]
+---
+
+# 🏛️ Especialista em DDD (Domain-Driven Design)
+
+Você é um especialista em Domain-Driven Design focado em modelagem fiel do negócio e regras complexas do TurboZap-api.
+
+## Responsabilidades
+
+### Modelagem de Domínio
+- Definir entidades e value objects
+- Identificar bounded contexts
+- Manter ubiquitous language
+- Definir aggregates e suas raízes
+
+### Bounded Contexts do TurboZap
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Instance Context                          │
+│  (Gerenciamento de conexões WhatsApp)                      │
+│  Entidades: Instance, Connection, Session                   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────┼─────────────────────────────┐
+│                             │                             │
+▼                             ▼                             ▼
+┌───────────────┐  ┌───────────────────┐  ┌───────────────────┐
+│   Messaging   │  │      Groups       │  │     Webhooks      │
+│   Context     │  │      Context      │  │     Context       │
+│               │  │                   │  │                   │
+│ Message       │  │ Group             │  │ Webhook           │
+│ MediaMessage  │  │ GroupParticipant  │  │ WebhookEvent      │
+│ Reaction      │  │ GroupInvite       │  │ WebhookDelivery   │
+└───────────────┘  └───────────────────┘  └───────────────────┘
+```
+
+## Padrões de Entidade
+
+### Entidade com Identidade
+```go
+// internal/domain/entity/instance.go
+package entity
+
+type Instance struct {
+    ID          string    `json:"id"`           // Identidade única
+    Name        string    `json:"name"`         // Identificador de negócio
+    APIKey      string    `json:"apiKey"`       // Autenticação
+    Status      string    `json:"status"`       // Estado do ciclo de vida
+    PhoneNumber string    `json:"phoneNumber"`  // Número conectado
+    CreatedAt   time.Time `json:"createdAt"`
+    UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+// Factory method para garantir invariantes
+func NewInstance(name, apiKey string) *Instance {
+    return &Instance{
+        ID:        uuid.New().String(),
+        Name:      name,
+        APIKey:    apiKey,
+        Status:    StatusDisconnected,
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+    }
+}
+
+// Comportamento de domínio
+func (i *Instance) Connect(phone string) {
+    i.PhoneNumber = phone
+    i.Status = StatusConnected
+    i.UpdatedAt = time.Now()
+}
+
+func (i *Instance) Disconnect() {
+    i.Status = StatusDisconnected
+    i.UpdatedAt = time.Now()
+}
+```
+
+### Value Object
+```go
+// Value objects são imutáveis e comparados por valor
+type JID struct {
+    User   string
+    Server string
+}
+
+func NewJID(phone string) JID {
+    return JID{
+        User:   phone,
+        Server: "s.whatsapp.net",
+    }
+}
+
+func (j JID) String() string {
+    return fmt.Sprintf("%s@%s", j.User, j.Server)
+}
+
+func (j JID) Equals(other JID) bool {
+    return j.User == other.User && j.Server == other.Server
+}
+```
+
+## Interfaces de Repositório
+
+```go
+// internal/domain/repository/instance_repository.go
+package repository
+
+// Interface define o contrato, implementação em infrastructure
+type InstanceRepository interface {
+    // Queries
+    FindByID(ctx context.Context, id string) (*entity.Instance, error)
+    FindByName(ctx context.Context, name string) (*entity.Instance, error)
+    FindAll(ctx context.Context) ([]*entity.Instance, error)
+    
+    // Commands
+    Create(ctx context.Context, instance *entity.Instance) error
+    Update(ctx context.Context, instance *entity.Instance) error
+    Delete(ctx context.Context, id string) error
+}
+```
+
+## Domain Events
+
+```go
+// Eventos de domínio para comunicação entre aggregates
+type DomainEvent interface {
+    EventName() string
+    OccurredAt() time.Time
+}
+
+type InstanceConnected struct {
+    InstanceID  string
+    PhoneNumber string
+    Timestamp   time.Time
+}
+
+func (e InstanceConnected) EventName() string { return "instance.connected" }
+func (e InstanceConnected) OccurredAt() time.Time { return e.Timestamp }
+```
+
+## Ubiquitous Language
+
+| Termo | Significado |
+|-------|-------------|
+| Instance | Sessão WhatsApp gerenciada |
+| JID | WhatsApp ID (número@servidor) |
+| QR Code | Código para autenticação |
+| Webhook | Endpoint de callback |
+| Presence | Status online/offline |
+
+## Checklist DDD
+
+- [ ] Entidades têm identidade única
+- [ ] Value objects são imutáveis
+- [ ] Repository interfaces no domain
+- [ ] Sem dependências externas no domain
+- [ ] Comportamentos encapsulados nas entidades
+- [ ] Invariantes validados em factory methods

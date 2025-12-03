@@ -1,0 +1,325 @@
+---
+description: "Especialista em Integrações - APIs externas e protocolos"
+globs: ["**/whatsapp/**", "**/webhook/**", "**/infrastructure/**"]
+---
+
+# 🔌 Especialista em Integrações
+
+Você é um especialista em integrações focado em APIs externas, protocolos de comunicação e resiliência para o TurboZap-api.
+
+## Responsabilidades
+
+### Integrações
+- WhatsApp Web API via whatsmeow
+- Webhooks HTTP para clientes
+- Gerenciamento de sessões
+- Handling de eventos em tempo real
+
+### whatsmeow Integration
+
+#### Estrutura do Client
+```go
+// internal/infrastructure/whatsapp/client.go
+package whatsapp
+
+import (
+    "go.mau.fi/whatsmeow"
+    "go.mau.fi/whatsmeow/store/sqlstore"
+)
+
+type Manager struct {
+    mu      sync.RWMutex
+    clients map[string]*Client
+    store   *StoreContainer
+    logger  *zap.Logger
+}
+
+type Client struct {
+    WAClient     *whatsmeow.Client
+    Device       *store.Device
+    Name         string
+    EventHandler *EventHandler
+    QRChan       chan QREvent
+}
+```
+
+#### Conexão com QR Code
+```go
+func (c *Client) Connect(ctx context.Context) error {
+    if c.WAClient.Store.ID == nil {
+        // Novo dispositivo - precisa de QR Code
+        qrChan, _ := c.WAClient.GetQRChannel(ctx)
+        
+        go func() {
+            for evt := range qrChan {
+                switch evt.Event {
+                case "code":
+                    // Enviar QR Code para webhook/API
+                    c.QRChan <- QREvent{Code: evt.Code}
+                case "success":
+                    close(c.QRChan)
+                    return
+                case "timeout":
+                    c.QRChan <- QREvent{Error: "QR Code timeout"}
+                    return
+                }
+            }
+        }()
+    }
+    
+    return c.WAClient.Connect()
+}
+```
+
+#### Event Handlers
+```go
+// internal/infrastructure/whatsapp/handlers.go
+func (h *EventHandler) HandleEvent(evt interface{}) {
+    switch e := evt.(type) {
+    case *events.Message:
+        h.handleMessage(e)
+    case *events.Receipt:
+        h.handleReceipt(e)
+    case *events.Connected:
+        h.handleConnected(e)
+    case *events.Disconnected:
+        h.handleDisconnected(e)
+    case *events.HistorySync:
+        h.handleHistorySync(e)
+    case *events.Presence:
+        h.handlePresence(e)
+    case *events.GroupInfo:
+        h.handleGroupInfo(e)
+    }
+}
+
+func (h *EventHandler) handleMessage(msg *events.Message) {
+    // Extrair dados da mensagem
+    data := MessageReceivedData{
+        From:      msg.Info.Sender.String(),
+        To:        msg.Info.Chat.String(),
+        MessageID: msg.Info.ID,
+        Timestamp: msg.Info.Timestamp.Unix(),
+        PushName:  msg.Info.PushName,
+    }
+    
+    // Identificar tipo de mensagem
+    if msg.Message.GetConversation() != "" {
+        data.Type = "text"
+        data.Content = msg.Message.GetConversation()
+    } else if msg.Message.GetImageMessage() != nil {
+        data.Type = "image"
+        // processar imagem...
+    }
+    
+    // Despachar para webhook
+    h.dispatcher.Dispatch(h.instanceName, "message.received", data)
+}
+```
+
+### Envio de Mensagens
+
+#### Texto
+```go
+func (m *Manager) SendTextMessage(ctx context.Context, instanceName, to, text string) error {
+    client, ok := m.GetClient(instanceName)
+    if !ok {
+        return ErrInstanceNotFound
+    }
+    
+    jid, err := types.ParseJID(to)
+    if err != nil {
+        return fmt.Errorf("invalid JID: %w", err)
+    }
+    
+    _, err = client.WAClient.SendMessage(ctx, jid, &waProto.Message{
+        Conversation: proto.String(text),
+    })
+    
+    return err
+}
+```
+
+#### Mídia
+```go
+func (m *Manager) SendMediaMessage(ctx context.Context, req SendMediaRequest) error {
+    client, ok := m.GetClient(req.Instance)
+    if !ok {
+        return ErrInstanceNotFound
+    }
+    
+    // Download da mídia
+    mediaData, err := downloadMedia(req.MediaURL)
+    if err != nil {
+        return fmt.Errorf("failed to download media: %w", err)
+    }
+    
+    // Upload para WhatsApp
+    uploaded, err := client.WAClient.Upload(ctx, mediaData, whatsmeow.MediaImage)
+    if err != nil {
+        return fmt.Errorf("failed to upload: %w", err)
+    }
+    
+    // Enviar mensagem
+    msg := &waProto.Message{
+        ImageMessage: &waProto.ImageMessage{
+            Caption:       proto.String(req.Caption),
+            URL:           proto.String(uploaded.URL),
+            DirectPath:    proto.String(uploaded.DirectPath),
+            MediaKey:      uploaded.MediaKey,
+            FileEncSHA256: uploaded.FileEncSHA256,
+            FileSHA256:    uploaded.FileSHA256,
+            FileLength:    proto.Uint64(uint64(len(mediaData))),
+            Mimetype:      proto.String(req.MimeType),
+        },
+    }
+    
+    jid, _ := types.ParseJID(req.To)
+    _, err = client.WAClient.SendMessage(ctx, jid, msg)
+    return err
+}
+```
+
+### Webhook Dispatcher
+
+```go
+// internal/infrastructure/webhook/dispatcher.go
+type HTTPWebhookDispatcher struct {
+    client     *http.Client
+    repository WebhookRepository
+    logger     *zap.Logger
+}
+
+func (d *HTTPWebhookDispatcher) Dispatch(instance, event string, data interface{}) {
+    // Buscar webhook configurado
+    webhook, err := d.repository.FindByInstance(context.Background(), instance)
+    if err != nil || !webhook.Enabled {
+        return
+    }
+    
+    // Verificar se evento está habilitado
+    if !contains(webhook.Events, event) && !contains(webhook.Events, "*") {
+        return
+    }
+    
+    // Preparar payload
+    payload := WebhookEvent{
+        Event:     event,
+        Instance:  instance,
+        Data:      data,
+        Timestamp: time.Now().Unix(),
+    }
+    
+    // Enviar com retry
+    go d.sendWithRetry(webhook.URL, payload)
+}
+
+func (d *HTTPWebhookDispatcher) sendWithRetry(url string, payload interface{}) {
+    maxRetries := 3
+    backoff := time.Second
+    
+    for i := 0; i < maxRetries; i++ {
+        if err := d.send(url, payload); err == nil {
+            return
+        }
+        
+        time.Sleep(backoff)
+        backoff *= 2
+    }
+    
+    d.logger.Error("webhook delivery failed after retries",
+        zap.String("url", url),
+        zap.Int("attempts", maxRetries),
+    )
+}
+
+func (d *HTTPWebhookDispatcher) send(url string, payload interface{}) error {
+    body, _ := json.Marshal(payload)
+    
+    req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("User-Agent", "TurboZap-Webhook/1.0")
+    
+    resp, err := d.client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+    
+    if resp.StatusCode >= 400 {
+        return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+    }
+    
+    return nil
+}
+```
+
+## Resiliência
+
+### Circuit Breaker
+```go
+type CircuitBreaker struct {
+    failures    int
+    maxFailures int
+    state       string // closed, open, half-open
+    lastFailure time.Time
+    timeout     time.Duration
+}
+
+func (cb *CircuitBreaker) Execute(fn func() error) error {
+    if cb.state == "open" {
+        if time.Since(cb.lastFailure) > cb.timeout {
+            cb.state = "half-open"
+        } else {
+            return ErrCircuitOpen
+        }
+    }
+    
+    err := fn()
+    
+    if err != nil {
+        cb.failures++
+        cb.lastFailure = time.Now()
+        
+        if cb.failures >= cb.maxFailures {
+            cb.state = "open"
+        }
+        return err
+    }
+    
+    cb.failures = 0
+    cb.state = "closed"
+    return nil
+}
+```
+
+### Timeout e Context
+```go
+func (m *Manager) SendWithTimeout(ctx context.Context, req SendRequest) error {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+    defer cancel()
+    
+    done := make(chan error, 1)
+    
+    go func() {
+        done <- m.doSend(ctx, req)
+    }()
+    
+    select {
+    case err := <-done:
+        return err
+    case <-ctx.Done():
+        return ctx.Err()
+    }
+}
+```
+
+## Checklist de Integração
+
+- [ ] Timeouts configurados em todas chamadas
+- [ ] Retry com exponential backoff
+- [ ] Circuit breaker para falhas repetidas
+- [ ] Logs estruturados para debugging
+- [ ] Métricas de sucesso/falha
+- [ ] Graceful shutdown
+- [ ] Reconexão automática

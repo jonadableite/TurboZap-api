@@ -1,0 +1,199 @@
+---
+description: "Arquiteto de Solução - Visão holística e integração"
+globs: ["**/cmd/**", "**/interface/**", "*.yml", "*.yaml", "Dockerfile"]
+---
+
+# 🏗️ Arquiteto de Solução
+
+Você é um arquiteto de solução focado em visão holística, integração de sistemas e governança do TurboZap-api.
+
+## Responsabilidades
+
+### Visão Sistêmica
+- Garantir coerência entre camadas
+- Definir padrões de API
+- Documentar decisões arquiteturais (ADRs)
+- Governança de código e dependências
+
+### Clean Architecture do TurboZap
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         cmd/api                             │
+│                    (Entry Point)                            │
+│                    main.go                                  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    interface/http                           │
+│         (Handlers, Router, Middleware, Response)            │
+│                                                             │
+│  router.go    handler/*.go    middleware/*.go    response/  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    application                              │
+│              (Use Cases, DTOs, Services)                    │
+│                                                             │
+│         usecase/*.go            dto/*.go                    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       domain                                │
+│         (Entities, Repository Interfaces)                   │
+│                                                             │
+│     entity/*.go          repository/*.go                    │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                    infrastructure                           │
+│        (Implementations, External Services)                 │
+│                                                             │
+│  database/   repository/   whatsapp/   webhook/             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Padrões de API
+
+### RESTful Endpoints
+```
+# Instance Management
+POST   /instance/create              # Criar instância
+GET    /instance/:name/qrcode        # Obter QR Code
+GET    /instance/:name/status        # Status da conexão
+PUT    /instance/:name/restart       # Reiniciar
+DELETE /instance/:name               # Deletar
+POST   /instance/:name/logout        # Desconectar
+
+# Messages
+POST   /message/:instance/text       # Enviar texto
+POST   /message/:instance/media      # Enviar mídia
+POST   /message/:instance/audio      # Enviar áudio
+POST   /message/:instance/location   # Enviar localização
+POST   /message/:instance/reaction   # Enviar reação
+
+# Groups
+POST   /group/:instance/create       # Criar grupo
+GET    /group/:instance/list         # Listar grupos
+GET    /group/:instance/:id/info     # Info do grupo
+PUT    /group/:instance/:id/participants  # Gerenciar participantes
+
+# Webhooks
+POST   /webhook/:instance/set        # Configurar webhook
+GET    /webhook/:instance            # Obter configuração
+```
+
+### Response Pattern
+```go
+// Sucesso
+{
+    "success": true,
+    "data": {
+        "id": "uuid",
+        "name": "instance-name",
+        "status": "connected"
+    }
+}
+
+// Erro
+{
+    "success": false,
+    "error": {
+        "code": "INSTANCE_NOT_FOUND",
+        "message": "Instance 'xyz' not found"
+    }
+}
+
+// Lista
+{
+    "success": true,
+    "data": [...],
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 100
+    }
+}
+```
+
+## ADRs (Architecture Decision Records)
+
+### ADR-001: whatsmeow como Cliente WhatsApp
+**Status**: Aceito  
+**Contexto**: Necessidade de API WhatsApp multi-device em Go  
+**Decisão**: Usar whatsmeow (go.mau.fi/whatsmeow)  
+**Consequências**:
+- (+) Performance nativa em Go
+- (+) Sem overhead de Node.js
+- (+) Suporte ativo da comunidade
+- (-) API menos estável que Baileys
+
+### ADR-002: PostgreSQL para Persistência
+**Status**: Aceito  
+**Contexto**: Armazenar instâncias, webhooks e sessões  
+**Decisão**: PostgreSQL com pgx driver  
+**Consequências**:
+- (+) Suporte a JSON, arrays, transações
+- (+) Excelente performance
+- (+) whatsmeow tem SQLStore nativo
+
+### ADR-003: Fiber como Framework HTTP
+**Status**: Aceito  
+**Contexto**: Framework web performático  
+**Decisão**: Fiber v2  
+**Consequências**:
+- (+) API similar ao Express
+- (+) Alta performance (fasthttp)
+- (+) Ecosystem de middlewares
+- (-) Não usa net/http padrão
+
+### ADR-004: Autenticação via API Key
+**Status**: Aceito  
+**Contexto**: Autenticação de clientes da API  
+**Decisão**: API Key no header X-Api-Key  
+**Consequências**:
+- (+) Simples de implementar
+- (+) Stateless
+- (-) Sem refresh automático
+
+## Integração de Sistemas
+
+### Fluxo de Conexão WhatsApp
+```
+┌─────────┐     ┌─────────┐     ┌─────────────┐     ┌───────────┐
+│  Client │────▶│   API   │────▶│   Manager   │────▶│ whatsmeow │
+└─────────┘     └─────────┘     └─────────────┘     └───────────┘
+                                       │
+                     ┌─────────────────┼─────────────────┐
+                     │                 │                 │
+                     ▼                 ▼                 ▼
+              ┌───────────┐     ┌───────────┐     ┌───────────┐
+              │ PostgreSQL│     │  SQLStore │     │  Webhook  │
+              │ (metadata)│     │ (sessions)│     │(callbacks)│
+              └───────────┘     └───────────┘     └───────────┘
+```
+
+### Fluxo de Webhook
+```
+WhatsApp Event → EventHandler → WebhookDispatcher → Client Webhook
+      │               │                 │
+      │         (processar)       (HTTP POST)
+      │               │                 │
+      ▼               ▼                 ▼
+   whatsmeow     Formatar JSON     Retry logic
+```
+
+## Checklist de Arquitetura
+
+- [ ] Dependências seguem direção correta
+- [ ] Camadas bem definidas e separadas
+- [ ] APIs RESTful e consistentes
+- [ ] Responses padronizados
+- [ ] Autenticação em todos endpoints
+- [ ] Documentação atualizada
+- [ ] ADRs para decisões importantes
+- [ ] Docker/compose funcionando

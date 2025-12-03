@@ -1,0 +1,209 @@
+# TurboZap API - Cursor Rules
+# Regras para assistentes de IA trabalharem neste projeto
+
+## Linguagem e Comunicação
+- Sempre responder em **Português (Brasil)**
+- Usar termos técnicos em inglês quando apropriado (API, endpoint, handler, etc.)
+- Citar caminhos de arquivos e trechos de código nas explicações
+
+## Stack Tecnológica
+- **Linguagem**: Go 1.22+
+- **Framework Web**: Fiber v2
+- **Banco de Dados**: PostgreSQL com pgx/v5
+- **WhatsApp**: whatsmeow (go.mau.fi/whatsmeow)
+- **Validação**: go-playground/validator/v10
+- **Logging**: uber-go/zap
+- **UUID**: google/uuid
+- **Config**: godotenv
+
+## Arquitetura (DDD + Clean Architecture)
+```
+internal/
+├── domain/           # Entidades e interfaces (núcleo do negócio)
+│   ├── entity/       # Structs de domínio
+│   └── repository/   # Interfaces de repositório
+├── application/      # Casos de uso e DTOs
+│   ├── usecase/      # Lógica de aplicação
+│   └── dto/          # Data Transfer Objects
+├── infrastructure/   # Implementações concretas
+│   ├── database/     # Conexão PostgreSQL
+│   ├── repository/   # Implementações de repositório
+│   ├── whatsapp/     # Integração whatsmeow
+│   └── webhook/      # Dispatcher de webhooks
+└── interface/        # Camada de apresentação
+    └── http/         # Handlers, routers, middlewares
+```
+
+## Princípios SOLID em Go
+1. **SRP**: Cada struct/função tem uma única responsabilidade
+2. **OCP**: Extensível via interfaces, não modificação
+3. **LSP**: Implementações substituíveis via interfaces
+4. **ISP**: Interfaces pequenas e específicas
+5. **DIP**: Depender de abstrações (interfaces), não implementações
+
+## Regras de Código Go
+
+### Nomenclatura
+- Structs exportadas: `PascalCase` (ex: `InstanceHandler`)
+- Structs privadas: `camelCase` (ex: `clientManager`)
+- Interfaces: sufixo descritivo (ex: `InstanceRepository`, `MessageSender`)
+- Constantes: `PascalCase` ou `SCREAMING_SNAKE_CASE`
+- Arquivos: `snake_case.go`
+
+### Estrutura de Arquivos
+- Um tipo principal por arquivo
+- Testes no mesmo diretório: `*_test.go`
+- Mocks em `internal/mocks/`
+
+### Error Handling
+```go
+// Sempre retornar errors, nunca panic em código de produção
+func (s *Service) DoSomething() error {
+    if err := s.validate(); err != nil {
+        return fmt.Errorf("validation failed: %w", err)
+    }
+    return nil
+}
+
+// Usar errors customizados para domínio
+var (
+    ErrInstanceNotFound = errors.New("instance not found")
+    ErrInvalidJID       = errors.New("invalid JID format")
+)
+```
+
+### Context
+- Sempre propagar `context.Context` em operações I/O
+- Primeiro parâmetro de funções que fazem I/O
+```go
+func (r *Repository) FindByID(ctx context.Context, id string) (*Entity, error)
+```
+
+### Dependency Injection
+- Injetar dependências via construtor
+- Usar interfaces para facilitar testes
+```go
+type Handler struct {
+    repo   Repository  // interface
+    logger *zap.Logger
+}
+
+func NewHandler(repo Repository, logger *zap.Logger) *Handler {
+    return &Handler{repo: repo, logger: logger}
+}
+```
+
+## Padrões de API HTTP
+
+### Estrutura de Response
+```go
+// Sucesso
+{
+    "success": true,
+    "data": { ... }
+}
+
+// Erro
+{
+    "success": false,
+    "error": {
+        "code": "INSTANCE_NOT_FOUND",
+        "message": "Instance not found"
+    }
+}
+```
+
+### Endpoints RESTful
+- `POST /instance/create` - Criar recurso
+- `GET /instance/:name/status` - Obter recurso
+- `PUT /instance/:name/restart` - Atualizar recurso
+- `DELETE /instance/:name` - Remover recurso
+
+### Autenticação
+- Header: `X-Api-Key` ou `Authorization: Bearer <key>`
+- Validar em middleware antes de handlers
+
+## Validação de Entrada
+```go
+type CreateInstanceRequest struct {
+    Name   string `json:"name" validate:"required,min=3,max=50"`
+    APIKey string `json:"apiKey" validate:"required,min=32"`
+}
+```
+
+## Testes
+
+### Convenções
+- Arquivos: `*_test.go` no mesmo pacote
+- Funções: `TestFunctionName_Scenario`
+- Table-driven tests para múltiplos cenários
+
+```go
+func TestService_CreateInstance(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   CreateInput
+        wantErr bool
+    }{
+        {"valid input", CreateInput{Name: "test"}, false},
+        {"empty name", CreateInput{Name: ""}, true},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // ...
+        })
+    }
+}
+```
+
+## Logging
+```go
+// Usar zap com campos estruturados
+logger.Info("instance created",
+    zap.String("instance", name),
+    zap.String("phone", phone),
+)
+
+// Níveis: Debug, Info, Warn, Error
+// Nunca logar dados sensíveis (API keys, senhas)
+```
+
+## Checklist Antes de Commit
+- [ ] Código compila: `go build ./...`
+- [ ] Testes passam: `go test ./...`
+- [ ] Lint passa: `golangci-lint run`
+- [ ] Sem `fmt.Println` em código de produção
+- [ ] Errors tratados adequadamente
+- [ ] Context propagado em operações I/O
+- [ ] Documentação atualizada se necessário
+
+## Comandos Úteis
+```bash
+# Build
+go build -o turbozap ./cmd/api
+
+# Testes
+go test ./... -v
+
+# Testes com coverage
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+
+# Lint
+golangci-lint run
+
+# Gerar mocks (mockgen)
+mockgen -source=internal/domain/repository/instance_repository.go -destination=internal/mocks/instance_repository_mock.go
+
+# Docker
+docker-compose up -d
+docker-compose logs -f api
+```
+
+## Referências
+- [Effective Go](https://go.dev/doc/effective_go)
+- [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- [whatsmeow Docs](https://pkg.go.dev/go.mau.fi/whatsmeow)
+- [Fiber Docs](https://docs.gofiber.io/)
+
