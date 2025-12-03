@@ -1,26 +1,75 @@
 # TurboZap API
 
-API REST para WhatsApp usando a biblioteca [whatsmeow](https://github.com/tulir/whatsmeow) em Go.
+> 🚀 API REST de WhatsApp em Go usando a biblioteca [whatsmeow](https://github.com/tulir/whatsmeow) - Self-hosted, multi-instance, com suporte a mensagens interativas.
 
-## Características
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 
-- **Multi-instância**: Suporte a múltiplos números de WhatsApp simultaneamente
-- **Webhooks**: Sistema de webhooks para receber eventos em tempo real
-- **Envio de mensagens**: Texto, mídia, áudio, stickers, localização, contatos, enquetes, reações, stories
-- **Grupos**: Criar, gerenciar participantes, entrar via link de convite
-- **Contatos**: Verificar números, obter foto de perfil, bloquear/desbloquear
-- **Presença**: Online/offline, digitando, gravando áudio
-- **Type-safe**: Arquitetura DDD com Go, type-safe e SOLID
+## 📋 Índice
 
-## Requisitos
+- [Características](#-características)
+- [Arquitetura](#-arquitetura)
+- [Requisitos](#-requisitos)
+- [Instalação](#-instalação)
+- [Configuração](#-configuração)
+- [Endpoints da API](#-endpoints-da-api)
+- [WebSocket](#-websocket)
+- [Webhooks](#-webhooks)
+- [Exemplos de Uso](#-exemplos-de-uso)
+- [Limitações](#-limitações)
+- [Monitoramento](#-monitoramento)
+- [Contribuição](#-contribuição)
+
+## ✨ Características
+
+- **Multi-instância**: Gerencie múltiplos números de WhatsApp simultaneamente
+- **Mensagens Interativas**: Suporte a botões e listas usando protobufs nativos do WhatsApp
+- **WebSocket**: Eventos em tempo real para integração
+- **Webhooks**: Notificações HTTP para eventos de mensagens
+- **Filas de Mensagens**: RabbitMQ para alta vazão e confiabilidade
+- **Rate Limiting**: Redis para controle de taxa e deduplicação
+- **Armazenamento de Mídia**: MinIO para arquivos de mídia
+- **Monitoramento**: Prometheus + Grafana para métricas
+
+## 🏗️ Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        TurboZap API                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐   │
+│  │  Fiber  │────▶│ Handler │────▶│ Manager │────▶│whatsmeow│   │
+│  │  HTTP   │     │ Layer   │     │  Layer  │     │ Client  │   │
+│  └─────────┘     └─────────┘     └─────────┘     └─────────┘   │
+│       │               │               │               │          │
+│       ▼               ▼               ▼               ▼          │
+│  ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐   │
+│  │  Auth   │     │  DTO    │     │ Events  │     │ WhatsApp│   │
+│  │Middleware│     │Validate │     │ Handler │     │  Web    │   │
+│  └─────────┘     └─────────┘     └─────────┘     └─────────┘   │
+│                                                                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Infrastructure Layer                                             │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐            │
+│  │PostgreSQL│  │  Redis  │  │RabbitMQ │  │  MinIO  │            │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 📦 Requisitos
 
 - Go 1.22+
-- PostgreSQL 14+
-- Docker (opcional)
+- Docker & Docker Compose
+- PostgreSQL 16+
+- Redis 7+
+- RabbitMQ 3.13+
+- MinIO (opcional)
 
-## Instalação
+## 🚀 Instalação
 
-### Com Docker (Recomendado)
+### Usando Docker Compose (Recomendado)
 
 ```bash
 # Clone o repositório
@@ -29,233 +78,295 @@ cd turbozap-api
 
 # Configure as variáveis de ambiente
 cp .env.example .env
-# Edite o .env com suas configurações
+# Edite o .env conforme necessário
 
-# Inicie com Docker Compose
+# Inicie os serviços
 docker-compose up -d
+
+# Verifique os logs
+docker-compose logs -f turbozap
 ```
 
-### Sem Docker
+### Desenvolvimento Local
 
 ```bash
-# Clone o repositório
-git clone https://github.com/jonadableite/turbozap-api.git
-cd turbozap-api
-
 # Instale as dependências
 go mod download
 
-# Configure as variáveis de ambiente
-cp .env.example .env
-# Edite o .env com suas configurações
+# Execute as migrações (PostgreSQL deve estar rodando)
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/turbozap?sslmode=disable"
 
-# Execute
+# Execute a API
 go run ./cmd/api
 ```
 
-## Configuração
+## ⚙️ Configuração
 
-Variáveis de ambiente disponíveis:
+### Variáveis de Ambiente
 
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
-| `SERVER_PORT` | Porta do servidor | `8080` |
+| `SERVER_PORT` | Porta do servidor HTTP | `8080` |
 | `SERVER_HOST` | Host do servidor | `0.0.0.0` |
 | `API_KEY` | Chave de API global | - |
-| `DATABASE_URL` | URL de conexão PostgreSQL | - |
-| `WHATSAPP_DEBUG` | Ativar debug do whatsmeow | `false` |
-| `WHATSAPP_AUTO_RECONNECT` | Reconexão automática | `true` |
-| `WEBHOOK_TIMEOUT` | Timeout de webhook (segundos) | `30` |
-| `WEBHOOK_RETRY_COUNT` | Tentativas de retry | `3` |
+| `DATABASE_URL` | URL do PostgreSQL | - |
+| `RABBITMQ_URL` | URL do RabbitMQ | `amqp://guest:guest@localhost:5672/` |
+| `REDIS_URL` | URL do Redis | `redis://localhost:6379` |
+| `MINIO_ENDPOINT` | Endpoint do MinIO | `localhost:9000` |
+| `MINIO_ACCESS_KEY` | Access key do MinIO | `minioadmin` |
+| `MINIO_SECRET_KEY` | Secret key do MinIO | `minioadmin` |
 | `LOG_LEVEL` | Nível de log | `info` |
 
-## Autenticação
-
-A API usa autenticação via API Key. Envie a chave no header:
-
-```
-X-API-Key: sua-api-key
-```
-
-Ou via Authorization Bearer:
-
-```
-Authorization: Bearer sua-api-key
-```
-
-## Endpoints
+## 📡 Endpoints da API
 
 ### Instâncias
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/instance/create` | Criar nova instância |
-| GET | `/api/instance/list` | Listar instâncias |
-| GET | `/api/instance/:name` | Obter instância |
-| GET | `/api/instance/:name/status` | Status da conexão |
-| GET | `/api/instance/:name/qrcode` | Obter QR Code |
-| POST | `/api/instance/:name/connect` | Conectar instância |
-| PUT | `/api/instance/:name/restart` | Reiniciar instância |
-| POST | `/api/instance/:name/logout` | Desconectar |
-| DELETE | `/api/instance/:name` | Deletar instância |
+| `POST` | `/instance/create` | Criar nova instância |
+| `GET` | `/instance/list` | Listar todas as instâncias |
+| `GET` | `/instance/:name` | Obter detalhes de uma instância |
+| `GET` | `/instance/:name/status` | Obter status de conexão |
+| `GET` | `/instance/:name/qrcode` | Obter QR code para conexão |
+| `POST` | `/instance/:name/connect` | Conectar instância |
+| `POST` | `/instance/:name/restart` | Reiniciar instância |
+| `POST` | `/instance/:name/logout` | Desconectar da sessão |
+| `DELETE` | `/instance/:name` | Deletar instância |
 
 ### Mensagens
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/message/:instance/text` | Enviar texto |
-| POST | `/api/message/:instance/media` | Enviar mídia |
-| POST | `/api/message/:instance/audio` | Enviar áudio |
-| POST | `/api/message/:instance/sticker` | Enviar sticker |
-| POST | `/api/message/:instance/location` | Enviar localização |
-| POST | `/api/message/:instance/contact` | Enviar contato |
-| POST | `/api/message/:instance/reaction` | Enviar reação |
-| POST | `/api/message/:instance/poll` | Enviar enquete |
-| POST | `/api/message/:instance/button` | Enviar botões |
-| POST | `/api/message/:instance/list` | Enviar lista |
-| POST | `/api/message/:instance/carousel` | Enviar carrossel |
-| POST | `/api/message/:instance/story` | Enviar story |
+| `POST` | `/message/:instance/text` | Enviar mensagem de texto |
+| `POST` | `/message/:instance/media` | Enviar mídia (imagem/vídeo/documento) |
+| `POST` | `/message/:instance/audio` | Enviar áudio/voz |
+| `POST` | `/message/:instance/sticker` | Enviar sticker |
+| `POST` | `/message/:instance/location` | Enviar localização |
+| `POST` | `/message/:instance/contact` | Enviar cartão de contato |
+| `POST` | `/message/:instance/reaction` | Enviar reação |
+| `POST` | `/message/:instance/poll` | Enviar enquete |
+| `POST` | `/message/:instance/button` | Enviar mensagem com botões |
+| `POST` | `/message/:instance/list` | Enviar mensagem de lista |
 
 ### Grupos
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/group/:instance/create` | Criar grupo |
-| GET | `/api/group/:instance/list` | Listar grupos |
-| GET | `/api/group/:instance/:groupId` | Info do grupo |
-| PUT | `/api/group/:instance/:groupId` | Atualizar grupo |
-| PUT | `/api/group/:instance/:groupId/participants` | Gerenciar participantes |
-| POST | `/api/group/:instance/join` | Entrar via link |
-| DELETE | `/api/group/:instance/:groupId/leave` | Sair do grupo |
-| GET | `/api/group/:instance/:groupId/invite` | Obter link de convite |
+| `GET` | `/group/:instance/list` | Listar grupos |
+| `GET` | `/group/:instance/:jid` | Obter info do grupo |
+| `POST` | `/group/:instance/create` | Criar grupo |
+| `POST` | `/group/:instance/:jid/leave` | Sair do grupo |
+| `POST` | `/group/:instance/:jid/participants/add` | Adicionar participantes |
+| `POST` | `/group/:instance/:jid/participants/remove` | Remover participantes |
 
-### Contatos
+### Webhooks
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/contact/:instance/check` | Verificar números |
-| GET | `/api/contact/:instance/list` | Listar contatos |
-| GET | `/api/contact/:instance/:jid` | Info do contato |
-| GET | `/api/contact/:instance/:jid/picture` | Foto de perfil |
-| POST | `/api/contact/:instance/block` | Bloquear contato |
-| POST | `/api/contact/:instance/unblock` | Desbloquear contato |
+| `GET` | `/webhook/:instance` | Obter configuração de webhook |
+| `POST` | `/webhook/:instance` | Configurar webhook |
+| `DELETE` | `/webhook/:instance` | Remover webhook |
 
-### Presença
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/api/presence/:instance/available` | Marcar online |
-| POST | `/api/presence/:instance/unavailable` | Marcar offline |
-| POST | `/api/presence/:instance/composing` | Digitando |
-| POST | `/api/presence/:instance/recording` | Gravando áudio |
-| POST | `/api/presence/:instance/clear` | Limpar presença |
-| POST | `/api/presence/:instance/subscribe` | Assinar presença |
-
-### Webhook
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/api/webhook/:instance/set` | Configurar webhook |
-| GET | `/api/webhook/:instance` | Obter config |
-| DELETE | `/api/webhook/:instance` | Remover webhook |
-| POST | `/api/webhook/:instance/enable` | Ativar webhook |
-| POST | `/api/webhook/:instance/disable` | Desativar webhook |
-| GET | `/api/webhook/events` | Listar eventos |
-
-## Eventos de Webhook
-
-- `message.received` - Nova mensagem recebida
-- `message.sent` - Mensagem enviada
-- `message.ack` - Confirmação de entrega/leitura
-- `message.revoked` - Mensagem revogada
-- `connection.update` - Mudança de conexão
-- `qrcode.updated` - Novo QR Code
-- `group.participants.update` - Mudança em participantes
-- `group.update` - Atualização de grupo
-- `presence.update` - Atualização de presença
-- `call.received` - Chamada recebida
-- `call.missed` - Chamada perdida
-- `poll.vote` - Voto em enquete
-- `button.response` - Resposta de botão
-- `list.response` - Resposta de lista
-- `story.viewed` - Story visualizado
-
-## Exemplos de Uso
+## 📨 Exemplos de Uso
 
 ### Criar Instância
 
 ```bash
-curl -X POST http://localhost:8080/api/instance/create \
-  -H "X-API-Key: sua-api-key" \
+curl -X POST http://localhost:8080/instance/create \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"name": "minha-instancia"}'
 ```
 
-### Obter QR Code
+### Enviar Mensagem com Botões
 
 ```bash
-curl http://localhost:8080/api/instance/minha-instancia/qrcode \
-  -H "X-API-Key: sua-api-key"
-```
-
-### Enviar Mensagem de Texto
-
-```bash
-curl -X POST http://localhost:8080/api/message/minha-instancia/text \
-  -H "X-API-Key: sua-api-key" \
+curl -X POST http://localhost:8080/message/minha-instancia/button \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "5511999999999",
-    "text": "Olá! Esta é uma mensagem de teste."
+    "text": "Escolha uma opção:",
+    "footer": "Powered by TurboZap",
+    "buttons": [
+      {"id": "btn_1", "text": "👍 Sim"},
+      {"id": "btn_2", "text": "👎 Não"},
+      {"id": "btn_3", "text": "🤔 Talvez"}
+    ],
+    "header": {
+      "type": "text",
+      "text": "Confirmação"
+    }
   }'
 ```
 
-### Enviar Imagem
+### Enviar Lista
 
 ```bash
-curl -X POST http://localhost:8080/api/message/minha-instancia/media \
-  -H "X-API-Key: sua-api-key" \
+curl -X POST http://localhost:8080/message/minha-instancia/list \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "5511999999999",
-    "media_url": "https://example.com/image.jpg",
-    "caption": "Legenda da imagem"
+    "title": "Menu Principal",
+    "description": "Selecione uma opção do menu",
+    "button_text": "📋 Abrir Menu",
+    "footer": "TurboZap API",
+    "sections": [
+      {
+        "title": "🛒 Produtos",
+        "rows": [
+          {"id": "prod_1", "title": "Produto A", "description": "R$ 99,90"},
+          {"id": "prod_2", "title": "Produto B", "description": "R$ 149,90"}
+        ]
+      },
+      {
+        "title": "ℹ️ Informações",
+        "rows": [
+          {"id": "info_1", "title": "Sobre nós"},
+          {"id": "info_2", "title": "Contato"}
+        ]
+      }
+    ]
   }'
 ```
 
 ### Configurar Webhook
 
 ```bash
-curl -X POST http://localhost:8080/api/webhook/minha-instancia/set \
-  -H "X-API-Key: sua-api-key" \
+curl -X POST http://localhost:8080/webhook/minha-instancia \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://seu-servidor.com/webhook",
-    "events": ["message.received", "message.ack"],
-    "enabled": true
+    "url": "https://meu-servidor.com/webhook",
+    "events": ["message_received", "message_ack", "connection_update"],
+    "headers": {
+      "Authorization": "Bearer meu-token"
+    }
   }'
 ```
 
-## Arquitetura
+## 🔌 WebSocket
 
-O projeto segue arquitetura DDD (Domain-Driven Design) com os seguintes componentes:
+Conecte-se ao WebSocket para receber eventos em tempo real:
 
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws?token=your-api-key&instance_id=uuid');
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Evento:', data.event, data.data);
+};
+
+// Eventos disponíveis:
+// - incoming_message
+// - message_status
+// - button_click
+// - list_selection
+// - connection_update
+// - qrcode_update
 ```
-TurboZap-api/
-├── cmd/api/           # Entry point
-├── internal/
-│   ├── domain/        # Entidades e interfaces
-│   ├── application/   # DTOs e use cases
-│   ├── infrastructure/ # Implementações (DB, WhatsApp)
-│   └── interface/     # HTTP handlers e middlewares
-└── pkg/               # Utilitários compartilhados
+
+## 🪝 Webhooks
+
+Eventos enviados para o webhook configurado:
+
+| Evento | Descrição |
+|--------|-----------|
+| `message_received` | Nova mensagem recebida |
+| `message_ack` | Status de mensagem (sent/delivered/read) |
+| `connection_update` | Mudança no status de conexão |
+| `qrcode_update` | Novo QR code gerado |
+| `presence_update` | Atualização de presença |
+| `group_update` | Mudanças em grupos |
+
+## ⚠️ Limitações
+
+### WhatsApp Web vs Cloud API
+
+| Recurso | WhatsApp Web (whatsmeow) | Cloud API |
+|---------|-------------------------|-----------|
+| Botões | ✅ Limitado | ✅ Completo |
+| Listas | ✅ Limitado | ✅ Completo |
+| Carrossel | ❌ Não suportado | ✅ Suportado |
+| Templates | ❌ Não suportado | ✅ Suportado |
+| Custo | Gratuito | Pago por mensagem |
+
+> **Nota**: Mensagens interativas (botões/listas) podem ter suporte limitado em alguns dispositivos ou versões do WhatsApp.
+
+## 📊 Monitoramento
+
+### Prometheus Metrics
+
+Acesse as métricas em `http://localhost:8080/metrics`:
+
+- `turbozap_messages_sent_total` - Total de mensagens enviadas
+- `turbozap_messages_received_total` - Total de mensagens recebidas
+- `turbozap_instances_active` - Instâncias ativas
+- `turbozap_http_requests_total` - Requisições HTTP
+
+### Grafana Dashboard
+
+Acesse o Grafana em `http://localhost:3000` (admin/admin) para visualizar dashboards.
+
+### UIs de Administração
+
+- **Adminer** (PostgreSQL): http://localhost:8081
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
+
+## 🧪 Testes
+
+```bash
+# Rodar todos os testes
+go test ./...
+
+# Com cobertura
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+
+# Testes específicos
+go test ./internal/application/dto/...
 ```
 
-## Licença
+## 🔧 Desenvolvimento
 
-MIT
+```bash
+# Build
+go build -o turbozap ./cmd/api
 
-## Contribuições
+# Lint
+golangci-lint run
 
-Contribuições são bem-vindas! Abra uma issue ou pull request.
+# Gerar mocks
+mockgen -source=internal/domain/repository/instance_repository.go \
+        -destination=internal/mocks/instance_repository_mock.go
+```
 
+## 📚 Documentação Adicional
+
+- [Guia de Migração para Cloud API](docs/MIGRATION_GUIDE.md)
+- [Plano Operacional](docs/OPERATIONAL_PLAN.md)
+- [Arquitetura Detalhada](docs/ARCHITECTURE.md)
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie sua branch (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Add MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🙏 Agradecimentos
+
+- [whatsmeow](https://github.com/tulir/whatsmeow) - Biblioteca Go para WhatsApp Web
+- [Fiber](https://gofiber.io/) - Framework web para Go
+- [Evolution API](https://github.com/EvolutionAPI/evolution-api) - Inspiração para o projeto
+
+---
+
+Feito com ❤️ por [TurboZap Team](https://github.com/jonadableite)

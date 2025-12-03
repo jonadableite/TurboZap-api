@@ -9,9 +9,9 @@ import (
 
 // SendTextRequest represents a request to send a text message
 type SendTextRequest struct {
-	To        string `json:"to" validate:"required"`
-	Text      string `json:"text" validate:"required,min=1"`
-	QuoteID   string `json:"quote_id,omitempty"`
+	To          string   `json:"to" validate:"required"`
+	Text        string   `json:"text" validate:"required,min=1"`
+	QuoteID     string   `json:"quote_id,omitempty"`
 	MentionJIDs []string `json:"mention_jids,omitempty"`
 }
 
@@ -53,7 +53,7 @@ type SendLocationRequest struct {
 
 // SendContactRequest represents a request to send contacts
 type SendContactRequest struct {
-	To       string              `json:"to" validate:"required"`
+	To       string               `json:"to" validate:"required"`
 	Contacts []ContactCardRequest `json:"contacts" validate:"required,min=1"`
 }
 
@@ -82,18 +82,30 @@ type SendPollRequest struct {
 
 // SendButtonRequest represents a request to send a button message
 type SendButtonRequest struct {
-	To       string          `json:"to" validate:"required"`
-	Text     string          `json:"text" validate:"required"`
-	Footer   string          `json:"footer,omitempty"`
-	Buttons  []ButtonRequest `json:"buttons" validate:"required,min=1,max=3"`
-	MediaURL string          `json:"media_url,omitempty"`
-	MimeType string          `json:"mime_type,omitempty"`
+	To       string                `json:"to" validate:"required"`
+	Text     string                `json:"text" validate:"required"`
+	Footer   string                `json:"footer,omitempty"`
+	Buttons  []ButtonRequest       `json:"buttons" validate:"required,min=1,max=3"`
+	Header   *MessageHeaderRequest `json:"header,omitempty"`
+	MediaURL string                `json:"media_url,omitempty"`
+	MimeType string                `json:"mime_type,omitempty"`
+}
+
+// MessageHeaderRequest represents a header for interactive messages
+type MessageHeaderRequest struct {
+	Type     string `json:"type" validate:"required,oneof=text image video document"`
+	Text     string `json:"text,omitempty"`
+	MediaURL string `json:"media_url,omitempty"`
+	Base64   string `json:"base64,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	FileName string `json:"file_name,omitempty"`
 }
 
 // ButtonRequest represents a button
 type ButtonRequest struct {
 	ID   string `json:"id" validate:"required"`
 	Text string `json:"text" validate:"required,max=20"`
+	Type string `json:"type,omitempty"` // RESPONSE, URL, CALL
 }
 
 // SendListRequest represents a request to send a list message
@@ -121,8 +133,8 @@ type ListRowRequest struct {
 
 // SendCarouselRequest represents a request to send a carousel message
 type SendCarouselRequest struct {
-	To    string                 `json:"to" validate:"required"`
-	Cards []CarouselCardRequest  `json:"cards" validate:"required,min=1,max=10"`
+	To    string                `json:"to" validate:"required"`
+	Cards []CarouselCardRequest `json:"cards" validate:"required,min=1,max=10"`
 }
 
 // CarouselCardRequest represents a card in a carousel
@@ -154,18 +166,18 @@ type MessageResponse struct {
 
 // MessageReceivedEvent represents a received message event
 type MessageReceivedEvent struct {
-	MessageID    string    `json:"message_id"`
-	From         string    `json:"from"`
-	FromName     string    `json:"from_name,omitempty"`
-	To           string    `json:"to"`
-	IsGroup      bool      `json:"is_group"`
-	Type         string    `json:"type"`
-	Content      string    `json:"content,omitempty"`
-	MediaURL     string    `json:"media_url,omitempty"`
-	MediaMimeType string   `json:"media_mime_type,omitempty"`
-	Caption      string    `json:"caption,omitempty"`
-	QuotedMsgID  string    `json:"quoted_msg_id,omitempty"`
-	Timestamp    time.Time `json:"timestamp"`
+	MessageID     string    `json:"message_id"`
+	From          string    `json:"from"`
+	FromName      string    `json:"from_name,omitempty"`
+	To            string    `json:"to"`
+	IsGroup       bool      `json:"is_group"`
+	Type          string    `json:"type"`
+	Content       string    `json:"content,omitempty"`
+	MediaURL      string    `json:"media_url,omitempty"`
+	MediaMimeType string    `json:"media_mime_type,omitempty"`
+	Caption       string    `json:"caption,omitempty"`
+	QuotedMsgID   string    `json:"quoted_msg_id,omitempty"`
+	Timestamp     time.Time `json:"timestamp"`
 }
 
 // MessageAckEvent represents a message acknowledgment event
@@ -185,4 +197,3 @@ func ToMessageResponse(msg *entity.Message, waMessageID string) MessageResponse 
 		Timestamp: msg.Timestamp,
 	}
 }
-

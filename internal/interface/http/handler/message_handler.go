@@ -67,6 +67,25 @@ func formatJID(to string) string {
 	return jid
 }
 
+// downloadMediaFromURL downloads media from a URL
+func downloadMediaFromURL(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+// decodeBase64 decodes base64 data
+func decodeBase64(data string) ([]byte, error) {
+	// Remove data URL prefix if present
+	if idx := strings.Index(data, ","); idx != -1 {
+		data = data[idx+1:]
+	}
+	return base64.StdEncoding.DecodeString(data)
+}
+
 // SendText sends a text message
 func (h *MessageHandler) SendText(c *fiber.Ctx) error {
 	instance, err := h.getInstanceAndValidate(c)
@@ -465,7 +484,7 @@ func (h *MessageHandler) SendPoll(c *fiber.Ctx) error {
 	})
 }
 
-// SendButton sends a button message (Note: Buttons are limited on WhatsApp Business API)
+// SendButton sends a button message using whatsmeow protobufs
 func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	instance, err := h.getInstanceAndValidate(c)
 	if err != nil {
@@ -482,18 +501,49 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid recipient phone number")
 	}
 
-	// Note: Interactive buttons are deprecated in personal WhatsApp
-	// Using template messages or alternative approach
-	// For now, send as formatted text
-	text := req.Text + "\n"
-	if req.Footer != "" {
-		text += "\n" + req.Footer + "\n"
-	}
-	for i, btn := range req.Buttons {
-		text += "\n" + string(rune('1'+i)) + ". " + btn.Text
+	if len(req.Buttons) == 0 || len(req.Buttons) > 3 {
+		return response.BadRequest(c, "Must have 1-3 buttons")
 	}
 
-	msgID, err := h.waManager.SendText(c.Context(), instance.ID, jid, text, "", nil)
+	// Convert buttons to internal format
+	buttons := make([]whatsapp.ButtonData, len(req.Buttons))
+	for i, btn := range req.Buttons {
+		buttons[i] = whatsapp.ButtonData{
+			ID:   btn.ID,
+			Text: btn.Text,
+			Type: btn.Type,
+		}
+	}
+
+	// Handle header if provided
+	var header *whatsapp.HeaderData
+	if req.Header != nil {
+		header = &whatsapp.HeaderData{
+			Type:     req.Header.Type,
+			Text:     req.Header.Text,
+			MimeType: req.Header.MimeType,
+			FileName: req.Header.FileName,
+		}
+
+		// Download media if needed
+		if req.Header.MediaURL != "" {
+			mediaData, err := downloadMediaFromURL(req.Header.MediaURL)
+			if err != nil {
+				h.logger.Warn("Failed to download header media", zap.Error(err))
+			} else {
+				header.MediaData = mediaData
+			}
+		} else if req.Header.Base64 != "" {
+			mediaData, err := decodeBase64(req.Header.Base64)
+			if err != nil {
+				return response.BadRequest(c, "Invalid base64 header data")
+			}
+			header.MediaData = mediaData
+		}
+	}
+
+	// Send using whatsmeow protobufs
+	msgID, err := h.waManager.SendButtons(c.Context(), instance.ID, jid, req.Text, req.Footer, buttons, header)
 	if err != nil {
 		h.logger.Error("Failed to send button message", zap.Error(err))
 		return response.InternalServerError(c, "Failed to send button message")
@@ -507,7 +557,7 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	})
 }
 
-// SendList sends a list message
+// SendList sends a list message using whatsmeow protobufs
 func (h *MessageHandler) SendList(c *fiber.Ctx) error {
 	instance, err := h.getInstanceAndValidate(c)
 	if err != nil {
@@ -524,29 +574,29 @@ func (h *MessageHandler) SendList(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid recipient phone number")
 	}
 
-	// Note: List messages are deprecated in personal WhatsApp
-	// Format as text list
-	text := "*" + req.Title + "*\n"
-	if req.Description != "" {
-		text += req.Description + "\n"
-	}
-	
-	for _, section := range req.Sections {
-		text += "\n*" + section.Title + "*\n"
-		for _, row := range section.Rows {
-			text += "• " + row.Title
-			if row.Description != "" {
-				text += " - " + row.Description
-			}
-			text += "\n"
-		}
-	}
-	
-	if req.Footer != "" {
-		text += "\n_" + req.Footer + "_"
+	if len(req.Sections) == 0 || len(req.Sections) > 10 {
+		return response.BadRequest(c, "Must have 1-10 sections")
 	}
 
-	msgID, err := h.waManager.SendText(c.Context(), instance.ID, jid, text, "", nil)
+	// Convert sections to internal format
+	sections := make([]whatsapp.ListSectionData, len(req.Sections))
+	for i, section := range req.Sections {
+		rows := make([]whatsapp.ListRowData, len(section.Rows))
+		for j, row := range section.Rows {
+			rows[j] = whatsapp.ListRowData{
+				ID:          row.ID,
+				Title:       row.Title,
+				Description: row.Description,
+			}
+		}
+		sections[i] = whatsapp.ListSectionData{
+			Title: section.Title,
+			Rows:  rows,
+		}
+	}
+
+	// Send using whatsmeow protobufs
+	msgID, err := h.waManager.SendList(c.Context(), instance.ID, jid, req.Title, req.Description, req.ButtonText, req.Footer, sections)
 	if err != nil {
 		h.logger.Error("Failed to send list message", zap.Error(err))
 		return response.InternalServerError(c, "Failed to send list message")

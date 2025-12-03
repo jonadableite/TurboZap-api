@@ -14,6 +14,9 @@ type Config struct {
 	WhatsApp WhatsAppConfig
 	Webhook  WebhookConfig
 	Log      LogConfig
+	RabbitMQ RabbitMQConfig
+	Redis    RedisConfig
+	MinIO    MinIOConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -52,6 +55,36 @@ type LogConfig struct {
 	Format string
 }
 
+// RabbitMQConfig holds RabbitMQ-related configuration
+type RabbitMQConfig struct {
+	URL            string
+	Exchange       string
+	QueuePrefix    string
+	WorkerCount    int
+	PrefetchCount  int
+	ReconnectDelay int
+	MaxRetries     int
+}
+
+// RedisConfig holds Redis-related configuration
+type RedisConfig struct {
+	URL            string
+	Password       string
+	DB             int
+	MaxRetries     int
+	PoolSize       int
+	RateLimitRPM   int // Rate limit requests per minute
+}
+
+// MinIOConfig holds MinIO-related configuration
+type MinIOConfig struct {
+	Endpoint        string
+	AccessKeyID     string
+	SecretAccessKey string
+	BucketName      string
+	UseSSL          bool
+}
+
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
 	// Load .env file if it exists
@@ -83,6 +116,30 @@ func Load() (*Config, error) {
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "json"),
+		},
+		RabbitMQ: RabbitMQConfig{
+			URL:            getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+			Exchange:       getEnv("RABBITMQ_EXCHANGE", "whatsapp.events"),
+			QueuePrefix:    getEnv("RABBITMQ_QUEUE_PREFIX", "whatsapp"),
+			WorkerCount:    getEnvInt("RABBITMQ_WORKER_COUNT", 2),
+			PrefetchCount:  getEnvInt("RABBITMQ_PREFETCH_COUNT", 10),
+			ReconnectDelay: getEnvInt("RABBITMQ_RECONNECT_DELAY", 5),
+			MaxRetries:     getEnvInt("RABBITMQ_MAX_RETRIES", 3),
+		},
+		Redis: RedisConfig{
+			URL:          getEnv("REDIS_URL", "redis://localhost:6379"),
+			Password:     getEnv("REDIS_PASSWORD", ""),
+			DB:           getEnvInt("REDIS_DB", 0),
+			MaxRetries:   getEnvInt("REDIS_MAX_RETRIES", 3),
+			PoolSize:     getEnvInt("REDIS_POOL_SIZE", 10),
+			RateLimitRPM: getEnvInt("REDIS_RATE_LIMIT_RPM", 60),
+		},
+		MinIO: MinIOConfig{
+			Endpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKeyID:     getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+			SecretAccessKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
+			BucketName:      getEnv("MINIO_BUCKET", "turbozap-media"),
+			UseSSL:          getEnvBool("MINIO_USE_SSL", false),
 		},
 	}
 

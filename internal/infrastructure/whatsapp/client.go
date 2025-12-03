@@ -739,6 +739,198 @@ func (m *Manager) SendPoll(ctx context.Context, instanceID uuid.UUID, to, questi
 	return resp.ID, nil
 }
 
+// SendButtons sends a buttons message using whatsmeow protobufs
+func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, text, footer string, buttons []ButtonData, header *HeaderData) (string, error) {
+	client, exists := m.GetClient(instanceID)
+	if !exists {
+		return "", fmt.Errorf("client not found")
+	}
+
+	jid, err := types.ParseJID(to)
+	if err != nil {
+		return "", fmt.Errorf("invalid JID: %w", err)
+	}
+
+	// Build buttons
+	waButtons := make([]*waE2E.ButtonsMessage_Button, len(buttons))
+	for i, btn := range buttons {
+		waButtons[i] = &waE2E.ButtonsMessage_Button{
+			ButtonID: proto.String(btn.ID),
+			ButtonText: &waE2E.ButtonsMessage_Button_ButtonText{
+				DisplayText: proto.String(btn.Text),
+			},
+			Type: waE2E.ButtonsMessage_Button_RESPONSE.Enum(),
+		}
+	}
+
+	// Build message
+	buttonsMsg := &waE2E.ButtonsMessage{
+		ContentText: proto.String(text),
+		FooterText:  proto.String(footer),
+		Buttons:     waButtons,
+		HeaderType:  waE2E.ButtonsMessage_EMPTY.Enum(),
+	}
+
+	// Handle header
+	if header != nil {
+		switch header.Type {
+		case "text":
+			buttonsMsg.HeaderType = waE2E.ButtonsMessage_TEXT.Enum()
+			buttonsMsg.Header = &waE2E.ButtonsMessage_Text{
+				Text: header.Text,
+			}
+		case "image":
+			if header.MediaData != nil {
+				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaImage)
+				if err != nil {
+					return "", fmt.Errorf("failed to upload header image: %w", err)
+				}
+				buttonsMsg.HeaderType = waE2E.ButtonsMessage_IMAGE.Enum()
+				buttonsMsg.Header = &waE2E.ButtonsMessage_ImageMessage{
+					ImageMessage: &waE2E.ImageMessage{
+						URL:           proto.String(uploaded.URL),
+						DirectPath:    proto.String(uploaded.DirectPath),
+						MediaKey:      uploaded.MediaKey,
+						FileEncSHA256: uploaded.FileEncSHA256,
+						FileSHA256:    uploaded.FileSHA256,
+						FileLength:    proto.Uint64(uint64(len(header.MediaData))),
+						Mimetype:      proto.String(header.MimeType),
+					},
+				}
+			}
+		case "video":
+			if header.MediaData != nil {
+				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaVideo)
+				if err != nil {
+					return "", fmt.Errorf("failed to upload header video: %w", err)
+				}
+				buttonsMsg.HeaderType = waE2E.ButtonsMessage_VIDEO.Enum()
+				buttonsMsg.Header = &waE2E.ButtonsMessage_VideoMessage{
+					VideoMessage: &waE2E.VideoMessage{
+						URL:           proto.String(uploaded.URL),
+						DirectPath:    proto.String(uploaded.DirectPath),
+						MediaKey:      uploaded.MediaKey,
+						FileEncSHA256: uploaded.FileEncSHA256,
+						FileSHA256:    uploaded.FileSHA256,
+						FileLength:    proto.Uint64(uint64(len(header.MediaData))),
+						Mimetype:      proto.String(header.MimeType),
+					},
+				}
+			}
+		case "document":
+			if header.MediaData != nil {
+				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaDocument)
+				if err != nil {
+					return "", fmt.Errorf("failed to upload header document: %w", err)
+				}
+				buttonsMsg.HeaderType = waE2E.ButtonsMessage_DOCUMENT.Enum()
+				buttonsMsg.Header = &waE2E.ButtonsMessage_DocumentMessage{
+					DocumentMessage: &waE2E.DocumentMessage{
+						URL:           proto.String(uploaded.URL),
+						DirectPath:    proto.String(uploaded.DirectPath),
+						MediaKey:      uploaded.MediaKey,
+						FileEncSHA256: uploaded.FileEncSHA256,
+						FileSHA256:    uploaded.FileSHA256,
+						FileLength:    proto.Uint64(uint64(len(header.MediaData))),
+						Mimetype:      proto.String(header.MimeType),
+						FileName:      proto.String(header.FileName),
+					},
+				}
+			}
+		}
+	}
+
+	msg := &waE2E.Message{
+		ButtonsMessage: buttonsMsg,
+	}
+
+	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
+	if err != nil {
+		return "", fmt.Errorf("failed to send buttons message: %w", err)
+	}
+
+	return resp.ID, nil
+}
+
+// SendList sends a list message using whatsmeow protobufs
+func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title, description, buttonText, footer string, sections []ListSectionData) (string, error) {
+	client, exists := m.GetClient(instanceID)
+	if !exists {
+		return "", fmt.Errorf("client not found")
+	}
+
+	jid, err := types.ParseJID(to)
+	if err != nil {
+		return "", fmt.Errorf("invalid JID: %w", err)
+	}
+
+	// Build sections
+	waSections := make([]*waE2E.ListMessage_Section, len(sections))
+	for i, section := range sections {
+		rows := make([]*waE2E.ListMessage_Row, len(section.Rows))
+		for j, row := range section.Rows {
+			rows[j] = &waE2E.ListMessage_Row{
+				RowID:       proto.String(row.ID),
+				Title:       proto.String(row.Title),
+				Description: proto.String(row.Description),
+			}
+		}
+		waSections[i] = &waE2E.ListMessage_Section{
+			Title: proto.String(section.Title),
+			Rows:  rows,
+		}
+	}
+
+	listMsg := &waE2E.ListMessage{
+		Title:       proto.String(title),
+		Description: proto.String(description),
+		ButtonText:  proto.String(buttonText),
+		FooterText:  proto.String(footer),
+		ListType:    waE2E.ListMessage_SINGLE_SELECT.Enum(),
+		Sections:    waSections,
+	}
+
+	msg := &waE2E.Message{
+		ListMessage: listMsg,
+	}
+
+	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
+	if err != nil {
+		return "", fmt.Errorf("failed to send list message: %w", err)
+	}
+
+	return resp.ID, nil
+}
+
+// ButtonData represents button data for SendButtons
+type ButtonData struct {
+	ID   string
+	Text string
+	Type string
+}
+
+// HeaderData represents header data for interactive messages
+type HeaderData struct {
+	Type      string
+	Text      string
+	MediaData []byte
+	MimeType  string
+	FileName  string
+}
+
+// ListSectionData represents a section in a list message
+type ListSectionData struct {
+	Title string
+	Rows  []ListRowData
+}
+
+// ListRowData represents a row in a list section
+type ListRowData struct {
+	ID          string
+	Title       string
+	Description string
+}
+
 // Helper function to download media from URL
 func downloadMedia(url string) ([]byte, error) {
 	resp, err := http.Get(url)
