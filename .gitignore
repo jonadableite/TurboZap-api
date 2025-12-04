@@ -26,3 +26,5 @@ go.work
 
 # Binary output
 turbozap
+api
+cmd/api/api
