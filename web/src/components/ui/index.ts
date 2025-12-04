@@ -5,4 +5,6 @@ export { Input } from './Input';
 export { Modal, ModalFooter } from './Modal';
 export { Spinner, LoadingOverlay } from './Spinner';
 export { EmptyState } from './EmptyState';
+export { ShineBorder } from './ShineBorder';
+export { LottieIcon } from './LottieIcon';
 

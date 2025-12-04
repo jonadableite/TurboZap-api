@@ -64,6 +64,7 @@ func RunMigrations(pool *pgxpool.Pool) error {
 		{2, migrationV2CreateWebhooks},
 		{3, migrationV3CreateMessages},
 		{4, migrationV4WhatsmeowTables},
+		{5, migrationV5AddDeviceJID},
 	}
 
 	for _, m := range migrations {
@@ -247,4 +248,12 @@ CREATE TABLE IF NOT EXISTS whatsmeow_chat_settings (
 	archived BOOLEAN NOT NULL DEFAULT false,
 	PRIMARY KEY (our_jid, chat_jid)
 );
+`
+
+const migrationV5AddDeviceJID = `
+-- Add device_jid column to instances table for session persistence
+ALTER TABLE instances 
+ADD COLUMN IF NOT EXISTS device_jid TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_instances_device_jid ON instances(device_jid) WHERE device_jid IS NOT NULL;
 `

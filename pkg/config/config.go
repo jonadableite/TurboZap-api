@@ -9,6 +9,7 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
+	App      AppConfig
 	Server   ServerConfig
 	Database DatabaseConfig
 	WhatsApp WhatsAppConfig
@@ -17,6 +18,12 @@ type Config struct {
 	RabbitMQ RabbitMQConfig
 	Redis    RedisConfig
 	MinIO    MinIOConfig
+}
+
+// AppConfig holds general application metadata
+type AppConfig struct {
+	Name    string
+	Version string
 }
 
 // ServerConfig holds server-related configuration
@@ -91,6 +98,10 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
+		App: AppConfig{
+			Name:    getEnv("APP_NAME", "TurboZap API"),
+			Version: getEnv("APP_VERSION", "dev"),
+		},
 		Server: ServerConfig{
 			Port:   getEnv("SERVER_PORT", "8080"),
 			Host:   getEnv("SERVER_HOST", "0.0.0.0"),

@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { LottieIcon } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Smartphone,
-  LayoutDashboard,
-  MessageSquare,
-  Webhook,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  Zap,
+  Settings,
   Users,
-  FileText,
-  HelpCircle,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Webhook,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import messageAnimation from "../../../public/balao-de-fala.json";
+import dashboardAnimation from "../../../public/grafico-de-barras.json";
+import htmlAnimation from "../../../public/html.json";
+import instanceAnimation from "../../../public/responsivo.json";
 
 interface NavItem {
   label: string;
@@ -28,45 +28,45 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    label: 'Dashboard',
-    icon: <LayoutDashboard className="w-5 h-5" />,
-    href: '/',
+    label: "Dashboard",
+    icon: <LottieIcon animationData={dashboardAnimation} className="w-5 h-5" />,
+    href: "/",
   },
   {
-    label: 'Instâncias',
-    icon: <Smartphone className="w-5 h-5" />,
-    href: '/instances',
+    label: "Instâncias",
+    icon: <LottieIcon animationData={instanceAnimation} className="w-5 h-5" />,
+    href: "/instances",
   },
   {
-    label: 'Mensagens',
-    icon: <MessageSquare className="w-5 h-5" />,
-    href: '/messages',
-    badge: 'Em breve',
+    label: "Mensagens",
+    icon: <LottieIcon animationData={messageAnimation} className="w-5 h-5" />,
+    href: "/messages",
+    badge: "Em breve",
   },
   {
-    label: 'Webhooks',
+    label: "Webhooks",
     icon: <Webhook className="w-5 h-5" />,
-    href: '/webhooks',
-    badge: 'Em breve',
+    href: "/webhooks",
+    badge: "Em breve",
   },
   {
-    label: 'Contatos',
+    label: "Contatos",
     icon: <Users className="w-5 h-5" />,
-    href: '/contacts',
-    badge: 'Em breve',
+    href: "/contacts",
+    badge: "Em breve",
   },
 ];
 
 const bottomNavItems: NavItem[] = [
   {
-    label: 'Documentação',
-    icon: <FileText className="w-5 h-5" />,
-    href: '/docs',
+    label: "Documentação",
+    icon: <LottieIcon animationData={htmlAnimation} className="w-5 h-5" />,
+    href: "/docs",
   },
   {
-    label: 'Configurações',
+    label: "Configurações",
     icon: <Settings className="w-5 h-5" />,
-    href: '/settings',
+    href: "/settings",
   },
 ];
 
@@ -78,11 +78,11 @@ export function Sidebar() {
     <motion.aside
       initial={false}
       animate={{ width: isCollapsed ? 76 : 280 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
-        'sticky top-0 h-screen z-30',
-        'bg-[var(--rocket-gray-800)] border-r border-[var(--rocket-gray-600)]',
-        'flex flex-col'
+        "sticky top-0 h-screen z-30",
+        "bg-[var(--rocket-gray-800)] border-r border-[var(--rocket-gray-600)]",
+        "flex flex-col"
       )}
     >
       {/* Logo */}
@@ -90,15 +90,21 @@ export function Sidebar() {
         <Link href="/" className="flex items-center gap-3">
           <motion.div
             whileHover={{ rotate: 15 }}
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--rocket-purple)] to-[var(--rocket-purple-dark)] flex items-center justify-center flex-shrink-0"
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           >
-            <Zap className="w-5 h-5 text-white" />
+            <Image
+              src="/whatsapp.svg"
+              alt="TurboZap Logo"
+              width={40}
+              height={40}
+              className="w-10 h-10"
+            />
           </motion.div>
           <AnimatePresence>
             {!isCollapsed && (
               <motion.div
                 initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
+                animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
@@ -124,11 +130,11 @@ export function Sidebar() {
               <motion.div
                 whileHover={{ x: 4 }}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                  'relative overflow-hidden group',
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                  "relative overflow-hidden group",
                   isActive
-                    ? 'bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]'
-                    : 'text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]'
+                    ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
+                    : "text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
                 )}
               >
                 {/* Active indicator */}
@@ -137,17 +143,17 @@ export function Sidebar() {
                     layoutId="sidebar-active"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]"
                     initial={false}
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
 
                 <span className="flex-shrink-0">{item.icon}</span>
-                
+
                 <AnimatePresence>
                   {!isCollapsed && (
                     <motion.span
                       initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
+                      animate={{ opacity: 1, width: "auto" }}
                       exit={{ opacity: 0, width: 0 }}
                       className="flex-1 whitespace-nowrap overflow-hidden"
                     >
@@ -180,10 +186,10 @@ export function Sidebar() {
               <motion.div
                 whileHover={{ x: 4 }}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
                   isActive
-                    ? 'bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]'
-                    : 'text-[var(--rocket-gray-400)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]'
+                    ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
+                    : "text-[var(--rocket-gray-400)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
                 )}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
@@ -209,12 +215,12 @@ export function Sidebar() {
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={cn(
-          'absolute -right-3 top-20 z-10',
-          'w-6 h-6 rounded-full',
-          'bg-[var(--rocket-gray-700)] border border-[var(--rocket-gray-600)]',
-          'flex items-center justify-center',
-          'text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)]',
-          'transition-colors'
+          "absolute -right-3 top-20 z-10",
+          "w-6 h-6 rounded-full",
+          "bg-[var(--rocket-gray-700)] border border-[var(--rocket-gray-600)]",
+          "flex items-center justify-center",
+          "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)]",
+          "transition-colors"
         )}
       >
         {isCollapsed ? (
@@ -228,4 +234,3 @@ export function Sidebar() {
 }
 
 export default Sidebar;
-

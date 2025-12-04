@@ -29,12 +29,13 @@ import (
 
 // Manager manages multiple WhatsApp client instances
 type Manager struct {
-	config     *config.Config
-	logger     *zap.Logger
-	dispatcher WebhookDispatcher
-	container  *sqlstore.Container
-	clients    map[uuid.UUID]*Client
-	mu         sync.RWMutex
+	config       *config.Config
+	logger       *zap.Logger
+	dispatcher   WebhookDispatcher
+	instanceRepo repository.InstanceRepository
+	container    *sqlstore.Container
+	clients      map[uuid.UUID]*Client
+	mu           sync.RWMutex
 }
 
 // Client represents a single WhatsApp client instance
@@ -50,7 +51,7 @@ type Client struct {
 }
 
 // NewManager creates a new WhatsApp manager
-func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, dispatcher WebhookDispatcher) *Manager {
+func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, dispatcher WebhookDispatcher, instanceRepo repository.InstanceRepository) *Manager {
 	// Create whatsmeow logger
 	waLogger := waLog.Stdout("whatsmeow", "INFO", true)
 
@@ -73,12 +74,29 @@ func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, disp
 	}
 
 	return &Manager{
-		config:     cfg,
-		logger:     logger,
-		dispatcher: dispatcher,
-		container:  container,
-		clients:    make(map[uuid.UUID]*Client),
+		config:       cfg,
+		logger:       logger,
+		dispatcher:   dispatcher,
+		instanceRepo: instanceRepo,
+		container:    container,
+		clients:      make(map[uuid.UUID]*Client),
 	}
+}
+
+// getDeviceByJID retrieves a device by its JID from the store container
+func (m *Manager) getDeviceByJID(ctx context.Context, jid string) (*store.Device, error) {
+	devices, err := m.container.GetAllDevices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all devices: %w", err)
+	}
+
+	for _, device := range devices {
+		if device.ID != nil && device.ID.String() == jid {
+			return device, nil
+		}
+	}
+
+	return nil, nil // Device not found, but that's okay
 }
 
 // CreateClient creates a new WhatsApp client for an instance
@@ -91,8 +109,38 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		return client, nil
 	}
 
-	// Create device store
-	device := m.container.NewDevice()
+	// Try to load existing device by JID if available for session persistence
+	var device *store.Device
+	if instance.DeviceJID != "" {
+		ctx := context.Background()
+		existingDevice, err := m.getDeviceByJID(ctx, instance.DeviceJID)
+		if err != nil {
+			m.logger.Warn("Failed to load device by JID, creating new device",
+				zap.String("instance", instance.Name),
+				zap.String("device_jid", instance.DeviceJID),
+				zap.Error(err),
+			)
+			device = m.container.NewDevice()
+		} else if existingDevice != nil {
+			device = existingDevice
+			m.logger.Info("Restored device from saved JID for session persistence",
+				zap.String("instance", instance.Name),
+				zap.String("device_jid", instance.DeviceJID),
+			)
+		} else {
+			// JID saved but device not found (might have been deleted), create new
+			m.logger.Warn("Device JID saved but device not found in store, creating new device",
+				zap.String("instance", instance.Name),
+				zap.String("device_jid", instance.DeviceJID),
+			)
+			device = m.container.NewDevice()
+			// Clear the invalid JID
+			instance.DeviceJID = ""
+		}
+	} else {
+		// No saved JID, create new device
+		device = m.container.NewDevice()
+	}
 
 	// Create whatsmeow client
 	waLogger := waLog.Stdout("Client-"+instance.Name, "INFO", true)
@@ -117,7 +165,10 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		client.mu.Lock()
 		client.QRCode = qrCode
 		client.QRCodeImage = qrCode
+		client.Instance.SetQRCode(qrCode)
 		client.mu.Unlock()
+
+		m.persistInstanceState(client.Instance)
 	})
 
 	handler.SetConnectedHandler(func(phone, name, pic string) {
@@ -125,14 +176,34 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		client.Connected = true
 		client.QRCode = ""
 		client.Instance.SetConnected(phone, name, pic)
+
+		// Save device JID for session persistence
+		if client.WAClient != nil && client.WAClient.Store.ID != nil {
+			deviceJID := client.WAClient.Store.ID.String()
+			client.Instance.SetDeviceJID(deviceJID)
+			m.logger.Info("Saved device JID for instance",
+				zap.String("instance", client.Instance.Name),
+				zap.String("device_jid", deviceJID),
+			)
+		}
 		client.mu.Unlock()
+
+		m.persistInstanceState(client.Instance)
 	})
 
 	handler.SetDisconnectHandler(func() {
 		client.mu.Lock()
 		client.Connected = false
 		client.Instance.SetDisconnected()
+		wasConnected := client.Instance.Status == entity.InstanceStatusConnected
 		client.mu.Unlock()
+
+		m.persistInstanceState(client.Instance)
+
+		// Auto-reconnect if enabled, has valid session, and was previously connected
+		if m.config.WhatsApp.AutoReconnect && wasConnected {
+			go m.scheduleAutoReconnect(client.Instance.ID, client.Instance.Name)
+		}
 	})
 
 	// Register event handler
@@ -183,6 +254,9 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 	if isConnected {
 		return nil
 	}
+
+	client.Instance.SetConnecting()
+	m.persistInstanceState(client.Instance)
 
 	// If not logged in (no session), we need to get QR codes
 	if !hasSession {
@@ -273,6 +347,8 @@ func (m *Manager) Disconnect(instanceID uuid.UUID) error {
 
 	client.WAClient.Disconnect()
 	client.Connected = false
+	client.Instance.SetDisconnected()
+	m.persistInstanceState(client.Instance)
 
 	return nil
 }
@@ -295,6 +371,9 @@ func (m *Manager) Logout(instanceID uuid.UUID) error {
 	client.WAClient.Disconnect()
 	client.Connected = false
 	client.QRCode = ""
+	client.Instance.SetDisconnected()
+
+	m.persistInstanceState(client.Instance)
 
 	return nil
 }
@@ -332,34 +411,148 @@ func (m *Manager) DisconnectAll() {
 	}
 }
 
-// RestoreInstances restores all instances from the database
-func (m *Manager) RestoreInstances(ctx context.Context, repo repository.InstanceRepository) error {
-	instances, err := repo.GetAll(ctx)
+// RestoreInstances restores all instances from the database and attempts to reconnect them
+func (m *Manager) RestoreInstances(ctx context.Context) error {
+	if m.instanceRepo == nil {
+		return fmt.Errorf("instance repository not configured")
+	}
+
+	instances, err := m.instanceRepo.GetAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
 
+	m.logger.Info("Restoring instances from database",
+		zap.Int("count", len(instances)),
+	)
+
 	for _, instance := range instances {
+		// Create client first
 		if _, err := m.CreateClient(instance); err != nil {
-			m.logger.Warn("Failed to create client",
+			m.logger.Warn("Failed to create client for instance",
 				zap.String("instance", instance.Name),
 				zap.Error(err),
 			)
 			continue
 		}
 
-		// Try to connect if it was previously connected
-		if instance.Status == entity.InstanceStatusConnected {
-			if err := m.Connect(ctx, instance.ID); err != nil {
-				m.logger.Warn("Failed to reconnect instance",
-					zap.String("instance", instance.Name),
+		// Skip auto-reconnect if disabled
+		if !m.config.WhatsApp.AutoReconnect {
+			m.logger.Debug("Auto-reconnect disabled, skipping",
+				zap.String("instance", instance.Name),
+			)
+			continue
+		}
+
+		// Try to reconnect if instance was previously connected
+		// Note: This will work if the device already has a session saved
+		// For new devices, they will need QR code scan
+		go func(inst *entity.Instance) {
+			// Small delay to allow client initialization
+			time.Sleep(1 * time.Second)
+
+			client, exists := m.GetClient(inst.ID)
+			if !exists || client == nil || client.WAClient == nil {
+				m.logger.Debug("Client not ready for reconnect",
+					zap.String("instance", inst.Name),
+				)
+				return
+			}
+
+			// Check if device has a valid session (previously logged in)
+			client.mu.RLock()
+			hasSession := client.WAClient.Store.ID != nil
+			client.mu.RUnlock()
+
+			if !hasSession {
+				m.logger.Debug("No valid session found for instance, skipping auto-reconnect",
+					zap.String("instance", inst.Name),
+				)
+				return
+			}
+
+			// Attempt to reconnect
+			reconnectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			m.logger.Info("Attempting to restore connection for instance",
+				zap.String("instance", inst.Name),
+			)
+
+			if err := m.Connect(reconnectCtx, inst.ID); err != nil {
+				m.logger.Warn("Failed to restore connection for instance",
+					zap.String("instance", inst.Name),
 					zap.Error(err),
 				)
+				return
 			}
-		}
+
+			m.logger.Info("Successfully restored connection for instance",
+				zap.String("instance", inst.Name),
+			)
+		}(instance)
 	}
 
 	return nil
+}
+
+// scheduleAutoReconnect schedules an automatic reconnection attempt after a delay
+func (m *Manager) scheduleAutoReconnect(instanceID uuid.UUID, instanceName string) {
+	reconnectDelay := time.Duration(m.config.WhatsApp.ReconnectInterval) * time.Second
+	m.logger.Info("Scheduling auto-reconnect",
+		zap.String("instance", instanceName),
+		zap.Duration("delay", reconnectDelay),
+	)
+
+	time.Sleep(reconnectDelay)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	client, exists := m.GetClient(instanceID)
+	if !exists {
+		m.logger.Warn("Client not found for auto-reconnect",
+			zap.String("instance", instanceName),
+		)
+		return
+	}
+
+	// Check if already connected
+	client.mu.RLock()
+	isConnected := client.WAClient != nil && client.WAClient.IsConnected()
+	hasSession := client.WAClient != nil && client.WAClient.Store.ID != nil
+	client.mu.RUnlock()
+
+	if isConnected {
+		m.logger.Info("Instance already connected, skipping auto-reconnect",
+			zap.String("instance", instanceName),
+		)
+		return
+	}
+
+	if !hasSession {
+		m.logger.Info("No valid session found, skipping auto-reconnect",
+			zap.String("instance", instanceName),
+		)
+		return
+	}
+
+	// Attempt to reconnect
+	if err := m.Connect(ctx, instanceID); err != nil {
+		m.logger.Warn("Auto-reconnect failed",
+			zap.String("instance", instanceName),
+			zap.Error(err),
+		)
+		// Schedule another attempt if enabled
+		if m.config.WhatsApp.AutoReconnect {
+			go m.scheduleAutoReconnect(instanceID, instanceName)
+		}
+		return
+	}
+
+	m.logger.Info("Auto-reconnect successful",
+		zap.String("instance", instanceName),
+	)
 }
 
 // GetQRCode returns the current QR code for an instance
@@ -406,6 +599,25 @@ func (m *Manager) IsLoggedIn(instanceID uuid.UUID) bool {
 		return false
 	}
 	return client.WAClient.Store.ID != nil
+}
+
+func (m *Manager) persistInstanceState(instance *entity.Instance) {
+	if m.instanceRepo == nil || instance == nil {
+		return
+	}
+
+	instanceCopy := *instance
+	go func(data entity.Instance) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := m.instanceRepo.Update(ctx, &data); err != nil {
+			m.logger.Warn("Failed to persist instance state",
+				zap.String("instance", data.Name),
+				zap.Error(err),
+			)
+		}
+	}(instanceCopy)
 }
 
 // GetConnectionInfo returns connection information

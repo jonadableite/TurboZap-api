@@ -25,8 +25,8 @@ func NewInstancePostgresRepository(pool *pgxpool.Pool) repository.InstanceReposi
 // Create creates a new instance
 func (r *instancePostgresRepository) Create(ctx context.Context, instance *entity.Instance) error {
 	query := `
-		INSERT INTO instances (id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO instances (id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		instance.ID,
@@ -37,6 +37,7 @@ func (r *instancePostgresRepository) Create(ctx context.Context, instance *entit
 		instance.ProfileName,
 		instance.ProfilePic,
 		instance.QRCode,
+		instance.DeviceJID,
 		instance.CreatedAt,
 		instance.UpdatedAt,
 	)
@@ -49,7 +50,7 @@ func (r *instancePostgresRepository) Create(ctx context.Context, instance *entit
 // GetByID retrieves an instance by ID
 func (r *instancePostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, created_at, updated_at
+		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE id = $1
 	`
 	return r.scanInstance(ctx, query, id)
@@ -58,7 +59,7 @@ func (r *instancePostgresRepository) GetByID(ctx context.Context, id uuid.UUID) 
 // GetByName retrieves an instance by name
 func (r *instancePostgresRepository) GetByName(ctx context.Context, name string) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, created_at, updated_at
+		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE name = $1
 	`
 	return r.scanInstance(ctx, query, name)
@@ -67,7 +68,7 @@ func (r *instancePostgresRepository) GetByName(ctx context.Context, name string)
 // GetByAPIKey retrieves an instance by API key
 func (r *instancePostgresRepository) GetByAPIKey(ctx context.Context, apiKey string) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, created_at, updated_at
+		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE api_key = $1
 	`
 	return r.scanInstance(ctx, query, apiKey)
@@ -76,7 +77,7 @@ func (r *instancePostgresRepository) GetByAPIKey(ctx context.Context, apiKey str
 // GetAll retrieves all instances
 func (r *instancePostgresRepository) GetAll(ctx context.Context) ([]*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, created_at, updated_at
+		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances ORDER BY created_at DESC
 	`
 	rows, err := r.pool.Query(ctx, query)
@@ -105,7 +106,7 @@ func (r *instancePostgresRepository) GetAll(ctx context.Context) ([]*entity.Inst
 func (r *instancePostgresRepository) Update(ctx context.Context, instance *entity.Instance) error {
 	query := `
 		UPDATE instances 
-		SET name = $2, status = $3, phone_number = $4, profile_name = $5, profile_pic = $6, qr_code = $7, updated_at = $8
+		SET name = $2, status = $3, phone_number = $4, profile_name = $5, profile_pic = $6, qr_code = $7, device_jid = $8, updated_at = $9
 		WHERE id = $1
 	`
 	instance.UpdatedAt = time.Now()
@@ -117,6 +118,7 @@ func (r *instancePostgresRepository) Update(ctx context.Context, instance *entit
 		instance.ProfileName,
 		instance.ProfilePic,
 		instance.QRCode,
+		instance.DeviceJID,
 		instance.UpdatedAt,
 	)
 	if err != nil {
@@ -162,7 +164,7 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 
 	var instance entity.Instance
 	var status string
-	var phoneNumber, profileName, profilePic, qrCode *string
+	var phoneNumber, profileName, profilePic, qrCode, deviceJID *string
 
 	err := row.Scan(
 		&instance.ID,
@@ -173,6 +175,7 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 		&profileName,
 		&profilePic,
 		&qrCode,
+		&deviceJID,
 		&instance.CreatedAt,
 		&instance.UpdatedAt,
 	)
@@ -196,6 +199,9 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 	if qrCode != nil {
 		instance.QRCode = *qrCode
 	}
+	if deviceJID != nil {
+		instance.DeviceJID = *deviceJID
+	}
 
 	return &instance, nil
 }
@@ -204,7 +210,7 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 func (r *instancePostgresRepository) scanInstanceRow(rows pgx.Rows) (*entity.Instance, error) {
 	var instance entity.Instance
 	var status string
-	var phoneNumber, profileName, profilePic, qrCode *string
+	var phoneNumber, profileName, profilePic, qrCode, deviceJID *string
 
 	err := rows.Scan(
 		&instance.ID,
@@ -215,6 +221,7 @@ func (r *instancePostgresRepository) scanInstanceRow(rows pgx.Rows) (*entity.Ins
 		&profileName,
 		&profilePic,
 		&qrCode,
+		&deviceJID,
 		&instance.CreatedAt,
 		&instance.UpdatedAt,
 	)
@@ -234,6 +241,9 @@ func (r *instancePostgresRepository) scanInstanceRow(rows pgx.Rows) (*entity.Ins
 	}
 	if qrCode != nil {
 		instance.QRCode = *qrCode
+	}
+	if deviceJID != nil {
+		instance.DeviceJID = *deviceJID
 	}
 
 	return &instance, nil

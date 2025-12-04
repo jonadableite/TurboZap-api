@@ -1,246 +1,407 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
+import { OnThisPage } from "@/components/docs/on-this-page";
 import {
+  Terminal,
+  TypingAnimation,
+  AnimatedSpan,
+  CodeBlock,
+} from "@/components/docs/terminal";
+import { ShineBorder } from "@/components/ui";
+import Link from "next/link";
+import {
+  ArrowRight,
   BookOpen,
-  Code,
-  Smartphone,
-  MessageSquare,
-  Webhook,
+  Code2,
+  Key,
+  Lock,
+  MessageCircle,
+  Rocket,
+  Send,
   Users,
+  Webhook,
+  Zap,
+  QrCode,
+  RefreshCw,
   Shield,
-  ExternalLink,
-} from 'lucide-react';
-import { Header } from '@/components/layout';
-import { Card, CardContent, Badge } from '@/components/ui';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
 
-const docs = [
+const tocItems = [
+  { id: "o-que-e", title: "O que é a TurboZap API?", level: 2 },
+  { id: "primeiros-passos", title: "Primeiros passos", level: 2 },
+  { id: "instalacao", title: "Instalação rápida", level: 2 },
+  { id: "recursos", title: "Recursos principais", level: 2 },
+];
+
+const features = [
   {
-    title: 'Instâncias',
-    description: 'Criar, listar e gerenciar instâncias WhatsApp',
-    icon: <Smartphone className="w-6 h-6" />,
-    color: 'var(--rocket-purple)',
-    endpoints: [
-      { method: 'POST', path: '/instance/create', description: 'Criar nova instância' },
-      { method: 'GET', path: '/instance/list', description: 'Listar todas instâncias' },
-      { method: 'GET', path: '/instance/:name', description: 'Obter instância por nome' },
-      { method: 'GET', path: '/instance/:name/qrcode', description: 'Obter QR Code' },
-      { method: 'POST', path: '/instance/:name/connect', description: 'Conectar instância' },
-      { method: 'DELETE', path: '/instance/:name', description: 'Deletar instância' },
-    ],
+    icon: <MessageCircle className="h-5 w-5" />,
+    title: "Multi-instância",
+    description: "Gerencie múltiplas conexões WhatsApp simultaneamente.",
   },
   {
-    title: 'Mensagens',
-    description: 'Enviar diferentes tipos de mensagens',
-    icon: <MessageSquare className="w-6 h-6" />,
-    color: 'var(--rocket-green)',
-    endpoints: [
-      { method: 'POST', path: '/message/:instance/text', description: 'Enviar texto' },
-      { method: 'POST', path: '/message/:instance/media', description: 'Enviar mídia' },
-      { method: 'POST', path: '/message/:instance/audio', description: 'Enviar áudio' },
-      { method: 'POST', path: '/message/:instance/button', description: 'Enviar botões' },
-      { method: 'POST', path: '/message/:instance/list', description: 'Enviar lista' },
-    ],
+    icon: <Webhook className="h-5 w-5" />,
+    title: "Webhooks em tempo real",
+    description: "Receba notificações instantâneas sobre mensagens e eventos.",
   },
   {
-    title: 'Contatos',
-    description: 'Gerenciar contatos e verificar números',
-    icon: <Users className="w-6 h-6" />,
-    color: 'var(--rocket-info)',
-    endpoints: [
-      { method: 'POST', path: '/contact/:instance/check', description: 'Verificar número' },
-      { method: 'GET', path: '/contact/:instance/:jid/info', description: 'Info do contato' },
-      { method: 'GET', path: '/contact/:instance/list', description: 'Listar contatos' },
-    ],
+    icon: <Shield className="h-5 w-5" />,
+    title: "Segurança",
+    description: "API Keys seguras e autenticação robusta por instância.",
   },
   {
-    title: 'Webhooks',
-    description: 'Configurar notificações em tempo real',
-    icon: <Webhook className="w-6 h-6" />,
-    color: 'var(--rocket-warning)',
-    endpoints: [
-      { method: 'POST', path: '/webhook/set', description: 'Configurar webhook' },
-      { method: 'GET', path: '/webhook/:instance', description: 'Obter webhook' },
-      { method: 'DELETE', path: '/webhook/:instance', description: 'Remover webhook' },
-    ],
+    icon: <Zap className="h-5 w-5" />,
+    title: "Alta performance",
+    description: "Desenvolvido em Go para máxima performance e baixa latência.",
   },
 ];
 
-const methodColors: Record<string, string> = {
-  GET: 'bg-[var(--rocket-green)]/20 text-[var(--rocket-green)]',
-  POST: 'bg-[var(--rocket-info)]/20 text-[var(--rocket-info)]',
-  PUT: 'bg-[var(--rocket-warning)]/20 text-[var(--rocket-warning)]',
-  DELETE: 'bg-[var(--rocket-danger)]/20 text-[var(--rocket-danger)]',
-};
-
 export default function DocsPage() {
   return (
-    <>
-      <Header
-        title="Documentação"
-        description="Referência da API TurboZap"
-      />
-
-      <div className="px-4 sm:px-8 lg:px-14 py-8 space-y-8 max-w-6xl mx-auto w-full">
-        {/* Intro */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl"
-        >
-          <Card variant="gradient">
-            <CardContent className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--rocket-purple)]/20 flex items-center justify-center flex-shrink-0">
-                <BookOpen className="w-6 h-6 text-[var(--rocket-purple)]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--rocket-gray-50)] mb-2">
-                  API Reference
-                </h2>
-                <p className="text-[var(--rocket-gray-300)] mb-4">
-                  A TurboZap API permite você conectar e gerenciar múltiplas instâncias do WhatsApp,
-                  enviar mensagens, receber eventos via webhook e muito mais.
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm text-[var(--rocket-gray-400)]">
-                    <Shield className="w-4 h-4" />
-                    <span>Autenticação via API Key</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-[var(--rocket-gray-400)]">
-                    <Code className="w-4 h-4" />
-                    <span>REST API</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Auth info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardContent>
-              <h3 className="font-semibold text-[var(--rocket-gray-50)] mb-3 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[var(--rocket-purple)]" />
-                Autenticação
-              </h3>
-              <p className="text-sm text-[var(--rocket-gray-300)] mb-4">
-                Todas as requisições precisam incluir a API Key no header:
-              </p>
-              <div className="bg-[var(--rocket-gray-900)] rounded-lg p-4 font-mono text-sm">
-                <div className="text-[var(--rocket-gray-400)]"># Header</div>
-                <div className="text-[var(--rocket-green)]">
-                  X-API-Key: <span className="text-[var(--rocket-gray-300)]">sua-api-key</span>
-                </div>
-                <div className="mt-2 text-[var(--rocket-gray-400)]"># Ou</div>
-                <div className="text-[var(--rocket-green)]">
-                  Authorization: <span className="text-[var(--rocket-gray-300)]">Bearer sua-api-key</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Endpoints by category */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {docs.map((category, index) => (
-            <motion.div
-              key={category.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * (index + 2) }}
-            >
-              <Card className="h-full">
-                <CardContent>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${category.color}20` }}
-                    >
-                      <span style={{ color: category.color }}>{category.icon}</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-[var(--rocket-gray-50)]">
-                        {category.title}
-                      </h3>
-                      <p className="text-sm text-[var(--rocket-gray-400)]">
-                        {category.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {category.endpoints.map((endpoint) => (
-                      <div
-                        key={endpoint.path}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--rocket-gray-700)] transition-colors"
-                      >
-                        <span
-                          className={cn(
-                            'px-2 py-0.5 text-xs font-medium rounded',
-                            methodColors[endpoint.method]
-                          )}
-                        >
-                          {endpoint.method}
-                        </span>
-                        <code className="text-sm text-[var(--rocket-gray-300)] flex-1">
-                          {endpoint.path}
-                        </code>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+    <div className="flex">
+      <div className="flex-1 min-w-0 px-8 py-10 max-w-4xl">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-primary mb-6">
+          <span>Introdução</span>
         </div>
 
-        {/* Example */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Card>
-            <CardContent>
-              <h3 className="font-semibold text-[var(--rocket-gray-50)] mb-3 flex items-center gap-2">
-                <Code className="w-5 h-5 text-[var(--rocket-purple)]" />
-                Exemplo: Criar Instância
-              </h3>
-              <div className="bg-[var(--rocket-gray-900)] rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                <div className="text-[var(--rocket-gray-400)]"># cURL</div>
-                <pre className="text-[var(--rocket-gray-300)] whitespace-pre-wrap">
-{`curl -X POST http://localhost:8080/instance/create \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: sua-api-key" \\
-  -d '{"name": "minha-instancia"}'`}
-                </pre>
+        {/* Title */}
+        <h1 className="text-4xl font-bold tracking-tight mb-4">Comece aqui</h1>
+        <p className="text-xl text-muted-foreground mb-8">
+          Integre o WhatsApp em minutos com a TurboZap API! 🚀
+        </p>
+
+        {/* Intro */}
+        <div className="prose prose-gray dark:prose-invert max-w-none mb-12">
+          <p className="text-lg leading-relaxed text-muted-foreground">
+            Nesta documentação você encontrará tudo o que precisa para integrar
+            com a TurboZap API. Desenvolvida em Go com a biblioteca whatsmeow,
+            nossa API oferece alta performance, conexões estáveis e suporte
+            completo para todas as funcionalidades do WhatsApp Web.
+          </p>
+        </div>
+
+        {/* O que é */}
+        <section id="o-que-e" className="mb-16 scroll-mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Rocket className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold">O que é a TurboZap API?</h2>
+          </div>
+
+          <div className="space-y-4 text-muted-foreground">
+            <p>
+              A TurboZap API é uma solução completa para integração com WhatsApp,
+              desenvolvida com foco em:
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li><strong>Multi-instância:</strong> Gerencie múltiplos números em uma única API</li>
+              <li><strong>Conexão via QR Code:</strong> Simples como o WhatsApp Web</li>
+              <li><strong>Sessões persistentes:</strong> Reconexão automática após reinicialização</li>
+              <li><strong>Webhooks:</strong> Receba eventos em tempo real</li>
+              <li><strong>Mensagens interativas:</strong> Botões, listas, reações e mais</li>
+              <li><strong>Grupos:</strong> Criação e gerenciamento completo</li>
+            </ul>
+            <p>
+              Com a TurboZap, você pode começar a enviar mensagens em minutos,
+              não em semanas.
+            </p>
+          </div>
+        </section>
+
+        {/* Primeiros passos */}
+        <section id="primeiros-passos" className="mb-16 scroll-mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold">Primeiros passos</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Link
+              href="/docs/autenticacao"
+              className="group relative p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-all overflow-hidden"
+            >
+              <ShineBorder shineColor={["#8257e5", "#04d361"]} duration={10} />
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Key className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                    Autenticação
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Aprenda a usar sua API Key para autenticação
+                  </p>
+                </div>
               </div>
-              <div className="mt-4 bg-[var(--rocket-gray-900)] rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                <div className="text-[var(--rocket-gray-400)]"># Response</div>
-                <pre className="text-[var(--rocket-green)]">
-{`{
+            </Link>
+
+            <Link
+              href="/docs/api/instances/create"
+              className="group relative p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-all overflow-hidden"
+            >
+              <ShineBorder shineColor={["#04d361", "#8257e5"]} duration={12} />
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <QrCode className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                    Criar uma instância
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sua primeira conexão em 5 minutos
+                  </p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/docs/webhooks"
+              className="group relative p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-all overflow-hidden"
+            >
+              <ShineBorder shineColor={["#fba94c", "#8257e5"]} duration={14} />
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Webhook className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                    Configurar Webhooks
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Receba notificações em tempo real
+                  </p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/docs/api/messages/text"
+              className="group relative p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-all overflow-hidden"
+            >
+              <ShineBorder shineColor={["#81d8f7", "#8257e5"]} duration={16} />
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Send className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                    Enviar primeira mensagem
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Envie texto, imagens e muito mais
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* Instalação rápida */}
+        <section id="instalacao" className="mb-16 scroll-mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Code2 className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold">Instalação rápida</h2>
+          </div>
+
+          <p className="text-muted-foreground mb-6">
+            Veja como é simples criar sua primeira instância e enviar uma mensagem:
+          </p>
+
+          {/* Step 1: Create Instance */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                1
+              </span>
+              Criar uma instância
+            </h3>
+            <Terminal title="Criar instância" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ curl --request POST \\"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--url http://localhost:8080/instance/create \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--header 'X-API-Key: sua-api-key-global' \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--header 'Content-Type: application/json' \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--data '{\"name\": \"minha-instancia\"}'"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Instância criada com sucesso!
+              </AnimatedSpan>
+            </Terminal>
+            <CodeBlock
+              title="Resposta"
+              language="json"
+              code={`{
   "success": true,
   "data": {
     "instance": {
-      "id": "uuid",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
       "name": "minha-instancia",
-      "status": "disconnected"
+      "api_key": "unique-api-key-for-this-instance",
+      "status": "disconnected",
+      "created_at": "2024-01-15T10:30:00.000Z"
     }
   }
 }`}
-                </pre>
+            />
+          </div>
+
+          {/* Step 2: Connect */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                2
+              </span>
+              Conectar via QR Code
+            </h3>
+            <Terminal title="Obter QR Code" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ curl --request POST \\"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--url http://localhost:8080/instance/minha-instancia/connect \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--header 'X-API-Key: unique-api-key-for-this-instance'"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Escaneie o QR Code no WhatsApp!
+              </AnimatedSpan>
+            </Terminal>
+          </div>
+
+          {/* Step 3: Send Message */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                3
+              </span>
+              Enviar mensagem
+            </h3>
+            <Terminal title="Enviar texto" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ curl --request POST \\"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--url http://localhost:8080/message/minha-instancia/text \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--header 'X-API-Key: unique-api-key-for-this-instance' \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--header 'Content-Type: application/json' \\"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"--data '{"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-400 pl-8">
+                {'"to": "5511999999999",'}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-400 pl-8">
+                {'"text": "Olá! Essa é minha primeira mensagem via TurboZap!"'}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-blue-400 pl-4">
+                {"}'"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Mensagem enviada com sucesso!
+              </AnimatedSpan>
+            </Terminal>
+            <CodeBlock
+              title="Resposta"
+              language="json"
+              code={`{
+  "success": true,
+  "data": {
+    "message_id": "3EB0A1B2C3D4E5F6",
+    "status": "sent",
+    "timestamp": "2024-01-15T10:35:00.000Z"
+  }
+}`}
+            />
+          </div>
+        </section>
+
+        {/* Recursos */}
+        <section id="recursos" className="mb-16 scroll-mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold">Recursos principais</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="relative p-6 rounded-xl border border-border bg-card overflow-hidden"
+              >
+                <ShineBorder 
+                  shineColor={["#8257e5", "#996dff"]} 
+                  duration={14 + index * 2} 
+                  borderWidth={1}
+                />
+                <div className="flex items-start gap-4 relative z-10">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="p-8 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="text-xl font-bold mb-2">Pronto para começar?</h3>
+              <p className="text-muted-foreground">
+                Crie sua primeira instância e comece a enviar mensagens agora.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href="/docs/api/instances"
+                className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors text-sm font-medium"
+              >
+                Ver documentação
+              </Link>
+              <Link
+                href="/instances"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                Ir para Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
-    </>
+
+      <OnThisPage items={tocItems} />
+    </div>
   );
 }
-

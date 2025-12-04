@@ -27,6 +27,7 @@ type Instance struct {
 	ProfileName string         `json:"profile_name,omitempty"`
 	ProfilePic  string         `json:"profile_pic,omitempty"`
 	QRCode      string         `json:"qr_code,omitempty"`
+	DeviceJID   string         `json:"device_jid,omitempty"` // WhatsApp device JID for session persistence
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
@@ -61,6 +62,12 @@ func (i *Instance) SetConnected(phoneNumber, profileName, profilePic string) {
 	i.ProfileName = profileName
 	i.ProfilePic = profilePic
 	i.QRCode = ""
+	i.UpdatedAt = time.Now()
+}
+
+// SetDeviceJID saves the WhatsApp device JID for session persistence
+func (i *Instance) SetDeviceJID(deviceJID string) {
+	i.DeviceJID = deviceJID
 	i.UpdatedAt = time.Now()
 }
 
