@@ -130,6 +130,21 @@ func NewRouter(
 	legacy.Post("/:name/logout", instanceHandler.Logout)
 	legacy.Delete("/:name", instanceHandler.Delete)
 
+	// Legacy message routes (without /api prefix)
+	legacyMessage := app.Group("/message/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyMessage.Post("/text", messageHandler.SendText)
+	legacyMessage.Post("/media", messageHandler.SendMedia)
+	legacyMessage.Post("/audio", messageHandler.SendAudio)
+	legacyMessage.Post("/sticker", messageHandler.SendSticker)
+	legacyMessage.Post("/location", messageHandler.SendLocation)
+	legacyMessage.Post("/contact", messageHandler.SendContact)
+	legacyMessage.Post("/reaction", messageHandler.SendReaction)
+	legacyMessage.Post("/poll", messageHandler.SendPoll)
+	legacyMessage.Post("/button", messageHandler.SendButton)
+	legacyMessage.Post("/list", messageHandler.SendList)
+	legacyMessage.Post("/carousel", messageHandler.SendCarousel)
+	legacyMessage.Post("/story", messageHandler.SendStory)
+
 	return app
 }
 

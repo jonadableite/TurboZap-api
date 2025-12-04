@@ -97,6 +97,9 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 	// Create whatsmeow client
 	waLogger := waLog.Stdout("Client-"+instance.Name, "INFO", true)
 	waClient := whatsmeow.NewClient(device, waLogger)
+	if waClient == nil {
+		return nil, fmt.Errorf("failed to create whatsmeow client: NewClient returned nil")
+	}
 
 	// Create event handler
 	handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher)
@@ -170,6 +173,9 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 
 	// Check if already connected (without holding lock during connect)
 	client.mu.RLock()
+	if client.WAClient == nil {
+		return fmt.Errorf("WhatsApp client is not initialized")
+	}
 	isConnected := client.WAClient.IsConnected()
 	hasSession := client.WAClient.Store.ID != nil
 	client.mu.RUnlock()
@@ -379,6 +385,9 @@ func (m *Manager) IsConnected(instanceID uuid.UUID) bool {
 	client.mu.RLock()
 	defer client.mu.RUnlock()
 
+	if client.WAClient == nil {
+		return false
+	}
 	return client.WAClient.IsConnected()
 }
 
@@ -393,6 +402,9 @@ func (m *Manager) IsLoggedIn(instanceID uuid.UUID) bool {
 	defer client.mu.RUnlock()
 
 	// Store.ID is set when the device is successfully paired
+	if client.WAClient == nil {
+		return false
+	}
 	return client.WAClient.Store.ID != nil
 }
 
@@ -406,6 +418,9 @@ func (m *Manager) GetConnectionInfo(instanceID uuid.UUID) (phone, name, pic stri
 	client.mu.RLock()
 	defer client.mu.RUnlock()
 
+	if client.WAClient == nil {
+		return "", "", "", fmt.Errorf("WhatsApp client is not initialized")
+	}
 	if client.WAClient.Store.ID == nil {
 		return "", "", "", nil
 	}
@@ -459,6 +474,10 @@ func (m *Manager) SendText(ctx context.Context, instanceID uuid.UUID, to, text s
 		msg.ExtendedTextMessage.ContextInfo.MentionedJID = mentions
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send message: %w", err)
@@ -503,6 +522,10 @@ func (m *Manager) SendImage(ctx context.Context, instanceID uuid.UUID, to string
 			StanzaID:    proto.String(quotedID),
 			Participant: proto.String(jid.String()),
 		}
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
@@ -551,6 +574,10 @@ func (m *Manager) SendVideo(ctx context.Context, instanceID uuid.UUID, to string
 		}
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send video: %w", err)
@@ -595,6 +622,10 @@ func (m *Manager) SendAudio(ctx context.Context, instanceID uuid.UUID, to string
 			StanzaID:    proto.String(quotedID),
 			Participant: proto.String(jid.String()),
 		}
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
@@ -644,6 +675,10 @@ func (m *Manager) SendDocument(ctx context.Context, instanceID uuid.UUID, to str
 		}
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send document: %w", err)
@@ -682,6 +717,10 @@ func (m *Manager) SendSticker(ctx context.Context, instanceID uuid.UUID, to stri
 		},
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send sticker: %w", err)
@@ -709,6 +748,10 @@ func (m *Manager) SendLocation(ctx context.Context, instanceID uuid.UUID, to str
 			Name:             proto.String(name),
 			Address:          proto.String(address),
 		},
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
@@ -755,6 +798,10 @@ END:VCARD`, c.FullName, c.FullName, c.Phone, c.Phone)
 		},
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send contact: %w", err)
@@ -785,6 +832,10 @@ func (m *Manager) SendReaction(ctx context.Context, instanceID uuid.UUID, to, me
 			Text:              proto.String(emoji),
 			SenderTimestampMS: proto.Int64(time.Now().UnixMilli()),
 		},
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
@@ -825,6 +876,10 @@ func (m *Manager) SendPoll(ctx context.Context, instanceID uuid.UUID, to, questi
 			Options:                pollOptions,
 			SelectableOptionsCount: proto.Uint32(uint32(selectableCount)),
 		},
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
@@ -940,6 +995,10 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		ButtonsMessage: buttonsMsg,
 	}
 
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
+	}
+
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to send buttons message: %w", err)
@@ -988,6 +1047,10 @@ func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title,
 
 	msg := &waE2E.Message{
 		ListMessage: listMsg,
+	}
+
+	if client.WAClient == nil {
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)

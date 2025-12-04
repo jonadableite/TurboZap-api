@@ -740,4 +740,3 @@ func (h *MessageHandler) SendStory(c *fiber.Ctx) error {
 		Timestamp: time.Now(),
 	})
 }
-
