@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -52,8 +53,13 @@ type WhatsAppConfig struct {
 
 // WebhookConfig holds webhook-related configuration
 type WebhookConfig struct {
-	Timeout    int
-	RetryCount int
+	Timeout               int
+	RetryCount            int
+	GlobalEnabled         bool
+	GlobalURL             string
+	GlobalWebhookByEvents bool
+	GlobalBase64          bool
+	GlobalEvents          map[string]bool
 }
 
 // LogConfig holds logging-related configuration
@@ -75,12 +81,12 @@ type RabbitMQConfig struct {
 
 // RedisConfig holds Redis-related configuration
 type RedisConfig struct {
-	URL            string
-	Password       string
-	DB             int
-	MaxRetries     int
-	PoolSize       int
-	RateLimitRPM   int // Rate limit requests per minute
+	URL          string
+	Password     string
+	DB           int
+	MaxRetries   int
+	PoolSize     int
+	RateLimitRPM int // Rate limit requests per minute
 }
 
 // MinIOConfig holds MinIO-related configuration
@@ -121,8 +127,13 @@ func Load() (*Config, error) {
 			ReconnectInterval: getEnvInt("WHATSAPP_RECONNECT_INTERVAL", 5),
 		},
 		Webhook: WebhookConfig{
-			Timeout:    getEnvInt("WEBHOOK_TIMEOUT", 30),
-			RetryCount: getEnvInt("WEBHOOK_RETRY_COUNT", 3),
+			Timeout:               getEnvInt("WEBHOOK_TIMEOUT", 30),
+			RetryCount:            getEnvInt("WEBHOOK_RETRY_COUNT", 3),
+			GlobalEnabled:         getEnvBool("WEBHOOK_GLOBAL_ENABLED", false),
+			GlobalURL:             getEnv("WEBHOOK_GLOBAL_URL", ""),
+			GlobalWebhookByEvents: getEnvBool("WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS", false),
+			GlobalBase64:          getEnvBool("WEBHOOK_GLOBAL_BASE64", false),
+			GlobalEvents:          loadWebhookEventToggles(),
 		},
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
@@ -190,3 +201,43 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
+func loadWebhookEventToggles() map[string]bool {
+	toggles := make(map[string]bool)
+
+	const prefix = "WEBHOOK_EVENTS_"
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, prefix) {
+			continue
+		}
+
+		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		envKey := strings.TrimPrefix(parts[0], prefix)
+		enabled, err := strconv.ParseBool(parts[1])
+		if err != nil {
+			continue
+		}
+
+		slug := slugFromWebhookEnvKey(envKey)
+		if slug == "" {
+			continue
+		}
+		toggles[slug] = enabled
+	}
+	return toggles
+}
+
+func slugFromWebhookEnvKey(key string) string {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return ""
+	}
+
+	slug := strings.ToLower(key)
+	slug = strings.ReplaceAll(slug, "__", "_")
+	slug = strings.ReplaceAll(slug, "_", "-")
+	return slug
+}

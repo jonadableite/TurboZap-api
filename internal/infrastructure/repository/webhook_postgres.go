@@ -25,6 +25,10 @@ func NewWebhookPostgresRepository(pool *pgxpool.Pool) repository.WebhookReposito
 
 // Create creates a new webhook configuration
 func (r *webhookPostgresRepository) Create(ctx context.Context, webhook *entity.Webhook) error {
+	if webhook.Headers == nil {
+		webhook.Headers = make(map[string]string)
+	}
+
 	headersJSON, err := json.Marshal(webhook.Headers)
 	if err != nil {
 		return fmt.Errorf("failed to marshal headers: %w", err)
@@ -36,8 +40,8 @@ func (r *webhookPostgresRepository) Create(ctx context.Context, webhook *entity.
 	}
 
 	query := `
-		INSERT INTO webhooks (id, instance_id, url, events, headers, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO webhooks (id, instance_id, url, events, headers, enabled, webhook_by_events, webhook_base64, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	_, err = r.pool.Exec(ctx, query,
 		webhook.ID,
@@ -46,6 +50,8 @@ func (r *webhookPostgresRepository) Create(ctx context.Context, webhook *entity.
 		events,
 		headersJSON,
 		webhook.Enabled,
+		webhook.WebhookByEvents,
+		webhook.UseBase64,
 		webhook.CreatedAt,
 		webhook.UpdatedAt,
 	)
@@ -58,7 +64,7 @@ func (r *webhookPostgresRepository) Create(ctx context.Context, webhook *entity.
 // GetByID retrieves a webhook by ID
 func (r *webhookPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Webhook, error) {
 	query := `
-		SELECT id, instance_id, url, events, headers, enabled, created_at, updated_at
+		SELECT id, instance_id, url, events, headers, enabled, webhook_by_events, webhook_base64, created_at, updated_at
 		FROM webhooks WHERE id = $1
 	`
 	return r.scanWebhook(ctx, query, id)
@@ -67,7 +73,7 @@ func (r *webhookPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (
 // GetByInstance retrieves webhook configuration for an instance
 func (r *webhookPostgresRepository) GetByInstance(ctx context.Context, instanceID uuid.UUID) (*entity.Webhook, error) {
 	query := `
-		SELECT id, instance_id, url, events, headers, enabled, created_at, updated_at
+		SELECT id, instance_id, url, events, headers, enabled, webhook_by_events, webhook_base64, created_at, updated_at
 		FROM webhooks WHERE instance_id = $1
 	`
 	return r.scanWebhook(ctx, query, instanceID)
@@ -75,6 +81,10 @@ func (r *webhookPostgresRepository) GetByInstance(ctx context.Context, instanceI
 
 // Update updates a webhook configuration
 func (r *webhookPostgresRepository) Update(ctx context.Context, webhook *entity.Webhook) error {
+	if webhook.Headers == nil {
+		webhook.Headers = make(map[string]string)
+	}
+
 	headersJSON, err := json.Marshal(webhook.Headers)
 	if err != nil {
 		return fmt.Errorf("failed to marshal headers: %w", err)
@@ -87,7 +97,7 @@ func (r *webhookPostgresRepository) Update(ctx context.Context, webhook *entity.
 
 	query := `
 		UPDATE webhooks 
-		SET url = $2, events = $3, headers = $4, enabled = $5, updated_at = $6
+		SET url = $2, events = $3, headers = $4, enabled = $5, webhook_by_events = $6, webhook_base64 = $7, updated_at = $8
 		WHERE id = $1
 	`
 	webhook.UpdatedAt = time.Now()
@@ -97,6 +107,8 @@ func (r *webhookPostgresRepository) Update(ctx context.Context, webhook *entity.
 		events,
 		headersJSON,
 		webhook.Enabled,
+		webhook.WebhookByEvents,
+		webhook.UseBase64,
 		webhook.UpdatedAt,
 	)
 	if err != nil {
@@ -107,6 +119,10 @@ func (r *webhookPostgresRepository) Update(ctx context.Context, webhook *entity.
 
 // Upsert creates or updates a webhook configuration
 func (r *webhookPostgresRepository) Upsert(ctx context.Context, webhook *entity.Webhook) error {
+	if webhook.Headers == nil {
+		webhook.Headers = make(map[string]string)
+	}
+
 	headersJSON, err := json.Marshal(webhook.Headers)
 	if err != nil {
 		return fmt.Errorf("failed to marshal headers: %w", err)
@@ -121,13 +137,15 @@ func (r *webhookPostgresRepository) Upsert(ctx context.Context, webhook *entity.
 	webhook.UpdatedAt = now
 
 	query := `
-		INSERT INTO webhooks (id, instance_id, url, events, headers, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO webhooks (id, instance_id, url, events, headers, enabled, webhook_by_events, webhook_base64, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (instance_id) DO UPDATE SET
 			url = EXCLUDED.url,
 			events = EXCLUDED.events,
 			headers = EXCLUDED.headers,
 			enabled = EXCLUDED.enabled,
+			webhook_by_events = EXCLUDED.webhook_by_events,
+			webhook_base64 = EXCLUDED.webhook_base64,
 			updated_at = EXCLUDED.updated_at
 	`
 	_, err = r.pool.Exec(ctx, query,
@@ -137,6 +155,8 @@ func (r *webhookPostgresRepository) Upsert(ctx context.Context, webhook *entity.
 		events,
 		headersJSON,
 		webhook.Enabled,
+		webhook.WebhookByEvents,
+		webhook.UseBase64,
 		webhook.CreatedAt,
 		webhook.UpdatedAt,
 	)
@@ -191,6 +211,8 @@ func (r *webhookPostgresRepository) scanWebhook(ctx context.Context, query strin
 		&events,
 		&headersJSON,
 		&webhook.Enabled,
+		&webhook.WebhookByEvents,
+		&webhook.UseBase64,
 		&webhook.CreatedAt,
 		&webhook.UpdatedAt,
 	)

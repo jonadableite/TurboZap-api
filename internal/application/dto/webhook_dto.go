@@ -6,18 +6,22 @@ import (
 
 // SetWebhookRequest represents a request to set webhook configuration
 type SetWebhookRequest struct {
-	URL     string                `json:"url" validate:"required,url"`
-	Events  []entity.WebhookEvent `json:"events,omitempty"`
-	Headers map[string]string     `json:"headers,omitempty"`
-	Enabled *bool                 `json:"enabled,omitempty"`
+	URL      string                `json:"url" validate:"required,url"`
+	Events   []entity.WebhookEvent `json:"events,omitempty"`
+	Headers  map[string]string     `json:"headers,omitempty"`
+	Enabled  *bool                 `json:"enabled,omitempty"`
+	ByEvents *bool                 `json:"webhook_by_events,omitempty"`
+	Base64   *bool                 `json:"webhook_base64,omitempty"`
 }
 
 // GetWebhookResponse represents the webhook configuration response
 type GetWebhookResponse struct {
-	URL     string                `json:"url"`
-	Events  []entity.WebhookEvent `json:"events"`
-	Headers map[string]string     `json:"headers,omitempty"`
-	Enabled bool                  `json:"enabled"`
+	URL             string                `json:"url"`
+	Events          []entity.WebhookEvent `json:"events"`
+	Headers         map[string]string     `json:"headers,omitempty"`
+	Enabled         bool                  `json:"enabled"`
+	WebhookByEvents bool                  `json:"webhook_by_events"`
+	WebhookBase64   bool                  `json:"webhook_base64"`
 }
 
 // WebhookEventPayload represents the payload sent to webhooks
@@ -93,9 +97,11 @@ type ListResponseData struct {
 // ToGetWebhookResponse converts an entity to response DTO
 func ToGetWebhookResponse(webhook *entity.Webhook) GetWebhookResponse {
 	return GetWebhookResponse{
-		URL:     webhook.URL,
-		Events:  webhook.Events,
-		Headers: webhook.Headers,
-		Enabled: webhook.Enabled,
+		URL:             webhook.URL,
+		Events:          webhook.Events,
+		Headers:         webhook.Headers,
+		Enabled:         webhook.Enabled,
+		WebhookByEvents: webhook.WebhookByEvents,
+		WebhookBase64:   webhook.UseBase64,
 	}
 }

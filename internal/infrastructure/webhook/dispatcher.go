@@ -3,9 +3,11 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,14 +65,30 @@ func (d *Dispatcher) Dispatch(instanceID uuid.UUID, event entity.WebhookEvent, d
 }
 
 func (d *Dispatcher) dispatchAsync(instanceID uuid.UUID, event entity.WebhookEvent, data interface{}) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.config.Timeout)*time.Second)
+	defer cancel()
+
+	d.mu.RLock()
+	instanceName := d.instanceMap[instanceID]
+	d.mu.RUnlock()
+
+	payload := entity.WebhookPayload{
+		Event:      event,
+		InstanceID: instanceID.String(),
+		Instance:   instanceName,
+		Timestamp:  time.Now(),
+		Data:       data,
+	}
+
+	d.dispatchInstanceWebhook(ctx, instanceID, payload)
+	d.dispatchGlobalWebhook(ctx, payload)
+}
+
+func (d *Dispatcher) dispatchInstanceWebhook(ctx context.Context, instanceID uuid.UUID, payload entity.WebhookPayload) {
 	if d.webhookRepo == nil {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.config.Timeout)*time.Second)
-	defer cancel()
-
-	// Get webhook config for instance
 	webhook, err := d.webhookRepo.GetByInstance(ctx, instanceID)
 	if err != nil {
 		d.logger.Error("Failed to get webhook config",
@@ -84,30 +102,45 @@ func (d *Dispatcher) dispatchAsync(instanceID uuid.UUID, event entity.WebhookEve
 		return
 	}
 
-	// Check if event is subscribed
-	if !webhook.ShouldTrigger(event) {
+	if !webhook.ShouldTrigger(payload.Event) {
 		return
 	}
 
-	// Get instance name
-	d.mu.RLock()
-	instanceName := d.instanceMap[instanceID]
-	d.mu.RUnlock()
-
-	// Build payload
-	payload := entity.WebhookPayload{
-		Event:      event,
-		InstanceID: instanceID.String(),
-		Instance:   instanceName,
-		Timestamp:  time.Now(),
-		Data:       data,
+	target := webhookTarget{
+		URL:       webhook.URL,
+		Headers:   webhook.Headers,
+		ByEvents:  webhook.WebhookByEvents,
+		UseBase64: webhook.UseBase64,
+		Label:     "instance",
 	}
 
-	// Send webhook with retries
-	d.sendWithRetry(ctx, webhook, payload)
+	d.sendWithRetry(ctx, target, payload)
 }
 
-func (d *Dispatcher) sendWithRetry(ctx context.Context, webhook *entity.Webhook, payload entity.WebhookPayload) {
+func (d *Dispatcher) dispatchGlobalWebhook(ctx context.Context, payload entity.WebhookPayload) {
+	if !d.config.GlobalEnabled || d.config.GlobalURL == "" {
+		return
+	}
+
+	if len(d.config.GlobalEvents) > 0 {
+		allowed, ok := d.config.GlobalEvents[payload.Event.Slug()]
+		if !ok || !allowed {
+			return
+		}
+	}
+
+	target := webhookTarget{
+		URL:       d.config.GlobalURL,
+		Headers:   nil,
+		ByEvents:  d.config.GlobalWebhookByEvents,
+		UseBase64: d.config.GlobalBase64,
+		Label:     "global",
+	}
+
+	d.sendWithRetry(ctx, target, payload)
+}
+
+func (d *Dispatcher) sendWithRetry(ctx context.Context, target webhookTarget, payload entity.WebhookPayload) {
 	var lastErr error
 
 	for attempt := 0; attempt <= d.config.RetryCount; attempt++ {
@@ -121,52 +154,63 @@ func (d *Dispatcher) sendWithRetry(ctx context.Context, webhook *entity.Webhook,
 			}
 		}
 
-		err := d.send(ctx, webhook, payload)
+		err := d.send(ctx, target, payload)
 		if err == nil {
 			d.logger.Debug("Webhook delivered successfully",
-				zap.String("url", webhook.URL),
+				zap.String("url", target.URL),
 				zap.String("event", string(payload.Event)),
+				zap.String("target", target.Label),
 			)
 			return
 		}
 
 		lastErr = err
 		d.logger.Warn("Webhook delivery failed",
-			zap.String("url", webhook.URL),
+			zap.String("url", target.URL),
 			zap.String("event", string(payload.Event)),
 			zap.Int("attempt", attempt+1),
+			zap.String("target", target.Label),
 			zap.Error(err),
 		)
 	}
 
 	d.logger.Error("Webhook delivery failed after all retries",
-		zap.String("url", webhook.URL),
+		zap.String("url", target.URL),
 		zap.String("event", string(payload.Event)),
+		zap.String("target", target.Label),
 		zap.Error(lastErr),
 	)
 }
 
-func (d *Dispatcher) send(ctx context.Context, webhook *entity.Webhook, payload entity.WebhookPayload) error {
+func (d *Dispatcher) send(ctx context.Context, target webhookTarget, payload entity.WebhookPayload) error {
 	// Marshal payload
-	body, err := json.Marshal(payload)
+	body, contentType, err := encodePayload(payload, target.UseBase64)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return err
+	}
+
+	url := target.URL
+	if target.ByEvents {
+		url = appendEventSlug(url, payload.Event)
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhook.URL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set headers
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("User-Agent", "TurboZap-Webhook/1.0")
 	req.Header.Set("X-Webhook-Event", string(payload.Event))
 	req.Header.Set("X-Instance-ID", payload.InstanceID)
+	if target.UseBase64 {
+		req.Header.Set("X-Content-Transfer-Encoding", "base64")
+	}
 
 	// Add custom headers
-	for key, value := range webhook.Headers {
+	for key, value := range target.Headers {
 		req.Header.Set(key, value)
 	}
 
@@ -193,4 +237,41 @@ func (d *Dispatcher) DispatchBatch(instanceID uuid.UUID, events []struct {
 	for _, e := range events {
 		d.Dispatch(instanceID, e.Event, e.Data)
 	}
+}
+
+type webhookTarget struct {
+	URL       string
+	Headers   map[string]string
+	ByEvents  bool
+	UseBase64 bool
+	Label     string
+}
+
+func appendEventSlug(base string, event entity.WebhookEvent) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return base
+	}
+
+	slug := event.Slug()
+	if slug == "" {
+		return base
+	}
+
+	base = strings.TrimRight(base, "/")
+	return fmt.Sprintf("%s/%s", base, slug)
+}
+
+func encodePayload(payload entity.WebhookPayload, useBase64 bool) ([]byte, string, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	if !useBase64 {
+		return body, "application/json", nil
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(body)
+	return []byte(encoded), "text/plain", nil
 }

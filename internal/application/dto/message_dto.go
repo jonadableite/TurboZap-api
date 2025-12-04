@@ -188,6 +188,57 @@ type MessageAckEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// MessageDeleteEvent represents a deleted message
+type MessageDeleteEvent struct {
+	MessageID string    `json:"message_id"`
+	Chat      string    `json:"chat"`
+	Actor     string    `json:"actor,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// MessageUpdateEvent represents updated message metadata
+type MessageUpdateEvent struct {
+	MessageID string    `json:"message_id"`
+	Chat      string    `json:"chat"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// MessageSentEvent represents an outgoing message
+type MessageSentEvent struct {
+	MessageID string    `json:"message_id"`
+	To        string    `json:"to"`
+	Type      string    `json:"type"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SyncSummaryData represents history sync summaries
+type SyncSummaryData struct {
+	Resource string `json:"resource"`
+	Count    int    `json:"count"`
+	SyncType string `json:"sync_type"`
+}
+
+// ContactUpdateEvent represents contact metadata changes
+type ContactUpdateEvent struct {
+	JID      string `json:"jid"`
+	PushName string `json:"push_name,omitempty"`
+	Event    string `json:"event"`
+}
+
+// GroupMetadataEvent represents detailed group updates
+type GroupMetadataEvent struct {
+	GroupJID  string    `json:"group_jid"`
+	Event     string    `json:"event"`
+	Actor     string    `json:"actor,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	Subject   string    `json:"subject,omitempty"`
+	Topic     string    `json:"topic,omitempty"`
+	Join      []string  `json:"join,omitempty"`
+	Leave     []string  `json:"leave,omitempty"`
+	Promote   []string  `json:"promote,omitempty"`
+	Demote    []string  `json:"demote,omitempty"`
+}
+
 // ToMessageResponse converts an entity to response DTO
 func ToMessageResponse(msg *entity.Message, waMessageID string) MessageResponse {
 	return MessageResponse{

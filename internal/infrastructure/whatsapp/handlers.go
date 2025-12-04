@@ -181,6 +181,17 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 		return
 	}
 
+	msg := evt.Message
+	if msg == nil {
+		return
+	}
+
+	if h.handleProtocolMessage(evt, msg.ProtocolMessage) {
+		return
+	}
+
+	h.handleInteractiveResponses(evt, msg)
+
 	// Build message event data
 	msgEvent := dto.MessageReceivedEvent{
 		MessageID: evt.Info.ID,
@@ -193,12 +204,6 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 	// Get sender name
 	if evt.Info.PushName != "" {
 		msgEvent.FromName = evt.Info.PushName
-	}
-
-	// Determine message type and content
-	msg := evt.Message
-	if msg == nil {
-		return
 	}
 
 	switch {
@@ -270,12 +275,15 @@ func (h *EventHandler) handleReceipt(evt *events.Receipt) {
 	}
 
 	for _, msgID := range evt.MessageIDs {
-		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessageAck, dto.MessageAckEvent{
+		eventData := dto.MessageAckEvent{
 			MessageID: msgID,
 			From:      evt.Chat.String(),
 			Status:    status,
 			Timestamp: evt.Timestamp,
-		})
+		}
+
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessagesUpdate, eventData)
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessageAck, eventData)
 	}
 }
 
@@ -298,11 +306,27 @@ func (h *EventHandler) handlePresence(evt *events.Presence) {
 }
 
 func (h *EventHandler) handleGroupInfo(evt *events.GroupInfo) {
-	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventGroupUpdate, map[string]interface{}{
-		"group_jid": evt.JID.String(),
-		"event":     "group_info_update",
-		"timestamp": time.Now().Unix(),
-	})
+	metadata := dto.GroupMetadataEvent{
+		GroupJID:  evt.JID.String(),
+		Event:     "group_info_update",
+		Timestamp: evt.Timestamp,
+		Join:      jidsToStrings(evt.Join),
+		Leave:     jidsToStrings(evt.Leave),
+		Promote:   jidsToStrings(evt.Promote),
+		Demote:    jidsToStrings(evt.Demote),
+	}
+
+	if evt.Sender != nil {
+		metadata.Actor = evt.Sender.String()
+	}
+	if evt.Name != nil {
+		metadata.Subject = evt.Name.Name
+	}
+	if evt.Topic != nil {
+		metadata.Topic = evt.Topic.Topic
+	}
+
+	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventGroupsUpdate, metadata)
 }
 
 func (h *EventHandler) handleJoinedGroup(evt *events.JoinedGroup) {
@@ -316,13 +340,56 @@ func (h *EventHandler) handleJoinedGroup(evt *events.JoinedGroup) {
 		Participants: participants,
 		Action:       "join",
 	})
+
+	metadata := dto.GroupMetadataEvent{
+		GroupJID: evt.JID.String(),
+		Event:    "group_joined",
+		Join:     participants,
+	}
+	if evt.Sender != nil {
+		metadata.Actor = evt.Sender.String()
+	}
+	metadata.Timestamp = time.Now()
+
+	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventGroupsUpsert, metadata)
 }
 
 func (h *EventHandler) handleHistorySync(evt *events.HistorySync) {
+	if evt.Data == nil {
+		return
+	}
+
+	syncType := evt.Data.GetSyncType().String()
 	h.logger.Debug("History sync received",
 		zap.String("instance", h.instanceName),
-		zap.String("type", evt.Data.GetSyncType().String()),
+		zap.String("type", syncType),
 	)
+
+	if messages := evt.Data.GetStatusV3Messages(); len(messages) > 0 {
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessagesSet, dto.SyncSummaryData{
+			Resource: "messages",
+			Count:    len(messages),
+			SyncType: syncType,
+		})
+	}
+
+	if contacts := evt.Data.GetPushnames(); len(contacts) > 0 {
+		summary := dto.SyncSummaryData{
+			Resource: "contacts",
+			Count:    len(contacts),
+			SyncType: syncType,
+		}
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventContactsSet, summary)
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventContactsUpsert, summary)
+	}
+
+	if chats := evt.Data.GetConversations(); len(chats) > 0 {
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventChatsSet, dto.SyncSummaryData{
+			Resource: "chats",
+			Count:    len(chats),
+			SyncType: syncType,
+		})
+	}
 }
 
 func (h *EventHandler) handlePushName(evt *events.PushName) {
@@ -331,6 +398,12 @@ func (h *EventHandler) handlePushName(evt *events.PushName) {
 		zap.String("jid", evt.JID.String()),
 		zap.String("name", evt.NewPushName),
 	)
+
+	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventContactsUpdate, dto.ContactUpdateEvent{
+		JID:      evt.JID.String(),
+		PushName: evt.NewPushName,
+		Event:    "push_name",
+	})
 }
 
 // extractTextFromMessage extracts text content from a message
@@ -360,4 +433,76 @@ func extractTextFromMessage(msg *waE2E.Message) string {
 	}
 
 	return ""
+}
+
+func (h *EventHandler) handleInteractiveResponses(evt *events.Message, msg *waE2E.Message) {
+	if msg == nil {
+		return
+	}
+
+	if resp := msg.ButtonsResponseMessage; resp != nil {
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventButtonResponse, dto.ButtonResponseData{
+			MessageID:  evt.Info.ID,
+			From:       evt.Info.Sender.String(),
+			ButtonID:   resp.GetSelectedButtonID(),
+			ButtonText: resp.GetSelectedDisplayText(),
+		})
+	}
+
+	if resp := msg.ListResponseMessage; resp != nil {
+		if single := resp.GetSingleSelectReply(); single != nil {
+			h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventListResponse, dto.ListResponseData{
+				MessageID:   evt.Info.ID,
+				From:        evt.Info.Sender.String(),
+				RowID:       single.GetSelectedRowID(),
+				Title:       resp.GetTitle(),
+				Description: resp.GetDescription(),
+			})
+		}
+	}
+}
+
+func (h *EventHandler) handleProtocolMessage(evt *events.Message, protocolMsg *waE2E.ProtocolMessage) bool {
+	if protocolMsg == nil {
+		return false
+	}
+
+	key := protocolMsg.GetKey()
+	if key == nil {
+		return false
+	}
+
+	chatJID := key.GetRemoteJID()
+
+	switch protocolMsg.GetType() {
+	case waE2E.ProtocolMessage_REVOKE:
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessagesDelete, dto.MessageDeleteEvent{
+			MessageID: key.GetID(),
+			Chat:      chatJID,
+			Actor:     evt.Info.Sender.String(),
+			Timestamp: evt.Info.Timestamp,
+		})
+		return true
+	case waE2E.ProtocolMessage_MESSAGE_EDIT:
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessagesUpdate, dto.MessageUpdateEvent{
+			MessageID: key.GetID(),
+			Chat:      chatJID,
+			Timestamp: evt.Info.Timestamp,
+		})
+		return true
+	default:
+		return false
+	}
+}
+
+func jidsToStrings(jids []types.JID) []string {
+	if len(jids) == 0 {
+		return nil
+	}
+
+	out := make([]string, len(jids))
+	for i, jid := range jids {
+		out[i] = jid.String()
+	}
+	return out
 }

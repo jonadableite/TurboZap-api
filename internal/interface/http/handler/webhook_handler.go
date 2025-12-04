@@ -68,6 +68,12 @@ func (h *WebhookHandler) SetWebhook(c *fiber.Ctx) error {
 	webhook := entity.NewWebhook(instance.ID, req.URL, events)
 	webhook.Headers = req.Headers
 	webhook.Enabled = enabled
+	if req.ByEvents != nil {
+		webhook.WebhookByEvents = *req.ByEvents
+	}
+	if req.Base64 != nil {
+		webhook.UseBase64 = *req.Base64
+	}
 
 	if err := h.webhookRepo.Upsert(c.Context(), webhook); err != nil {
 		h.logger.Error("Failed to save webhook", zap.Error(err))
@@ -224,4 +230,3 @@ func (h *WebhookHandler) ListWebhookEvents(c *fiber.Ctx) error {
 		"events": eventStrings,
 	})
 }
-

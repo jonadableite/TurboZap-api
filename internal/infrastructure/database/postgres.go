@@ -65,6 +65,7 @@ func RunMigrations(pool *pgxpool.Pool) error {
 		{3, migrationV3CreateMessages},
 		{4, migrationV4WhatsmeowTables},
 		{5, migrationV5AddDeviceJID},
+		{6, migrationV6AddWebhookOptions},
 	}
 
 	for _, m := range migrations {
@@ -256,4 +257,10 @@ ALTER TABLE instances
 ADD COLUMN IF NOT EXISTS device_jid TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_instances_device_jid ON instances(device_jid) WHERE device_jid IS NOT NULL;
+`
+
+const migrationV6AddWebhookOptions = `
+ALTER TABLE webhooks
+ADD COLUMN IF NOT EXISTS webhook_by_events BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS webhook_base64 BOOLEAN DEFAULT false;
 `

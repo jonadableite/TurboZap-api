@@ -695,6 +695,8 @@ func (m *Manager) SendText(ctx context.Context, instanceID uuid.UUID, to, text s
 		return "", fmt.Errorf("failed to send message: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "text", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -744,6 +746,8 @@ func (m *Manager) SendImage(ctx context.Context, instanceID uuid.UUID, to string
 	if err != nil {
 		return "", fmt.Errorf("failed to send image: %w", err)
 	}
+
+	m.emitMessageSent(instanceID, jid, "image", resp.ID)
 
 	return resp.ID, nil
 }
@@ -795,6 +799,8 @@ func (m *Manager) SendVideo(ctx context.Context, instanceID uuid.UUID, to string
 		return "", fmt.Errorf("failed to send video: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "video", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -844,6 +850,8 @@ func (m *Manager) SendAudio(ctx context.Context, instanceID uuid.UUID, to string
 	if err != nil {
 		return "", fmt.Errorf("failed to send audio: %w", err)
 	}
+
+	m.emitMessageSent(instanceID, jid, "audio", resp.ID)
 
 	return resp.ID, nil
 }
@@ -896,6 +904,8 @@ func (m *Manager) SendDocument(ctx context.Context, instanceID uuid.UUID, to str
 		return "", fmt.Errorf("failed to send document: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "document", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -938,6 +948,8 @@ func (m *Manager) SendSticker(ctx context.Context, instanceID uuid.UUID, to stri
 		return "", fmt.Errorf("failed to send sticker: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "sticker", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -970,6 +982,8 @@ func (m *Manager) SendLocation(ctx context.Context, instanceID uuid.UUID, to str
 	if err != nil {
 		return "", fmt.Errorf("failed to send location: %w", err)
 	}
+
+	m.emitMessageSent(instanceID, jid, "location", resp.ID)
 
 	return resp.ID, nil
 }
@@ -1019,6 +1033,8 @@ END:VCARD`, c.FullName, c.FullName, c.Phone, c.Phone)
 		return "", fmt.Errorf("failed to send contact: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "contact", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -1054,6 +1070,8 @@ func (m *Manager) SendReaction(ctx context.Context, instanceID uuid.UUID, to, me
 	if err != nil {
 		return "", fmt.Errorf("failed to send reaction: %w", err)
 	}
+
+	m.emitMessageSent(instanceID, jid, "reaction", resp.ID)
 
 	return resp.ID, nil
 }
@@ -1098,6 +1116,8 @@ func (m *Manager) SendPoll(ctx context.Context, instanceID uuid.UUID, to, questi
 	if err != nil {
 		return "", fmt.Errorf("failed to send poll: %w", err)
 	}
+
+	m.emitMessageSent(instanceID, jid, "poll", resp.ID)
 
 	return resp.ID, nil
 }
@@ -1216,6 +1236,8 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		return "", fmt.Errorf("failed to send buttons message: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "button", resp.ID)
+
 	return resp.ID, nil
 }
 
@@ -1270,7 +1292,22 @@ func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title,
 		return "", fmt.Errorf("failed to send list message: %w", err)
 	}
 
+	m.emitMessageSent(instanceID, jid, "list", resp.ID)
+
 	return resp.ID, nil
+}
+
+func (m *Manager) emitMessageSent(instanceID uuid.UUID, to types.JID, messageType, messageID string) {
+	if m.dispatcher == nil || messageID == "" {
+		return
+	}
+
+	m.dispatcher.Dispatch(instanceID, entity.WebhookEventSendMessage, dto.MessageSentEvent{
+		MessageID: messageID,
+		To:        to.String(),
+		Type:      messageType,
+		Timestamp: time.Now(),
+	})
 }
 
 // ButtonData represents button data for SendButtons
