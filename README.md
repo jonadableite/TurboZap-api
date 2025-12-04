@@ -120,6 +120,54 @@ go run ./cmd/api
 | `MINIO_SECRET_KEY` | Secret key do MinIO | `minioadmin` |
 | `LOG_LEVEL` | Nível de log | `info` |
 
+### Variáveis de Webhook Global
+
+O TurboZap suporta webhooks globais que recebem eventos de todas as instâncias. Configure as seguintes variáveis de ambiente:
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `WEBHOOK_GLOBAL_ENABLED` | Habilita webhook global | `false` |
+| `WEBHOOK_GLOBAL_URL` | URL base do webhook global | - |
+| `WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS` | Usa URL específica por evento | `false` |
+| `WEBHOOK_GLOBAL_BASE64` | Codifica payload em base64 | `false` |
+| `WEBHOOK_EVENTS_APPLICATION_STARTUP` | Evento de inicialização | `false` |
+| `WEBHOOK_EVENTS_QRCODE_UPDATED` | Evento de QR code atualizado | `true` |
+| `WEBHOOK_EVENTS_CONNECTION_UPDATE` | Evento de atualização de conexão | `true` |
+| `WEBHOOK_EVENTS_MESSAGES_SET` | Evento de sincronização de mensagens | `false` |
+| `WEBHOOK_EVENTS_MESSAGES_UPSERT` | Evento de nova mensagem | `true` |
+| `WEBHOOK_EVENTS_MESSAGES_UPDATE` | Evento de atualização de mensagem | `true` |
+| `WEBHOOK_EVENTS_MESSAGES_DELETE` | Evento de mensagem deletada | `true` |
+| `WEBHOOK_EVENTS_SEND_MESSAGE` | Evento de mensagem enviada | `true` |
+| `WEBHOOK_EVENTS_CONTACTS_SET` | Evento de sincronização de contatos | `false` |
+| `WEBHOOK_EVENTS_CONTACTS_UPSERT` | Evento de contato atualizado | `false` |
+| `WEBHOOK_EVENTS_CONTACTS_UPDATE` | Evento de atualização de contato | `false` |
+| `WEBHOOK_EVENTS_PRESENCE_UPDATE` | Evento de atualização de presença | `true` |
+| `WEBHOOK_EVENTS_CHATS_SET` | Evento de sincronização de chats | `false` |
+| `WEBHOOK_EVENTS_CHATS_UPDATE` | Evento de atualização de chat | `false` |
+| `WEBHOOK_EVENTS_CHATS_UPSERT` | Evento de novo chat | `false` |
+| `WEBHOOK_EVENTS_CHATS_DELETE` | Evento de chat deletado | `false` |
+| `WEBHOOK_EVENTS_GROUPS_UPSERT` | Evento de grupo criado/atualizado | `true` |
+| `WEBHOOK_EVENTS_GROUPS_UPDATE` | Evento de atualização de grupo | `true` |
+| `WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE` | Evento de participantes do grupo | `true` |
+| `WEBHOOK_EVENTS_ERRORS` | Eventos de erro | `false` |
+| `WEBHOOK_EVENTS_ERRORS_WEBHOOK` | URL específica para erros | - |
+
+**Exemplo de configuração no `.env`:**
+
+```bash
+# Webhook Global
+WEBHOOK_GLOBAL_ENABLED=true
+WEBHOOK_GLOBAL_URL=https://meu-servidor.com/webhook
+WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+WEBHOOK_GLOBAL_BASE64=false
+
+# Eventos habilitados
+WEBHOOK_EVENTS_QRCODE_UPDATED=true
+WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+WEBHOOK_EVENTS_CONNECTION_UPDATE=true
+WEBHOOK_EVENTS_GROUPS_UPSERT=true
+```
+
 ## 📡 Endpoints da API
 
 ### Instâncias
@@ -167,8 +215,11 @@ go run ./cmd/api
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | `GET` | `/webhook/:instance` | Obter configuração de webhook |
-| `POST` | `/webhook/:instance` | Configurar webhook |
+| `POST` | `/webhook/:instance/set` | Configurar webhook |
 | `DELETE` | `/webhook/:instance` | Remover webhook |
+| `POST` | `/webhook/:instance/enable` | Habilitar webhook |
+| `POST` | `/webhook/:instance/disable` | Desabilitar webhook |
+| `GET` | `/webhook/events` | Listar todos os eventos disponíveis |
 
 ## 📨 Exemplos de Uso
 
@@ -234,19 +285,48 @@ curl -X POST http://localhost:8080/message/minha-instancia/list \
   }'
 ```
 
-### Configurar Webhook
+### Configurar Webhook por Instância
 
 ```bash
-curl -X POST http://localhost:8080/webhook/minha-instancia \
+curl -X POST http://localhost:8080/webhook/minha-instancia/set \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://meu-servidor.com/webhook",
-    "events": ["message_received", "message_ack", "connection_update"],
+    "events": ["message.received", "message.ack", "connection.update"],
+    "webhook_by_events": false,
+    "webhook_base64": false,
+    "enabled": true,
     "headers": {
       "Authorization": "Bearer meu-token"
     }
   }'
+```
+
+### Obter Configuração de Webhook
+
+```bash
+curl -X GET http://localhost:8080/webhook/minha-instancia \
+  -H "X-API-Key: your-api-key"
+```
+
+**Resposta:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "url": "https://meu-servidor.com/webhook",
+    "webhook_by_events": false,
+    "webhook_base64": false,
+    "events": [
+      "message.received",
+      "message.ack",
+      "connection.update"
+    ]
+  }
+}
 ```
 
 ## 🔌 WebSocket
@@ -272,16 +352,214 @@ ws.onmessage = (event) => {
 
 ## 🪝 Webhooks
 
-Eventos enviados para o webhook configurado:
+O TurboZap suporta dois tipos de webhooks:
 
-| Evento | Descrição |
-|--------|-----------|
-| `message_received` | Nova mensagem recebida |
-| `message_ack` | Status de mensagem (sent/delivered/read) |
-| `connection_update` | Mudança no status de conexão |
-| `qrcode_update` | Novo QR code gerado |
-| `presence_update` | Atualização de presença |
-| `group_update` | Mudanças em grupos |
+### Webhooks por Instância
+
+Configure webhooks específicos para cada instância através do endpoint `/webhook/:instance`. Cada instância pode ter sua própria URL e lista de eventos.
+
+### Webhooks Globais
+
+Configure um webhook global que recebe eventos de todas as instâncias através das variáveis de ambiente `WEBHOOK_GLOBAL_*`. Útil para centralizar o processamento de eventos.
+
+### Eventos Disponíveis
+
+| Evento | Descrição | Slug (para webhook_by_events) |
+|--------|-----------|-------------------------------|
+| `application_startup` | Inicialização da aplicação | `application-startup` |
+| `qrcode.updated` | Novo QR code gerado | `qrcode-updated` |
+| `connection.update` | Mudança no status de conexão | `connection-update` |
+| `messages.set` | Sincronização inicial de mensagens | `messages-set` |
+| `message.received` | Nova mensagem recebida | `messages-upsert` |
+| `messages.update` | Atualização de mensagem (status) | `messages-update` |
+| `messages.delete` | Mensagem deletada | `messages-delete` |
+| `message.sent` | Mensagem enviada pela API | `send-message` |
+| `contacts.set` | Sincronização inicial de contatos | `contacts-set` |
+| `contacts.upsert` | Contato criado/atualizado | `contacts-upsert` |
+| `contacts.update` | Atualização de contato | `contacts-update` |
+| `presence.update` | Atualização de presença | `presence-update` |
+| `chats.set` | Sincronização inicial de chats | `chats-set` |
+| `chats.update` | Atualização de chat | `chats-update` |
+| `chats.upsert` | Novo chat criado | `chats-upsert` |
+| `chats.delete` | Chat deletado | `chats-delete` |
+| `groups.upsert` | Grupo criado/atualizado | `groups-upsert` |
+| `groups.update` | Atualização de grupo | `groups-update` |
+| `group.participants.update` | Mudança em participantes | `group-participants-update` |
+
+### Webhook por Eventos (`webhook_by_events`)
+
+Quando `webhook_by_events` está habilitado, o TurboZap adiciona automaticamente o slug do evento ao final da URL do webhook.
+
+**Exemplo:**
+
+- URL base: `https://meu-servidor.com/webhook`
+- Evento: `messages-upsert`
+- URL final: `https://meu-servidor.com/webhook/messages-upsert`
+
+Isso permite criar endpoints específicos para cada tipo de evento no seu servidor.
+
+### Payload Base64
+
+Quando `webhook_base64` ou `WEBHOOK_GLOBAL_BASE64` está habilitado, o payload JSON completo é codificado em base64 antes de ser enviado.
+
+**Formato do Payload:**
+
+```json
+{
+  "event": "message.received",
+  "instance_id": "550e8400-e29b-41d4-a716-446655440000",
+  "instance": "minha-instancia",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "message_id": "3EB0123456789ABCDEF",
+    "from": "5511999999999@s.whatsapp.net",
+    "to": "5511888888888@s.whatsapp.net",
+    "type": "text",
+    "content": "Olá, mundo!",
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Com Base64 habilitado:**
+
+O payload acima seria enviado como uma string base64 no corpo da requisição, com o header `Content-Type: text/plain` e `X-Content-Transfer-Encoding: base64`.
+
+**Exemplo de decodificação (Node.js):**
+
+```javascript
+const base64Payload = req.body; // String base64
+const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf-8'));
+console.log('Evento:', payload.event);
+console.log('Dados:', payload.data);
+```
+
+### Configuração de Webhook por Instância
+
+```bash
+curl -X POST http://localhost:8080/webhook/minha-instancia \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://meu-servidor.com/webhook",
+    "events": ["message.received", "message.ack", "connection.update"],
+    "webhook_by_events": false,
+    "webhook_base64": false,
+    "enabled": true,
+    "headers": {
+      "Authorization": "Bearer meu-token"
+    }
+  }'
+```
+
+### Estrutura do Payload
+
+Todos os webhooks seguem a mesma estrutura:
+
+```json
+{
+  "event": "string",
+  "instance_id": "uuid",
+  "instance": "string",
+  "timestamp": "ISO8601",
+  "data": {}
+}
+```
+
+O campo `data` varia conforme o tipo de evento. Consulte a documentação da API para ver a estrutura específica de cada evento.
+
+### Exemplo Prático: Webhook Global com Base64
+
+**Configuração no `.env`:**
+
+```bash
+WEBHOOK_GLOBAL_ENABLED=true
+WEBHOOK_GLOBAL_URL=https://api.meuservidor.com/webhooks/turbozap
+WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true
+WEBHOOK_GLOBAL_BASE64=true
+
+# Habilitar apenas eventos importantes
+WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+WEBHOOK_EVENTS_CONNECTION_UPDATE=true
+WEBHOOK_EVENTS_QRCODE_UPDATED=true
+```
+
+**Comportamento:**
+
+- Evento `messages-upsert` → POST para `https://api.meuservidor.com/webhooks/turbozap/messages-upsert`
+- Payload será enviado como string base64 no corpo da requisição
+- Header `X-Content-Transfer-Encoding: base64` será incluído
+
+**Handler no seu servidor (Express.js exemplo):**
+
+```javascript
+app.post('/webhooks/turbozap/messages-upsert', (req, res) => {
+  // Decodificar payload base64
+  const base64Payload = req.body;
+  const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf-8'));
+  
+  console.log('Instância:', payload.instance);
+  console.log('Mensagem:', payload.data);
+  
+  // Processar mensagem...
+  
+  res.status(200).json({ received: true });
+});
+```
+
+### Exemplo Prático: Webhook por Instância sem Base64
+
+**Configuração via API:**
+
+```bash
+curl -X POST http://localhost:8080/webhook/minha-instancia/set \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.meuservidor.com/webhooks/instancia-1",
+    "events": ["message.received", "message.ack"],
+    "webhook_by_events": false,
+    "webhook_base64": false,
+    "enabled": true
+  }'
+```
+
+**Comportamento:**
+
+- Todos os eventos serão enviados para `https://api.meuservidor.com/webhooks/instancia-1`
+- Payload será JSON normal no corpo da requisição
+- Header `Content-Type: application/json`
+
+**Handler no seu servidor:**
+
+```javascript
+app.post('/webhooks/instancia-1', (req, res) => {
+  const payload = req.body; // Já é um objeto JSON
+  
+  console.log('Evento:', payload.event);
+  console.log('Dados:', payload.data);
+  
+  // Processar evento...
+  
+  res.status(200).json({ received: true });
+});
+```
+
+### Headers Personalizados
+
+Você pode adicionar headers personalizados aos webhooks:
+
+```json
+{
+  "url": "https://api.meuservidor.com/webhook",
+  "headers": {
+    "Authorization": "Bearer token-secreto",
+    "X-Custom-Header": "valor-customizado"
+  }
+}
+```
+
+Esses headers serão incluídos em todas as requisições do webhook.
 
 ## ⚠️ Limitações
 
