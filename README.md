@@ -6,6 +6,9 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 
+**Autores:**  
+[Fernando Sorrentino](https://github.com/Sorretino) • [Jonadab Leite](https://github.com/jonadableite)
+
 ## 📋 Índice
 
 - [Características](#-características)
@@ -365,7 +368,6 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 - [whatsmeow](https://github.com/tulir/whatsmeow) - Biblioteca Go para WhatsApp Web
 - [Fiber](https://gofiber.io/) - Framework web para Go
-- [Evolution API](https://github.com/EvolutionAPI/evolution-api) - Inspiração para o projeto
 
 ---
 
