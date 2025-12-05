@@ -30,6 +30,7 @@ type EventHandler struct {
 // WebhookDispatcher interface for dispatching webhook events
 type WebhookDispatcher interface {
 	Dispatch(instanceID uuid.UUID, event entity.WebhookEvent, data interface{})
+	RegisterInstance(instanceID uuid.UUID, instanceName string)
 }
 
 // NewEventHandler creates a new event handler
@@ -274,6 +275,7 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 		MessageID: evt.Info.ID,
 		From:      evt.Info.Sender.String(),
 		To:        evt.Info.Chat.String(),
+		FromMe:    evt.Info.IsFromMe,
 		IsGroup:   evt.Info.IsGroup,
 		Timestamp: evt.Info.Timestamp,
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
 	"github.com/jonadableite/turbozap-api/pkg/config"
+	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waCommon"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -24,7 +25,6 @@ import (
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	waLog "go.mau.fi/whatsmeow/util/log"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -115,20 +115,20 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		existingDevice, err := m.getDeviceByJID(ctx, instance.DeviceJID)
 		if err != nil {
 			m.logger.WithFields(logrus.Fields{
-				"instance":  instance.Name,
+				"instance":   instance.Name,
 				"device_jid": instance.DeviceJID,
 			}).WithError(err).Warn("Failed to load device by JID, creating new device")
 			device = m.container.NewDevice()
 		} else if existingDevice != nil {
 			device = existingDevice
 			m.logger.WithFields(logrus.Fields{
-				"instance":  instance.Name,
+				"instance":   instance.Name,
 				"device_jid": instance.DeviceJID,
 			}).Info("Restored device from saved JID for session persistence")
 		} else {
 			// JID saved but device not found (might have been deleted), create new
 			m.logger.WithFields(logrus.Fields{
-				"instance":  instance.Name,
+				"instance":   instance.Name,
 				"device_jid": instance.DeviceJID,
 			}).Warn("Device JID saved but device not found in store, creating new device")
 			device = m.container.NewDevice()
@@ -158,6 +158,11 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		Handler:  handler,
 	}
 
+	// Register instance in dispatcher
+	if m.dispatcher != nil {
+		m.dispatcher.RegisterInstance(instance.ID, instance.Name)
+	}
+
 	// Set event handler callbacks
 	handler.SetQRCodeHandler(func(qrCode string) {
 		client.mu.Lock()
@@ -180,7 +185,7 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 			deviceJID := client.WAClient.Store.ID.String()
 			client.Instance.SetDeviceJID(deviceJID)
 			m.logger.WithFields(logrus.Fields{
-				"instance":  client.Instance.Name,
+				"instance":   client.Instance.Name,
 				"device_jid": deviceJID,
 			}).Info("Saved device JID for instance")
 		}
@@ -406,7 +411,7 @@ func (m *Manager) Logout(instanceID uuid.UUID) error {
 	}
 
 	ctx := context.Background()
-	
+
 	// Try logout with error handling
 	if client.WAClient.IsConnected() || client.WAClient.Store.ID != nil {
 		if err := func() error {
@@ -786,7 +791,7 @@ func (m *Manager) SendText(ctx context.Context, instanceID uuid.UUID, to, text s
 		return "", fmt.Errorf("failed to send message: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "text", resp.ID)
+	m.emitMessageSent(instanceID, jid, "text", resp.ID, text, "", "")
 
 	return resp.ID, nil
 }
@@ -838,7 +843,7 @@ func (m *Manager) SendImage(ctx context.Context, instanceID uuid.UUID, to string
 		return "", fmt.Errorf("failed to send image: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "image", resp.ID)
+	m.emitMessageSent(instanceID, jid, "image", resp.ID, "", caption, "")
 
 	return resp.ID, nil
 }
@@ -890,7 +895,7 @@ func (m *Manager) SendVideo(ctx context.Context, instanceID uuid.UUID, to string
 		return "", fmt.Errorf("failed to send video: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "video", resp.ID)
+	m.emitMessageSent(instanceID, jid, "video", resp.ID, "", caption, "")
 
 	return resp.ID, nil
 }
@@ -942,7 +947,7 @@ func (m *Manager) SendAudio(ctx context.Context, instanceID uuid.UUID, to string
 		return "", fmt.Errorf("failed to send audio: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "audio", resp.ID)
+	m.emitMessageSent(instanceID, jid, "audio", resp.ID, "", "", "")
 
 	return resp.ID, nil
 }
@@ -995,7 +1000,7 @@ func (m *Manager) SendDocument(ctx context.Context, instanceID uuid.UUID, to str
 		return "", fmt.Errorf("failed to send document: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "document", resp.ID)
+	m.emitMessageSent(instanceID, jid, "document", resp.ID, "", caption, fileName)
 
 	return resp.ID, nil
 }
@@ -1039,7 +1044,7 @@ func (m *Manager) SendSticker(ctx context.Context, instanceID uuid.UUID, to stri
 		return "", fmt.Errorf("failed to send sticker: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "sticker", resp.ID)
+	m.emitMessageSent(instanceID, jid, "sticker", resp.ID, "", "", "")
 
 	return resp.ID, nil
 }
@@ -1074,7 +1079,7 @@ func (m *Manager) SendLocation(ctx context.Context, instanceID uuid.UUID, to str
 		return "", fmt.Errorf("failed to send location: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "location", resp.ID)
+	m.emitMessageSent(instanceID, jid, "location", resp.ID, name, "", "")
 
 	return resp.ID, nil
 }
@@ -1124,7 +1129,7 @@ END:VCARD`, c.FullName, c.FullName, c.Phone, c.Phone)
 		return "", fmt.Errorf("failed to send contact: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "contact", resp.ID)
+	m.emitMessageSent(instanceID, jid, "contact", resp.ID, displayName, "", "")
 
 	return resp.ID, nil
 }
@@ -1162,7 +1167,7 @@ func (m *Manager) SendReaction(ctx context.Context, instanceID uuid.UUID, to, me
 		return "", fmt.Errorf("failed to send reaction: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "reaction", resp.ID)
+	m.emitMessageSent(instanceID, jid, "reaction", resp.ID, emoji, "", "")
 
 	return resp.ID, nil
 }
@@ -1208,7 +1213,7 @@ func (m *Manager) SendPoll(ctx context.Context, instanceID uuid.UUID, to, questi
 		return "", fmt.Errorf("failed to send poll: %w", err)
 	}
 
-	m.emitMessageSent(instanceID, jid, "poll", resp.ID)
+	m.emitMessageSent(instanceID, jid, "poll", resp.ID, question, "", "")
 
 	return resp.ID, nil
 }
@@ -1225,7 +1230,7 @@ func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) str
 			"buttons": make([]map[string]interface{}, len(buttons)),
 		},
 	}
-	
+
 	// Adicionar botões no formato Cloud API
 	cloudButtons := make([]map[string]interface{}, len(buttons))
 	for i, btn := range buttons {
@@ -1233,7 +1238,7 @@ func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) str
 		if btnID == "" {
 			btnID = fmt.Sprintf("btn_%d", i+1)
 		}
-		
+
 		var buttonAction map[string]interface{}
 		switch strings.ToLower(btn.Type) {
 		case "url", "link":
@@ -1249,8 +1254,8 @@ func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) str
 			buttonAction = map[string]interface{}{
 				"type": "phone_number",
 				"phone_number": map[string]string{
-					"id":          btnID,
-					"title":       btn.Text,
+					"id":           btnID,
+					"title":        btn.Text,
 					"phone_number": btn.Phone,
 				},
 			}
@@ -1268,14 +1273,14 @@ func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) str
 		cloudButtons[i] = buttonAction
 	}
 	interactive["action"].(map[string]interface{})["buttons"] = cloudButtons
-	
+
 	// Adicionar footer se houver
 	if footer != "" {
 		interactive["footer"] = map[string]string{
 			"text": footer,
 		}
 	}
-	
+
 	jsonBytes, _ := json.Marshal(interactive)
 	return string(jsonBytes)
 }
@@ -1297,8 +1302,8 @@ func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) str
 func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, text, footer string, buttons []ButtonData, header *HeaderData) (string, error) {
 	m.logger.Warn("SendButtons: ⚠️ AVISO - Botões interativos têm suporte limitado no WhatsApp Web API")
 	m.logger.WithFields(logrus.Fields{
-		"instanceID":  instanceID.String(),
-		"to":          to,
+		"instanceID":   instanceID.String(),
+		"to":           to,
 		"buttonsCount": len(buttons),
 	}).Info("SendButtons: iniciando envio de mensagem com botões")
 	// Validações
@@ -1363,8 +1368,8 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 			buttonAction = map[string]interface{}{
 				"type": "phone_number",
 				"phone_number": map[string]string{
-					"id":          btn.ID,
-					"title":       btn.Text,
+					"id":           btn.ID,
+					"title":        btn.Text,
 					"phone_number": btn.Phone,
 				},
 			}
@@ -1437,7 +1442,7 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		if btn.ID == "" {
 			btn.ID = fmt.Sprintf("btn_%d", i+1)
 		}
-		
+
 		// Construir JSON no formato Cloud API (estilo interactive → action → buttons)
 		var buttonAction map[string]interface{}
 		switch strings.ToLower(btn.Type) {
@@ -1454,8 +1459,8 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 			buttonAction = map[string]interface{}{
 				"type": "phone_number",
 				"phone_number": map[string]string{
-					"id":          btn.ID,
-					"title":       btn.Text,
+					"id":           btn.ID,
+					"title":        btn.Text,
 					"phone_number": btn.Phone,
 				},
 			}
@@ -1471,9 +1476,9 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 				},
 			}
 		}
-		
+
 		buttonActionBytes, _ := json.Marshal(buttonAction)
-		
+
 		// Determinar nome do NativeFlowButton
 		nativeFlowName := "quick_reply"
 		if btn.Type == "url" || btn.Type == "link" {
@@ -1481,7 +1486,7 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		} else if btn.Type == "phone" || btn.Type == "call" {
 			nativeFlowName = "cta_call"
 		}
-		
+
 		nativeButtons[i] = &waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
 			Name:             proto.String(nativeFlowName),
 			ButtonParamsJSON: proto.String(string(buttonActionBytes)),
@@ -1714,14 +1719,13 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		return "", fmt.Errorf("failed to send buttons message to %s after 5 attempts: %w", jid.String(), sendErr)
 	}
 
-
 	m.logger.WithFields(logrus.Fields{
-		"messageID":      resp.ID,
-		"jid":            jid.String(),
-		"method":         successMethod,
+		"messageID":       resp.ID,
+		"jid":             jid.String(),
+		"method":          successMethod,
 		"serverTimestamp": resp.Timestamp,
 	}).Info("SendButtons: mensagem enviada com sucesso")
-	m.emitMessageSent(instanceID, jid, "button", resp.ID)
+	m.emitMessageSent(instanceID, jid, "button", resp.ID, text, "", "")
 
 	return resp.ID, nil
 }
@@ -1915,9 +1919,8 @@ func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title,
 		},
 	}
 
-
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
-	
+
 	// Se falhar com erro 405, tentar sem ViewOnceMessage
 	if err != nil && strings.Contains(err.Error(), "405") {
 		m.logger.Warn("SendList: erro 405 com ViewOnceMessage, tentando sem envelope")
@@ -1948,35 +1951,47 @@ func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title,
 	}
 
 	m.logger.WithFields(logrus.Fields{
-		"messageID":      resp.ID,
-		"jid":            jid.String(),
+		"messageID":       resp.ID,
+		"jid":             jid.String(),
 		"serverTimestamp": resp.Timestamp,
 	}).Info("SendList: mensagem de lista enviada com sucesso")
-	m.emitMessageSent(instanceID, jid, "list", resp.ID)
+	m.emitMessageSent(instanceID, jid, "list", resp.ID, title, "", "")
 
 	return resp.ID, nil
 }
 
-func (m *Manager) emitMessageSent(instanceID uuid.UUID, to types.JID, messageType, messageID string) {
+func (m *Manager) emitMessageSent(instanceID uuid.UUID, to types.JID, messageType, messageID string, content, caption, fileName string) {
 	if m.dispatcher == nil || messageID == "" {
 		return
 	}
 
+	// Get instance to find sender JID
+	var from string
+	if client, ok := m.clients[instanceID]; ok && client.WAClient != nil && client.WAClient.Store.ID != nil {
+		from = client.WAClient.Store.ID.User
+	}
+
 	m.dispatcher.Dispatch(instanceID, entity.WebhookEventSendMessage, dto.MessageSentEvent{
 		MessageID: messageID,
-		To:        to.String(),
+		From:      from,
+		To:        to.User, // Send only number, not full JID
+		FromMe:    true,
 		Type:      messageType,
+		Content:   content,
+		Caption:   caption,
+		FileName:  fileName,
+		Status:    "sent",
 		Timestamp: time.Now(),
 	})
 }
 
 // ButtonData represents button data for SendButtons
 type ButtonData struct {
-	ID     string // buttonId
-	Text   string // displayText
-	Type   string // reply, url, phone
-	URL    string // For URL buttons
-	Phone  string // For phone buttons
+	ID    string // buttonId
+	Text  string // displayText
+	Type  string // reply, url, phone
+	URL   string // For URL buttons
+	Phone string // For phone buttons
 }
 
 // HeaderData represents header data for interactive messages
@@ -2020,4 +2035,3 @@ func decodeBase64Media(data string) ([]byte, error) {
 	}
 	return base64.StdEncoding.DecodeString(data)
 }
-

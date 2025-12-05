@@ -61,6 +61,10 @@ func (d *Dispatcher) UnregisterInstance(instanceID uuid.UUID) {
 
 // Dispatch sends an event to the configured webhook
 func (d *Dispatcher) Dispatch(instanceID uuid.UUID, event entity.WebhookEvent, data interface{}) {
+	d.logger.WithFields(logrus.Fields{
+		"event":       string(event),
+		"instance_id": instanceID.String(),
+	}).Info("🔔 Dispatching webhook event")
 	go d.dispatchAsync(instanceID, event, data)
 }
 
@@ -97,11 +101,30 @@ func (d *Dispatcher) dispatchInstanceWebhook(ctx context.Context, instanceID uui
 		return
 	}
 
-	if webhook == nil || !webhook.Enabled {
+	if webhook == nil {
+		d.logger.WithFields(logrus.Fields{
+			"instance_id": instanceID.String(),
+		}).Warn("No webhook configured for instance")
 		return
 	}
 
+	if !webhook.Enabled {
+		d.logger.WithFields(logrus.Fields{
+			"instance_id": instanceID.String(),
+		}).Info("Webhook disabled for instance")
+		return
+	}
+
+	d.logger.WithFields(logrus.Fields{
+		"url":    webhook.URL,
+		"events": webhook.Events,
+	}).Info("Found webhook config")
+
 	if !webhook.ShouldTrigger(payload.Event) {
+		d.logger.WithFields(logrus.Fields{
+			"event":             string(payload.Event),
+			"subscribed_events": webhook.Events,
+		}).Info("Webhook not subscribed to event")
 		return
 	}
 
@@ -140,6 +163,11 @@ func (d *Dispatcher) dispatchGlobalWebhook(ctx context.Context, payload entity.W
 }
 
 func (d *Dispatcher) sendWithRetry(ctx context.Context, target webhookTarget, payload entity.WebhookPayload) {
+	d.logger.WithFields(logrus.Fields{
+		"url":   target.URL,
+		"event": string(payload.Event),
+	}).Info("🚀 Attempting to send webhook")
+
 	var lastErr error
 
 	for attempt := 0; attempt <= d.config.RetryCount; attempt++ {

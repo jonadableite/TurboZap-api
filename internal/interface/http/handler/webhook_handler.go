@@ -56,6 +56,22 @@ func (h *WebhookHandler) SetWebhook(c *fiber.Ctx) error {
 	events := req.Events
 	if len(events) == 0 {
 		events = entity.AllWebhookEvents()
+	} else {
+		// Normalize events (handle aliases)
+		normalizedEvents := make([]entity.WebhookEvent, 0, len(events))
+		for _, e := range events {
+			// Check if it's a known alias
+			if e == "message.sent" {
+				normalizedEvents = append(normalizedEvents, entity.WebhookEventSendMessage)
+				continue
+			}
+			if e == "message.received" {
+				normalizedEvents = append(normalizedEvents, entity.WebhookEventMessagesUpsert)
+				continue
+			}
+			normalizedEvents = append(normalizedEvents, e)
+		}
+		events = normalizedEvents
 	}
 
 	// Set default enabled if not specified

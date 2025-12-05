@@ -197,6 +197,7 @@ type MessageReceivedEvent struct {
 	From          string    `json:"from"`
 	FromName      string    `json:"from_name,omitempty"`
 	To            string    `json:"to"`
+	FromMe        bool      `json:"fromMe"`
 	IsGroup       bool      `json:"is_group"`
 	Type          string    `json:"type"`
 	Content       string    `json:"content,omitempty"`
@@ -233,8 +234,14 @@ type MessageUpdateEvent struct {
 // MessageSentEvent represents an outgoing message
 type MessageSentEvent struct {
 	MessageID string    `json:"message_id"`
+	From      string    `json:"from"`
 	To        string    `json:"to"`
+	FromMe    bool      `json:"fromMe"`
 	Type      string    `json:"type"`
+	Content   string    `json:"content,omitempty"`
+	Caption   string    `json:"caption,omitempty"`
+	FileName  string    `json:"filename,omitempty"`
+	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
