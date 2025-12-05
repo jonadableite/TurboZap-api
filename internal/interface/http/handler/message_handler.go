@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -15,18 +16,18 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/infrastructure/whatsapp"
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // MessageHandler handles message-related requests
 type MessageHandler struct {
 	instanceRepo repository.InstanceRepository
 	waManager    *whatsapp.Manager
-	logger       *zap.Logger
+	logger       *logrus.Logger
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *zap.Logger) *MessageHandler {
+func NewMessageHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *MessageHandler {
 	return &MessageHandler{
 		instanceRepo: instanceRepo,
 		waManager:    waManager,
@@ -43,7 +44,7 @@ func (h *MessageHandler) getInstanceAndValidate(c *fiber.Ctx) (*entity.Instance,
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return nil, response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -111,7 +112,7 @@ func (h *MessageHandler) SendText(c *fiber.Ctx) error {
 	// Send message
 	msgID, err := h.waManager.SendText(c.Context(), instance.ID, jid, req.Text, req.QuoteID, req.MentionJIDs)
 	if err != nil {
-		h.logger.Error("Failed to send text message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send text message")
 		return response.InternalServerError(c, "Failed to send message")
 	}
 
@@ -195,7 +196,7 @@ func (h *MessageHandler) SendMedia(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		h.logger.Error("Failed to send media message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send media message")
 		return response.InternalServerError(c, "Failed to send media")
 	}
 
@@ -257,7 +258,7 @@ func (h *MessageHandler) SendAudio(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendAudio(c.Context(), instance.ID, jid, audioData, mimeType, req.PTT, req.QuoteID)
 	if err != nil {
-		h.logger.Error("Failed to send audio message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send audio message")
 		return response.InternalServerError(c, "Failed to send audio")
 	}
 
@@ -316,7 +317,7 @@ func (h *MessageHandler) SendSticker(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendSticker(c.Context(), instance.ID, jid, stickerData, mimeType)
 	if err != nil {
-		h.logger.Error("Failed to send sticker message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send sticker message")
 		return response.InternalServerError(c, "Failed to send sticker")
 	}
 
@@ -347,7 +348,7 @@ func (h *MessageHandler) SendLocation(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendLocation(c.Context(), instance.ID, jid, req.Latitude, req.Longitude, req.Name, req.Address)
 	if err != nil {
-		h.logger.Error("Failed to send location message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send location message")
 		return response.InternalServerError(c, "Failed to send location")
 	}
 
@@ -393,7 +394,7 @@ func (h *MessageHandler) SendContact(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendContact(c.Context(), instance.ID, jid, contacts)
 	if err != nil {
-		h.logger.Error("Failed to send contact message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send contact message")
 		return response.InternalServerError(c, "Failed to send contact")
 	}
 
@@ -428,7 +429,7 @@ func (h *MessageHandler) SendReaction(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendReaction(c.Context(), instance.ID, jid, req.MessageID, req.Emoji)
 	if err != nil {
-		h.logger.Error("Failed to send reaction", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send reaction")
 		return response.InternalServerError(c, "Failed to send reaction")
 	}
 
@@ -472,7 +473,7 @@ func (h *MessageHandler) SendPoll(c *fiber.Ctx) error {
 
 	msgID, err := h.waManager.SendPoll(c.Context(), instance.ID, jid, req.Question, req.Options, selectableCount)
 	if err != nil {
-		h.logger.Error("Failed to send poll", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send poll")
 		return response.InternalServerError(c, "Failed to send poll")
 	}
 
@@ -496,9 +497,27 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
-	jid := formatJID(req.To)
+	// Support UAZAPI format: use "phone" if "to" is empty
+	recipient := req.To
+	if recipient == "" {
+		recipient = req.Phone
+	}
+	if recipient == "" {
+		return response.BadRequest(c, "Invalid recipient phone number (to or phone required)")
+	}
+
+	jid := formatJID(recipient)
 	if jid == "" {
 		return response.BadRequest(c, "Invalid recipient phone number")
+	}
+
+	// Support UAZAPI format: use "caption" if "text" is empty
+	text := req.Text
+	if text == "" {
+		text = req.Caption
+	}
+	if text == "" {
+		return response.BadRequest(c, "Text or caption is required")
 	}
 
 	if len(req.Buttons) == 0 || len(req.Buttons) > 3 {
@@ -508,16 +527,53 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	// Convert buttons to internal format
 	buttons := make([]whatsapp.ButtonData, len(req.Buttons))
 	for i, btn := range req.Buttons {
+		// Support both new format (buttonId, buttonText) and legacy format (id, text)
+		buttonID := btn.ButtonID
+		if buttonID == "" {
+			buttonID = btn.ID
+		}
+		buttonText := btn.ButtonText.DisplayText
+		if buttonText == "" {
+			buttonText = btn.Text
+		}
+		buttonType := btn.Type
+		if buttonType == "" {
+			buttonType = "reply" // Default
+		}
+		
 		buttons[i] = whatsapp.ButtonData{
-			ID:   btn.ID,
-			Text: btn.Text,
-			Type: btn.Type,
+			ID:    buttonID,
+			Text:  buttonText,
+			Type:  buttonType,
+			URL:   btn.URL,
+			Phone: btn.Phone,
 		}
 	}
 
 	// Handle header if provided
 	var header *whatsapp.HeaderData
-	if req.Header != nil {
+	
+	// Support UAZAPI format: image at root level or title
+	if req.Image != nil && req.Image.URL != "" {
+		// Image at root level - convert to header
+		header = &whatsapp.HeaderData{
+			Type: "image",
+		}
+		mediaData, err := downloadMediaFromURL(req.Image.URL)
+		if err != nil {
+			h.logger.WithError(err).Warn("Failed to download image")
+		} else {
+			header.MediaData = mediaData
+			header.MimeType = "image/jpeg" // Default, can be detected from URL
+		}
+	} else if req.Title != "" {
+		// Title at root level - convert to header text
+		header = &whatsapp.HeaderData{
+			Type: "text",
+			Text: req.Title,
+		}
+	} else if req.Header != nil {
+		// Standard header format
 		header = &whatsapp.HeaderData{
 			Type:     req.Header.Type,
 			Text:     req.Header.Text,
@@ -529,7 +585,7 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 		if req.Header.MediaURL != "" {
 			mediaData, err := downloadMediaFromURL(req.Header.MediaURL)
 			if err != nil {
-				h.logger.Warn("Failed to download header media", zap.Error(err))
+				h.logger.WithError(err).Warn("Failed to download header media")
 			} else {
 				header.MediaData = mediaData
 			}
@@ -543,10 +599,18 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	}
 
 	// Send using whatsmeow protobufs
-	msgID, err := h.waManager.SendButtons(c.Context(), instance.ID, jid, req.Text, req.Footer, buttons, header)
+	// Use text (or caption) and footer
+	footer := req.Footer
+	msgID, err := h.waManager.SendButtons(c.Context(), instance.ID, jid, text, footer, buttons, header)
 	if err != nil {
-		h.logger.Error("Failed to send button message", zap.Error(err))
-		return response.InternalServerError(c, "Failed to send button message")
+		h.logger.WithError(err).WithFields(logrus.Fields{
+			"instance":    instance.Name,
+			"to":          jid,
+			"buttonsCount": len(buttons),
+			"text":        req.Text,
+		}).Error("Failed to send button message")
+		// Retornar mensagem de erro mais detalhada
+		return response.InternalServerError(c, fmt.Sprintf("Failed to send button message: %v", err))
 	}
 
 	return response.Success(c, dto.MessageResponse{
@@ -598,7 +662,7 @@ func (h *MessageHandler) SendList(c *fiber.Ctx) error {
 	// Send using whatsmeow protobufs
 	msgID, err := h.waManager.SendList(c.Context(), instance.ID, jid, req.Title, req.Description, req.ButtonText, req.Footer, sections)
 	if err != nil {
-		h.logger.Error("Failed to send list message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send list message")
 		return response.InternalServerError(c, "Failed to send list message")
 	}
 
@@ -729,7 +793,7 @@ func (h *MessageHandler) SendStory(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		h.logger.Error("Failed to send story", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to send story")
 		return response.InternalServerError(c, "Failed to send story")
 	}
 

@@ -9,13 +9,13 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/interface/http/handler"
 	"github.com/jonadableite/turbozap-api/internal/interface/http/middleware"
 	"github.com/jonadableite/turbozap-api/pkg/config"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // NewRouter creates a new Fiber router with all routes configured
 func NewRouter(
 	cfg *config.Config,
-	logger *zap.Logger,
+	logger *logrus.Logger,
 	instanceRepo repository.InstanceRepository,
 	webhookRepo repository.WebhookRepository,
 	waManager *whatsapp.Manager,

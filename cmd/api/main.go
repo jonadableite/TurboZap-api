@@ -32,8 +32,8 @@ func main() {
 	}
 	defer loggerInstance.Sync()
 
-	// Get zap logger for compatibility
-	zapLogger := loggerInstance.GetZap()
+	// Get logrus logger
+	logrusLogger := loggerInstance.GetLogrus()
 	appLogger := loggerInstance.WithContext("API")
 
 	appLogger.Info("Starting TurboZap API", map[string]interface{}{
@@ -61,11 +61,11 @@ func main() {
 	webhookRepo := repository.NewWebhookPostgresRepository(db)
 
 	// Initialize webhook dispatcher
-	webhookDispatcher := webhook.NewDispatcher(cfg.Webhook, zapLogger)
+	webhookDispatcher := webhook.NewDispatcher(cfg.Webhook, logrusLogger)
 	webhookDispatcher.SetWebhookRepository(webhookRepo)
 
 	// Initialize WhatsApp manager
-	waManager := whatsapp.NewManager(cfg, db, zapLogger, webhookDispatcher, instanceRepo)
+	waManager := whatsapp.NewManager(cfg, db, logrusLogger, webhookDispatcher, instanceRepo)
 
 	// Restore existing instances and auto-reconnect
 	ctx := context.Background()
@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// Initialize HTTP router
-	router := http.NewRouter(cfg, zapLogger, instanceRepo, webhookRepo, waManager)
+	router := http.NewRouter(cfg, logrusLogger, instanceRepo, webhookRepo, waManager)
 
 	// Start server in goroutine
 	go func() {

@@ -3,83 +3,301 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/jonadableite/turbozap-api/pkg/config"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/sirupsen/logrus"
 )
 
 const (
 	// ANSI color codes
 	colorReset  = "\033[0m"
 	colorBold   = "\033[1m"
-	colorBright = "\033[1m"
+	colorDim    = "\033[2m"
+	colorItalic = "\033[3m"
 
 	// Text colors
-	colorGreen   = "\033[32m"
-	colorCyan    = "\033[36m"
-	colorYellow  = "\033[33m"
+	colorBlack   = "\033[30m"
 	colorRed     = "\033[31m"
-	colorMagenta = "\033[35m"
+	colorGreen   = "\033[32m"
+	colorYellow  = "\033[33m"
 	colorBlue    = "\033[34m"
-	colorGray    = "\033[90m"
-	colorGold    = "\033[33m"
+	colorMagenta = "\033[35m"
+	colorCyan    = "\033[36m"
 	colorWhite   = "\033[37m"
+	colorGray    = "\033[90m"
+
+	// Bright colors
+	colorBrightBlack   = "\033[90m"
+	colorBrightRed     = "\033[91m"
+	colorBrightGreen   = "\033[92m"
+	colorBrightYellow  = "\033[93m"
+	colorBrightBlue    = "\033[94m"
+	colorBrightMagenta = "\033[95m"
+	colorBrightCyan    = "\033[96m"
+	colorBrightWhite   = "\033[97m"
 
 	// Background colors
-	colorGreenBG  = "\033[42m"
-	colorCyanBG   = "\033[46m"
-	colorYellowBG = "\033[43m"
-	colorRedBG    = "\033[41m"
-	colorBlueBG   = "\033[44m"
-	colorWhiteBG  = "\033[47m"
+	colorBGBlack   = "\033[40m"
+	colorBGRed     = "\033[41m"
+	colorBGGreen   = "\033[42m"
+	colorBGYellow  = "\033[43m"
+	colorBGBlue    = "\033[44m"
+	colorBGMagenta = "\033[45m"
+	colorBGCyan    = "\033[46m"
+	colorBGWhite   = "\033[47m"
 )
 
 const (
 	// Log emojis
 	emojiLog     = "📝"
-	emojiInfo    = "ℹ️"
+	emojiInfo    = "🚀"
 	emojiWarn    = "⚠️"
 	emojiError   = "❌"
 	emojiDebug   = "🔍"
-	emojiVerbose = "📢"
 	emojiSuccess = "✅"
+	emojiFatal   = "💀"
+	emojiTrace   = "🔎"
+	emojiPanic   = "🚨"
 )
 
-// Logger wraps zap.Logger with enhanced formatting
+// Logger wraps logrus.Logger with enhanced formatting
 type Logger struct {
-	zap    *zap.Logger
+	logrus *logrus.Logger
 	config *config.Config
 	pid    int
 }
 
-// NewLogger creates a new logger instance
+// ContextLogger provides context-specific logging
+type ContextLogger struct {
+	logger  *Logger
+	context string
+}
+
+// BeautifulFormatter is a custom formatter for logrus with beautiful colors
+type BeautifulFormatter struct {
+	config *config.Config
+}
+
+// Format formats the log entry
+func (f *BeautifulFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	var b strings.Builder
+
+	// Get level emoji and color
+	levelColor, _, emoji := f.getLevelStyle(entry.Level)
+	levelLabel := f.getLevelLabel(entry.Level)
+
+	// Timestamp
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+
+	// Build main line: 🚀  INFO  2025-02-05 12:31:13 | POST /login | 200 | 44ms
+	b.WriteString(fmt.Sprintf("%s  %s%s%s%s%s  %s%s%s%s%s | ",
+		emoji,
+		colorBold+levelColor, levelLabel, colorReset,
+		timestamp,
+	))
+
+	// Extract HTTP method, path, status, duration from fields
+	method := ""
+	path := ""
+	status := ""
+	duration := ""
+	metadata := make(map[string]interface{})
+
+	for k, v := range entry.Data {
+		switch k {
+		case "method":
+			if m, ok := v.(string); ok {
+				method = m
+			}
+		case "path", "route":
+			if p, ok := v.(string); ok {
+				path = p
+			}
+		case "status", "status_code":
+			if s, ok := v.(int); ok {
+				status = fmt.Sprintf("%d", s)
+			} else if s, ok := v.(string); ok {
+				status = s
+			}
+		case "duration", "latency", "time":
+			if d, ok := v.(string); ok {
+				duration = d
+			} else if d, ok := v.(time.Duration); ok {
+				duration = d.String()
+			} else if d, ok := v.(float64); ok {
+				duration = fmt.Sprintf("%.0fms", d)
+			}
+		case "context":
+			// Skip context, it's handled separately
+		default:
+			// Add to metadata
+			metadata[k] = v
+		}
+	}
+
+	// Build HTTP info line
+	if method != "" && path != "" {
+		b.WriteString(fmt.Sprintf("%s%s%s %s%s%s%s%s | ",
+			colorBrightCyan, method, colorReset,
+			colorBrightWhite, path, colorReset,
+		))
+	}
+
+	if status != "" {
+		statusColor := colorBrightGreen
+		if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
+			statusColor = colorBrightRed
+		} else if strings.HasPrefix(status, "3") {
+			statusColor = colorBrightYellow
+		}
+		b.WriteString(fmt.Sprintf("%s%s%s%s%s | ",
+			statusColor, status, colorReset,
+		))
+	}
+
+	if duration != "" {
+		b.WriteString(fmt.Sprintf("%s%s%s",
+			colorBrightMagenta, duration, colorReset,
+		))
+	}
+
+	// If no HTTP info, just show the message
+	if method == "" && path == "" && status == "" {
+		b.WriteString(fmt.Sprintf("%s%s%s", levelColor, entry.Message, colorReset))
+	}
+
+	b.WriteString("\n")
+
+	// Add JSON metadata if there are fields
+	if len(metadata) > 0 {
+		// Build JSON object
+		jsonData := make(map[string]interface{})
+		for k, v := range metadata {
+			// Sanitize sensitive data
+			jsonData[k] = sanitizeValue(k, v)
+		}
+		// Add error if present
+		if entry.Data["error"] != nil {
+			if err, ok := entry.Data["error"].(error); ok {
+				jsonData["error"] = err.Error()
+			} else {
+				jsonData["error"] = entry.Data["error"]
+			}
+		}
+
+		if len(jsonData) > 0 {
+			jsonBytes, err := json.MarshalIndent(jsonData, "", "   ")
+			if err == nil {
+				b.WriteString(string(jsonBytes))
+				b.WriteString("\n")
+			}
+		}
+	}
+
+	return []byte(b.String()), nil
+}
+
+// sanitizeValue removes sensitive information from values
+func sanitizeValue(key string, value interface{}) interface{} {
+	keyLower := strings.ToLower(key)
+	sensitiveKeys := []string{
+		"password", "token", "secret", "api_key", "apikey",
+		"credentials", "authorization", "access_token", "refresh_token",
+	}
+
+	for _, sensitive := range sensitiveKeys {
+		if strings.Contains(keyLower, sensitive) {
+			return "***REDACTED***"
+		}
+	}
+
+	return value
+}
+
+func (f *BeautifulFormatter) getLevelStyle(level logrus.Level) (color, bg, emoji string) {
+	switch level {
+	case logrus.PanicLevel:
+		return colorBrightRed, colorBGRed, emojiPanic
+	case logrus.FatalLevel:
+		return colorBrightRed, colorBGRed, emojiFatal
+	case logrus.ErrorLevel:
+		return colorBrightRed, colorBGRed, emojiError
+	case logrus.WarnLevel:
+		return colorBrightYellow, colorBGYellow, emojiWarn
+	case logrus.InfoLevel:
+		return colorBrightBlue, colorBGCyan, emojiInfo
+	case logrus.DebugLevel:
+		return colorBrightMagenta, colorBGBlue, emojiDebug
+	case logrus.TraceLevel:
+		return colorBrightCyan, colorBGCyan, emojiTrace
+	default:
+		return colorWhite, colorBGWhite, emojiLog
+	}
+}
+
+func (f *BeautifulFormatter) getLevelLabel(level logrus.Level) string {
+	switch level {
+	case logrus.PanicLevel:
+		return "PANIC"
+	case logrus.FatalLevel:
+		return "FATAL"
+	case logrus.ErrorLevel:
+		return "ERROR"
+	case logrus.WarnLevel:
+		return "WARN"
+	case logrus.InfoLevel:
+		return "INFO"
+	case logrus.DebugLevel:
+		return "DEBUG"
+	case logrus.TraceLevel:
+		return "TRACE"
+	default:
+		return "LOG"
+	}
+}
+
+// NewLogger creates a new logger instance with beautiful formatting
 func NewLogger(cfg *config.Config) (*Logger, error) {
-	var zapLogger *zap.Logger
-	var err error
+	logrusLogger := logrus.New()
 
-	if cfg.Log.Format == "json" || os.Getenv("ENVIRONMENT") == "production" {
-		zapConfig := zap.NewProductionConfig()
-		zapLogger, err = zapConfig.Build()
-	} else {
-		zapConfig := zap.NewDevelopmentConfig()
-		zapConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-		zapLogger, err = zapConfig.Build()
-	}
+	// Set output to stdout
+	logrusLogger.SetOutput(os.Stdout)
 
+	// Set formatter
+	logrusLogger.SetFormatter(&BeautifulFormatter{config: cfg})
+
+	// Set report caller for file:line info
+	logrusLogger.SetReportCaller(false) // Disabled for cleaner output
+
+	// Set log level
+	level, err := logrus.ParseLevel(cfg.Log.Level)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+		level = logrus.InfoLevel
 	}
+	logrusLogger.SetLevel(level)
+
+	// Enable colors (always for terminal)
+	logrusLogger.SetOutput(&ColorWriter{Writer: os.Stdout})
 
 	return &Logger{
-		zap:    zapLogger,
+		logrus: logrusLogger,
 		config: cfg,
 		pid:    os.Getpid(),
 	}, nil
+}
+
+// ColorWriter wraps io.Writer to ensure colors are enabled
+type ColorWriter struct {
+	Writer io.Writer
+}
+
+func (cw *ColorWriter) Write(p []byte) (n int, err error) {
+	return cw.Writer.Write(p)
 }
 
 // WithContext creates a new logger with a specific context
@@ -90,10 +308,125 @@ func (l *Logger) WithContext(context string) *ContextLogger {
 	}
 }
 
-// ContextLogger provides context-specific logging
-type ContextLogger struct {
-	logger  *Logger
-	context string
+// GetLogrus returns the underlying logrus logger for compatibility
+func (l *Logger) GetLogrus() *logrus.Logger {
+	return l.logrus
+}
+
+// AddHook adds a hook to the logger
+func (l *Logger) AddHook(hook logrus.Hook) {
+	l.logrus.AddHook(hook)
+}
+
+// SetLevel sets the log level
+func (l *Logger) SetLevel(level logrus.Level) {
+	l.logrus.SetLevel(level)
+}
+
+// SetOutput sets the output writer
+func (l *Logger) SetOutput(w io.Writer) {
+	l.logrus.SetOutput(w)
+}
+
+// Success logs a success message
+func (cl *ContextLogger) Success(message string, fields ...map[string]interface{}) {
+	entry := cl.logger.logrus.WithFields(logrus.Fields{
+		"context": cl.context,
+	})
+
+	if len(fields) > 0 {
+		for k, v := range fields[0] {
+			entry = entry.WithField(k, v)
+		}
+	}
+
+	// Use Info level but with success styling
+	entry.Info(message)
+}
+
+// Info logs an info message
+func (cl *ContextLogger) Info(message string, fields ...map[string]interface{}) {
+	entry := cl.logger.logrus.WithFields(logrus.Fields{
+		"context": cl.context,
+	})
+
+	if len(fields) > 0 {
+		for k, v := range fields[0] {
+			entry = entry.WithField(k, v)
+		}
+	}
+
+	entry.Info(message)
+}
+
+// Warn logs a warning message
+func (cl *ContextLogger) Warn(message string, fields ...map[string]interface{}) {
+	entry := cl.logger.logrus.WithFields(logrus.Fields{
+		"context": cl.context,
+	})
+
+	if len(fields) > 0 {
+		for k, v := range fields[0] {
+			entry = entry.WithField(k, v)
+		}
+	}
+
+	entry.Warn(message)
+}
+
+// Error logs an error message
+func (cl *ContextLogger) Error(message string, err error, fields ...map[string]interface{}) {
+	entry := cl.logger.logrus.WithFields(logrus.Fields{
+		"context": cl.context,
+	})
+
+	if err != nil {
+		entry = entry.WithError(err)
+	}
+
+	if len(fields) > 0 {
+		for k, v := range fields[0] {
+			entry = entry.WithField(k, v)
+		}
+	}
+
+	entry.Error(message)
+}
+
+// Debug logs a debug message
+func (cl *ContextLogger) Debug(message string, fields ...map[string]interface{}) {
+	entry := cl.logger.logrus.WithFields(logrus.Fields{
+		"context": cl.context,
+	})
+
+	if len(fields) > 0 {
+		for k, v := range fields[0] {
+			entry = entry.WithField(k, v)
+		}
+	}
+
+	entry.Debug(message)
+}
+
+// Verbose logs a verbose message (alias for Debug)
+func (cl *ContextLogger) Verbose(message string, fields ...map[string]interface{}) {
+	cl.Debug(message, fields...)
+}
+
+// Log logs a generic log message
+func (cl *ContextLogger) Log(message string, fields ...map[string]interface{}) {
+	cl.Info(message, fields...)
+}
+
+// Sync flushes any buffered log entries (compatibility method)
+func (l *Logger) Sync() error {
+	// Logrus doesn't need explicit syncing, but we keep this for compatibility
+	return nil
+}
+
+// GetZap returns nil (compatibility method - deprecated)
+func (l *Logger) GetZap() interface{} {
+	return nil
 }
 
 // sanitizeLogData removes sensitive information from log data
@@ -132,45 +465,6 @@ func sanitizeLogData(data interface{}) interface{} {
 	return data
 }
 
-// formatMessage formats a log message with timestamp, PID, version, etc.
-func (l *Logger) formatMessage(level string, emoji string, context string, message string, fields map[string]interface{}) string {
-	timestamp := time.Now().Format("04/11/2006 15:04:05")
-	version := l.config.App.Version
-	appName := l.config.App.Name
-
-	// Build formatted message similar to the reference image
-	var parts []string
-
-	// [AppName API] version - timestamp
-	parts = append(parts, fmt.Sprintf("%s[%s API]%s", colorBold+colorWhite, appName, colorReset))
-	parts = append(parts, fmt.Sprintf("%sv%s%s", colorWhite, version, colorReset))
-	parts = append(parts, "-")
-	parts = append(parts, timestamp)
-
-	// Level tag with background color
-	levelBG := getLevelBGColor(level)
-	levelLabel := getLevelLabel(level)
-	parts = append(parts, fmt.Sprintf("  %s%s%s %s%s", levelBG, colorBold+colorWhite, emoji, levelLabel, colorReset))
-
-	// Context tag
-	if context != "" {
-		parts = append(parts, fmt.Sprintf("  %s[%s]%s", colorBold+colorYellow, context, colorReset))
-	}
-
-	// Message
-	parts = append(parts, fmt.Sprintf("  %s", message))
-
-	// Fields as key-value pairs
-	if len(fields) > 0 {
-		sanitizedFields := sanitizeLogData(fields).(map[string]interface{})
-		for k, v := range sanitizedFields {
-			parts = append(parts, fmt.Sprintf("%s: %v", k, v))
-		}
-	}
-
-	return strings.Join(parts, " ")
-}
-
 // getCallerInfo gets the caller file name (excluding full path)
 func getCallerInfo() string {
 	_, file, _, ok := runtime.Caller(3)
@@ -188,222 +482,4 @@ func getCallerInfo() string {
 	}
 
 	return filename
-}
-
-func getLevelColor(level string) string {
-	switch level {
-	case "SUCCESS":
-		return colorGreen
-	case "INFO":
-		return colorBlue
-	case "WARN":
-		return colorYellow
-	case "ERROR":
-		return colorRed
-	case "DEBUG":
-		return colorCyan
-	case "VERBOSE":
-		return colorWhite
-	default:
-		return colorGreen
-	}
-}
-
-func getLevelBGColor(level string) string {
-	switch level {
-	case "SUCCESS":
-		return "\033[42m" // Green background
-	case "INFO":
-		return "\033[46m" // Cyan background
-	case "WARN":
-		return "\033[43m" // Yellow background
-	case "ERROR":
-		return "\033[41m" // Red background
-	case "DEBUG":
-		return "\033[44m" // Blue background
-	case "VERBOSE":
-		return "\033[47m" // White background
-	default:
-		return "\033[46m" // Cyan background
-	}
-}
-
-func getLevelLabel(level string) string {
-	switch level {
-	case "SUCCESS":
-		return " OK "
-	case "INFO":
-		return " INFO "
-	case "WARN":
-		return " WARN "
-	case "ERROR":
-		return " ERROR "
-	case "DEBUG":
-		return " DEBUG "
-	case "VERBOSE":
-		return " VERBOSE "
-	default:
-		return " LOG "
-	}
-}
-
-// SerializeMessage converts any message to string
-func serializeMessage(msg interface{}) string {
-	if msg == nil {
-		return "null"
-	}
-
-	switch v := msg.(type) {
-	case string:
-		return v
-	case error:
-		return v.Error()
-	default:
-		sanitized := sanitizeLogData(msg)
-		jsonData, err := json.MarshalIndent(sanitized, "", "  ")
-		if err != nil {
-			return fmt.Sprintf("%v", sanitized)
-		}
-		return string(jsonData)
-	}
-}
-
-// Success logs a success message
-func (cl *ContextLogger) Success(message string, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("SUCCESS", emojiSuccess, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	// Also log to zap
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Info(message, zapFields...)
-}
-
-// Info logs an info message
-func (cl *ContextLogger) Info(message string, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("INFO", emojiInfo, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Info(message, zapFields...)
-}
-
-// Warn logs a warning message
-func (cl *ContextLogger) Warn(message string, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("WARN", emojiWarn, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Warn(message, zapFields...)
-}
-
-// Error logs an error message
-func (cl *ContextLogger) Error(message string, err error, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	if err != nil {
-		if mergedFields == nil {
-			mergedFields = make(map[string]interface{})
-		}
-		mergedFields["error"] = err.Error()
-		if err.Error() != "" {
-			message = fmt.Sprintf("%s: %s", message, err.Error())
-		}
-	}
-
-	formatted := cl.logger.formatMessage("ERROR", emojiError, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	if err != nil {
-		cl.logger.zap.Error(message, append(zapFields, zap.Error(err))...)
-	} else {
-		cl.logger.zap.Error(message, zapFields...)
-	}
-}
-
-// Debug logs a debug message (only if DEBUG=true)
-func (cl *ContextLogger) Debug(message string, fields ...map[string]interface{}) {
-	if os.Getenv("DEBUG") != "true" && cl.logger.config.Log.Level != "debug" {
-		return
-	}
-
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("DEBUG", emojiDebug, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Debug(message, zapFields...)
-}
-
-// Verbose logs a verbose message
-func (cl *ContextLogger) Verbose(message string, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("VERBOSE", emojiVerbose, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Debug(message, zapFields...)
-}
-
-// Log logs a generic log message
-func (cl *ContextLogger) Log(message string, fields ...map[string]interface{}) {
-	var mergedFields map[string]interface{}
-	if len(fields) > 0 {
-		mergedFields = fields[0]
-	}
-
-	formatted := cl.logger.formatMessage("LOG", emojiLog, cl.context, message, mergedFields)
-	fmt.Println(formatted)
-
-	zapFields := toZapFields(mergedFields)
-	cl.logger.zap.Info(message, zapFields...)
-}
-
-// toZapFields converts map to zap fields
-func toZapFields(fields map[string]interface{}) []zap.Field {
-	if fields == nil {
-		return nil
-	}
-
-	zapFields := make([]zap.Field, 0, len(fields))
-	for k, v := range fields {
-		zapFields = append(zapFields, zap.Any(k, v))
-	}
-	return zapFields
-}
-
-// Sync flushes any buffered log entries
-func (l *Logger) Sync() error {
-	return l.zap.Sync()
-}
-
-// GetZap returns the underlying zap logger for compatibility
-func (l *Logger) GetZap() *zap.Logger {
-	return l.zap
 }

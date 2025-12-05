@@ -8,18 +8,18 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
 	"go.mau.fi/whatsmeow/types"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // PresenceHandler handles presence-related requests
 type PresenceHandler struct {
 	instanceRepo repository.InstanceRepository
 	waManager    *whatsapp.Manager
-	logger       *zap.Logger
+	logger       *logrus.Logger
 }
 
 // NewPresenceHandler creates a new presence handler
-func NewPresenceHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *zap.Logger) *PresenceHandler {
+func NewPresenceHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *PresenceHandler {
 	return &PresenceHandler{
 		instanceRepo: instanceRepo,
 		waManager:    waManager,
@@ -35,7 +35,7 @@ func (h *PresenceHandler) getInstanceAndClient(c *fiber.Ctx) (*entity.Instance, 
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return nil, nil, response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -58,7 +58,7 @@ func (h *PresenceHandler) SetAvailable(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SendPresence(c.Context(), types.PresenceAvailable); err != nil {
-		h.logger.Error("Failed to set presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to set presence")
 		return response.InternalServerError(c, "Failed to set presence")
 	}
 
@@ -76,7 +76,7 @@ func (h *PresenceHandler) SetUnavailable(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SendPresence(c.Context(), types.PresenceUnavailable); err != nil {
-		h.logger.Error("Failed to set presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to set presence")
 		return response.InternalServerError(c, "Failed to set presence")
 	}
 
@@ -116,7 +116,7 @@ func (h *PresenceHandler) SetComposing(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SendChatPresence(c.Context(), jid, types.ChatPresenceComposing, types.ChatPresenceMediaText); err != nil {
-		h.logger.Error("Failed to set composing presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to set composing presence")
 		return response.InternalServerError(c, "Failed to set composing presence")
 	}
 
@@ -156,7 +156,7 @@ func (h *PresenceHandler) SetRecording(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SendChatPresence(c.Context(), jid, types.ChatPresenceComposing, types.ChatPresenceMediaAudio); err != nil {
-		h.logger.Error("Failed to set recording presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to set recording presence")
 		return response.InternalServerError(c, "Failed to set recording presence")
 	}
 
@@ -196,7 +196,7 @@ func (h *PresenceHandler) ClearPresence(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SendChatPresence(c.Context(), jid, types.ChatPresencePaused, types.ChatPresenceMediaText); err != nil {
-		h.logger.Error("Failed to clear presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to clear presence")
 		return response.InternalServerError(c, "Failed to clear presence")
 	}
 
@@ -236,7 +236,7 @@ func (h *PresenceHandler) SubscribePresence(c *fiber.Ctx) error {
 	}
 
 	if err := client.WAClient.SubscribePresence(c.Context(), jid); err != nil {
-		h.logger.Error("Failed to subscribe to presence", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to subscribe to presence")
 		return response.InternalServerError(c, "Failed to subscribe to presence")
 	}
 

@@ -3,6 +3,7 @@ package whatsapp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,14 +24,14 @@ import (
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	waLog "go.mau.fi/whatsmeow/util/log"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 // Manager manages multiple WhatsApp client instances
 type Manager struct {
 	config       *config.Config
-	logger       *zap.Logger
+	logger       *logrus.Logger
 	dispatcher   WebhookDispatcher
 	instanceRepo repository.InstanceRepository
 	container    *sqlstore.Container
@@ -51,7 +52,7 @@ type Client struct {
 }
 
 // NewManager creates a new WhatsApp manager
-func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, dispatcher WebhookDispatcher, instanceRepo repository.InstanceRepository) *Manager {
+func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *logrus.Logger, dispatcher WebhookDispatcher, instanceRepo repository.InstanceRepository) *Manager {
 	// Create whatsmeow logger
 	waLogger := waLog.Stdout("whatsmeow", "INFO", true)
 
@@ -63,13 +64,11 @@ func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *zap.Logger, disp
 		// Check if error is about tables already existing (schema already initialized)
 		// This can happen if tables were created manually or by a previous run
 		if strings.Contains(err.Error(), "already exists") {
-			logger.Warn("WhatsApp store tables already exist - this is normal if schema was pre-created",
-				zap.Error(err),
-			)
+			logger.WithError(err).Warn("WhatsApp store tables already exist - this is normal if schema was pre-created")
 			// The whatsmeow library should still work with existing tables
 			// We'll try to continue, but if there are issues, the tables may need cleanup
 		} else {
-			logger.Fatal("Failed to create SQL store", zap.Error(err))
+			logger.WithError(err).Fatal("Failed to create SQL store")
 		}
 	}
 
@@ -115,24 +114,23 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		ctx := context.Background()
 		existingDevice, err := m.getDeviceByJID(ctx, instance.DeviceJID)
 		if err != nil {
-			m.logger.Warn("Failed to load device by JID, creating new device",
-				zap.String("instance", instance.Name),
-				zap.String("device_jid", instance.DeviceJID),
-				zap.Error(err),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance":  instance.Name,
+				"device_jid": instance.DeviceJID,
+			}).WithError(err).Warn("Failed to load device by JID, creating new device")
 			device = m.container.NewDevice()
 		} else if existingDevice != nil {
 			device = existingDevice
-			m.logger.Info("Restored device from saved JID for session persistence",
-				zap.String("instance", instance.Name),
-				zap.String("device_jid", instance.DeviceJID),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance":  instance.Name,
+				"device_jid": instance.DeviceJID,
+			}).Info("Restored device from saved JID for session persistence")
 		} else {
 			// JID saved but device not found (might have been deleted), create new
-			m.logger.Warn("Device JID saved but device not found in store, creating new device",
-				zap.String("instance", instance.Name),
-				zap.String("device_jid", instance.DeviceJID),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance":  instance.Name,
+				"device_jid": instance.DeviceJID,
+			}).Warn("Device JID saved but device not found in store, creating new device")
 			device = m.container.NewDevice()
 			// Clear the invalid JID
 			instance.DeviceJID = ""
@@ -181,10 +179,10 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		if client.WAClient != nil && client.WAClient.Store.ID != nil {
 			deviceJID := client.WAClient.Store.ID.String()
 			client.Instance.SetDeviceJID(deviceJID)
-			m.logger.Info("Saved device JID for instance",
-				zap.String("instance", client.Instance.Name),
-				zap.String("device_jid", deviceJID),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance":  client.Instance.Name,
+				"device_jid": deviceJID,
+			}).Info("Saved device JID for instance")
 		}
 		client.mu.Unlock()
 
@@ -264,10 +262,9 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 		qrChan, err := client.WAClient.GetQRChannel(ctx)
 		if err != nil {
 			// If GetQRChannel fails (e.g., already called), just proceed with connect
-			m.logger.Warn("Failed to get QR channel, proceeding with connect",
-				zap.Error(err),
-				zap.String("instance", client.Instance.Name),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).WithError(err).Warn("Failed to get QR channel, proceeding with connect")
 		} else {
 			// Start goroutine to handle QR codes
 			go m.handleQRChannel(client, qrChan)
@@ -288,14 +285,14 @@ func (m *Manager) handleQRChannel(client *Client, qrChan <-chan whatsmeow.QRChan
 	for evt := range qrChan {
 		switch evt.Event {
 		case "code":
-			m.logger.Info("QR code received from channel",
-				zap.String("instance", client.Instance.Name),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).Info("QR code received from channel")
 			// Generate QR code image
 			generator := NewQRCodeGenerator()
 			qrImage, err := generator.Generate(evt.Code, 256)
 			if err != nil {
-				m.logger.Error("Failed to generate QR code image", zap.Error(err))
+				m.logger.WithError(err).Error("Failed to generate QR code image")
 				continue
 			}
 			// Update client with QR code
@@ -310,27 +307,26 @@ func (m *Manager) handleQRChannel(client *Client, qrChan <-chan whatsmeow.QRChan
 				Code:   evt.Code,
 			})
 		case "success":
-			m.logger.Info("QR code pairing successful",
-				zap.String("instance", client.Instance.Name),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).Info("QR code pairing successful")
 			client.mu.Lock()
 			client.Connected = true
 			client.QRCode = ""
 			client.QRCodeImage = ""
 			client.mu.Unlock()
 		case "timeout":
-			m.logger.Warn("QR code timeout",
-				zap.String("instance", client.Instance.Name),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).Warn("QR code timeout")
 			client.mu.Lock()
 			client.QRCode = ""
 			client.QRCodeImage = ""
 			client.mu.Unlock()
 		case "error":
-			m.logger.Error("QR code error",
-				zap.String("instance", client.Instance.Name),
-				zap.Error(evt.Error),
-			)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).WithError(evt.Error).Error("QR code error")
 		}
 	}
 }
@@ -345,7 +341,43 @@ func (m *Manager) Disconnect(instanceID uuid.UUID) error {
 	client.mu.Lock()
 	defer client.mu.Unlock()
 
-	client.WAClient.Disconnect()
+	if client.WAClient == nil {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Warn("Disconnect: WhatsApp client is nil, skipping disconnect")
+		client.Connected = false
+		client.Instance.SetDisconnected()
+		return nil
+	}
+
+	// Check if already disconnected to avoid WebSocket errors
+	if !client.WAClient.IsConnected() {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Debug("Disconnect: client already disconnected")
+		client.Connected = false
+		client.Instance.SetDisconnected()
+		return nil
+	}
+
+	// Disconnect with error handling
+	if err := func() error {
+		defer func() {
+			if r := recover(); r != nil {
+				m.logger.WithFields(logrus.Fields{
+					"instance": client.Instance.Name,
+					"panic":    r,
+				}).Warn("Disconnect: recovered from panic during disconnect")
+			}
+		}()
+		client.WAClient.Disconnect()
+		return nil
+	}(); err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).WithError(err).Warn("Disconnect: error during disconnect (non-fatal)")
+	}
+
 	client.Connected = false
 	client.Instance.SetDisconnected()
 	m.persistInstanceState(client.Instance)
@@ -363,12 +395,57 @@ func (m *Manager) Logout(instanceID uuid.UUID) error {
 	client.mu.Lock()
 	defer client.mu.Unlock()
 
-	ctx := context.Background()
-	if err := client.WAClient.Logout(ctx); err != nil {
-		m.logger.Warn("Logout failed", zap.Error(err))
+	if client.WAClient == nil {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Warn("Logout: WhatsApp client is nil, skipping logout")
+		client.Connected = false
+		client.QRCode = ""
+		client.Instance.SetDisconnected()
+		return nil
 	}
 
-	client.WAClient.Disconnect()
+	ctx := context.Background()
+	
+	// Try logout with error handling
+	if client.WAClient.IsConnected() || client.WAClient.Store.ID != nil {
+		if err := func() error {
+			defer func() {
+				if r := recover(); r != nil {
+					m.logger.WithFields(logrus.Fields{
+						"instance": client.Instance.Name,
+						"panic":    r,
+					}).Warn("Logout: recovered from panic during logout")
+				}
+			}()
+			return client.WAClient.Logout(ctx)
+		}(); err != nil {
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).WithError(err).Warn("Logout failed (non-fatal)")
+		}
+	}
+
+	// Disconnect with error handling
+	if err := func() error {
+		defer func() {
+			if r := recover(); r != nil {
+				m.logger.WithFields(logrus.Fields{
+					"instance": client.Instance.Name,
+					"panic":    r,
+				}).Warn("Logout: recovered from panic during disconnect")
+			}
+		}()
+		if client.WAClient.IsConnected() {
+			client.WAClient.Disconnect()
+		}
+		return nil
+	}(); err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).WithError(err).Warn("Logout: error during disconnect (non-fatal)")
+	}
+
 	client.Connected = false
 	client.QRCode = ""
 	client.Instance.SetDisconnected()
@@ -388,27 +465,76 @@ func (m *Manager) DeleteClient(instanceID uuid.UUID) error {
 		return nil
 	}
 
-	// Disconnect and cleanup
-	client.WAClient.Disconnect()
+	// Disconnect and cleanup with error handling
+	if client.WAClient != nil {
+		if err := func() error {
+			defer func() {
+				if r := recover(); r != nil {
+				}
+			}()
+			if client.WAClient.IsConnected() {
+				client.WAClient.Disconnect()
+			}
+			return nil
+		}(); err != nil {
+		}
+	}
 
 	// Delete device from store
 	ctx := context.Background()
 	if client.Device != nil {
-		client.Device.Delete(ctx)
+		if err := client.Device.Delete(ctx); err != nil {
+		}
 	}
 
 	delete(m.clients, instanceID)
 	return nil
 }
 
-// DisconnectAll disconnects all clients
+// DisconnectAll disconnects all clients gracefully
 func (m *Manager) DisconnectAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for _, client := range m.clients {
-		client.WAClient.Disconnect()
+	m.logger.WithFields(logrus.Fields{
+		"clientsCount": len(m.clients),
+	}).Info("DisconnectAll: disconnecting all WhatsApp clients")
+
+	for instanceID, client := range m.clients {
+		if client.WAClient == nil {
+			m.logger.WithFields(logrus.Fields{
+				"instanceID": instanceID.String(),
+			}).Debug("DisconnectAll: skipping nil client")
+			continue
+		}
+
+		// Check if already disconnected to avoid WebSocket errors
+		if !client.WAClient.IsConnected() {
+			m.logger.Debug("DisconnectAll: client already disconnected")
+			continue
+		}
+
+		// Disconnect with error handling
+		if err := func() error {
+			defer func() {
+				if r := recover(); r != nil {
+				}
+			}()
+			client.WAClient.Disconnect()
+			return nil
+		}(); err != nil {
+		} else {
+			m.logger.Debug("DisconnectAll: successfully disconnected client")
+		}
+
+		// Update client state
+		client.mu.Lock()
+		client.Connected = false
+		client.Instance.SetDisconnected()
+		client.mu.Unlock()
 	}
+
+	m.logger.Info("DisconnectAll: all clients disconnected")
 }
 
 // RestoreInstances restores all instances from the database and attempts to reconnect them
@@ -422,25 +548,19 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
 
-	m.logger.Info("Restoring instances from database",
-		zap.Int("count", len(instances)),
-	)
+	m.logger.WithFields(logrus.Fields{
+		"count": len(instances),
+	}).Info("Restoring instances from database")
 
 	for _, instance := range instances {
 		// Create client first
 		if _, err := m.CreateClient(instance); err != nil {
-			m.logger.Warn("Failed to create client for instance",
-				zap.String("instance", instance.Name),
-				zap.Error(err),
-			)
 			continue
 		}
 
 		// Skip auto-reconnect if disabled
 		if !m.config.WhatsApp.AutoReconnect {
-			m.logger.Debug("Auto-reconnect disabled, skipping",
-				zap.String("instance", instance.Name),
-			)
+			m.logger.Debug("Auto-reconnect disabled, skipping")
 			continue
 		}
 
@@ -453,9 +573,7 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 
 			client, exists := m.GetClient(inst.ID)
 			if !exists || client == nil || client.WAClient == nil {
-				m.logger.Debug("Client not ready for reconnect",
-					zap.String("instance", inst.Name),
-				)
+				m.logger.Debug("Client not ready for reconnect")
 				return
 			}
 
@@ -465,9 +583,7 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 			client.mu.RUnlock()
 
 			if !hasSession {
-				m.logger.Debug("No valid session found for instance, skipping auto-reconnect",
-					zap.String("instance", inst.Name),
-				)
+				m.logger.Debug("No valid session found for instance, skipping auto-reconnect")
 				return
 			}
 
@@ -475,21 +591,13 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 			reconnectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			m.logger.Info("Attempting to restore connection for instance",
-				zap.String("instance", inst.Name),
-			)
+			m.logger.Info("Attempting to restore connection for instance")
 
 			if err := m.Connect(reconnectCtx, inst.ID); err != nil {
-				m.logger.Warn("Failed to restore connection for instance",
-					zap.String("instance", inst.Name),
-					zap.Error(err),
-				)
 				return
 			}
 
-			m.logger.Info("Successfully restored connection for instance",
-				zap.String("instance", inst.Name),
-			)
+			m.logger.Info("Successfully restored connection for instance")
 		}(instance)
 	}
 
@@ -499,11 +607,10 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 // scheduleAutoReconnect schedules an automatic reconnection attempt after a delay
 func (m *Manager) scheduleAutoReconnect(instanceID uuid.UUID, instanceName string) {
 	reconnectDelay := time.Duration(m.config.WhatsApp.ReconnectInterval) * time.Second
-	m.logger.Info("Scheduling auto-reconnect",
-		zap.String("instance", instanceName),
-		zap.Duration("delay", reconnectDelay),
-	)
-
+	m.logger.WithFields(logrus.Fields{
+		"instance": instanceName,
+		"delay":    reconnectDelay.String(),
+	}).Info("Scheduling auto-reconnect")
 	time.Sleep(reconnectDelay)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -511,9 +618,7 @@ func (m *Manager) scheduleAutoReconnect(instanceID uuid.UUID, instanceName strin
 
 	client, exists := m.GetClient(instanceID)
 	if !exists {
-		m.logger.Warn("Client not found for auto-reconnect",
-			zap.String("instance", instanceName),
-		)
+		m.logger.Warn("Client not found for auto-reconnect")
 		return
 	}
 
@@ -524,25 +629,17 @@ func (m *Manager) scheduleAutoReconnect(instanceID uuid.UUID, instanceName strin
 	client.mu.RUnlock()
 
 	if isConnected {
-		m.logger.Info("Instance already connected, skipping auto-reconnect",
-			zap.String("instance", instanceName),
-		)
+		m.logger.Info("Instance already connected, skipping auto-reconnect")
 		return
 	}
 
 	if !hasSession {
-		m.logger.Info("No valid session found, skipping auto-reconnect",
-			zap.String("instance", instanceName),
-		)
+		m.logger.Info("No valid session found, skipping auto-reconnect")
 		return
 	}
 
 	// Attempt to reconnect
 	if err := m.Connect(ctx, instanceID); err != nil {
-		m.logger.Warn("Auto-reconnect failed",
-			zap.String("instance", instanceName),
-			zap.Error(err),
-		)
 		// Schedule another attempt if enabled
 		if m.config.WhatsApp.AutoReconnect {
 			go m.scheduleAutoReconnect(instanceID, instanceName)
@@ -550,9 +647,7 @@ func (m *Manager) scheduleAutoReconnect(instanceID uuid.UUID, instanceName strin
 		return
 	}
 
-	m.logger.Info("Auto-reconnect successful",
-		zap.String("instance", instanceName),
-	)
+	m.logger.Info("Auto-reconnect successful")
 }
 
 // GetQRCode returns the current QR code for an instance
@@ -612,10 +707,6 @@ func (m *Manager) persistInstanceState(instance *entity.Instance) {
 		defer cancel()
 
 		if err := m.instanceRepo.Update(ctx, &data); err != nil {
-			m.logger.Warn("Failed to persist instance state",
-				zap.String("instance", data.Name),
-				zap.Error(err),
-			)
 		}
 	}(instanceCopy)
 }
@@ -1122,54 +1213,344 @@ func (m *Manager) SendPoll(ctx context.Context, instanceID uuid.UUID, to, questi
 	return resp.ID, nil
 }
 
-// SendButtons sends a buttons message using whatsmeow protobufs
+// buildCloudAPIInteractiveJSON constrói o JSON completo no formato Cloud API
+// Formato: {"type":"button","body":{"text":"..."},"action":{"buttons":[...]},"footer":{"text":"..."}}
+func buildCloudAPIInteractiveJSON(text, footer string, buttons []ButtonData) string {
+	interactive := map[string]interface{}{
+		"type": "button",
+		"body": map[string]string{
+			"text": text,
+		},
+		"action": map[string]interface{}{
+			"buttons": make([]map[string]interface{}, len(buttons)),
+		},
+	}
+	
+	// Adicionar botões no formato Cloud API
+	cloudButtons := make([]map[string]interface{}, len(buttons))
+	for i, btn := range buttons {
+		btnID := btn.ID
+		if btnID == "" {
+			btnID = fmt.Sprintf("btn_%d", i+1)
+		}
+		
+		var buttonAction map[string]interface{}
+		switch strings.ToLower(btn.Type) {
+		case "url", "link":
+			buttonAction = map[string]interface{}{
+				"type": "url",
+				"url": map[string]string{
+					"id":    btnID,
+					"title": btn.Text,
+					"url":   btn.URL,
+				},
+			}
+		case "phone", "call":
+			buttonAction = map[string]interface{}{
+				"type": "phone_number",
+				"phone_number": map[string]string{
+					"id":          btnID,
+					"title":       btn.Text,
+					"phone_number": btn.Phone,
+				},
+			}
+		case "reply", "response", "":
+			fallthrough
+		default:
+			buttonAction = map[string]interface{}{
+				"type": "reply",
+				"reply": map[string]string{
+					"id":    btnID,
+					"title": btn.Text,
+				},
+			}
+		}
+		cloudButtons[i] = buttonAction
+	}
+	interactive["action"].(map[string]interface{})["buttons"] = cloudButtons
+	
+	// Adicionar footer se houver
+	if footer != "" {
+		interactive["footer"] = map[string]string{
+			"text": footer,
+		}
+	}
+	
+	jsonBytes, _ := json.Marshal(interactive)
+	return string(jsonBytes)
+}
+
+// SendButtons sends a buttons message using InteractiveMessage with NativeFlowMessage
+//
+// ⚠️ IMPORTANTE: Tentativa de emular Cloud API - não há garantia de renderização
+// O WhatsApp Web Multidevice não garante renderização de interativos
+// A mensagem pode ser enviada com sucesso, mas os botões podem não renderizar
+// Isso é uma limitação conhecida do protocolo, não da implementação.
+//
+// Alternativas recomendadas:
+// - Use Poll (enquete) que funciona 100%: POST /message/:instance/poll
+// - Use mensagens de texto com opções numeradas
+// - Use ListMessage que tem melhor suporte
+//
+// Reference: https://github.com/tulir/whatsmeow/issues (Button messages are not supported)
+// Reference: https://docs.uazapi.com/endpoint/post/send~menu (Termos: recursos podem ser descontinuados)
 func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, text, footer string, buttons []ButtonData, header *HeaderData) (string, error) {
+	m.logger.Warn("SendButtons: ⚠️ AVISO - Botões interativos têm suporte limitado no WhatsApp Web API")
+	m.logger.WithFields(logrus.Fields{
+		"instanceID":  instanceID.String(),
+		"to":          to,
+		"buttonsCount": len(buttons),
+	}).Info("SendButtons: iniciando envio de mensagem com botões")
+	// Validações
+	if text == "" {
+		m.logger.Error("SendButtons: texto da mensagem é obrigatório")
+		return "", fmt.Errorf("content text is required")
+	}
+
+	if len(buttons) == 0 {
+		m.logger.Error("SendButtons: pelo menos um botão é necessário")
+		return "", fmt.Errorf("at least one button is required")
+	}
+
+	if len(buttons) > 3 {
+		m.logger.Warn("SendButtons: WhatsApp suporta no máximo 3 botões, truncando lista")
+		buttons = buttons[:3]
+	}
+
 	client, exists := m.GetClient(instanceID)
 	if !exists {
-		return "", fmt.Errorf("client not found")
+		m.logger.WithFields(logrus.Fields{
+			"instanceID": instanceID.String(),
+		}).Error("SendButtons: cliente não encontrado")
+		return "", fmt.Errorf("client not found for instance %s", instanceID.String())
+	}
+
+	if client.WAClient == nil {
+		m.logger.Error("SendButtons: cliente WhatsApp não inicializado")
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	jid, err := types.ParseJID(to)
 	if err != nil {
-		return "", fmt.Errorf("invalid JID: %w", err)
+		return "", fmt.Errorf("invalid JID '%s': %w", to, err)
 	}
 
-	// Build buttons
+	m.logger.Debug("SendButtons: construindo botões")
+	// ============================================================
+	// ABORDAGEM 1: ButtonsMessage com formato Cloud API dentro de NativeFlowInfo
+	// Baseado na recomendação: construir JSON no formato Cloud API e colocar em ButtonParamsJSON
+	// ============================================================
 	waButtons := make([]*waE2E.ButtonsMessage_Button, len(buttons))
 	for i, btn := range buttons {
-		waButtons[i] = &waE2E.ButtonsMessage_Button{
+		if btn.ID == "" {
+			btn.ID = fmt.Sprintf("btn_%d", i+1)
+		}
+
+		// Construir JSON no formato Cloud API (estilo interactive → action → buttons)
+		// Formato: {"type":"reply","reply":{"id":"...","title":"..."}}
+		var buttonAction map[string]interface{}
+		switch strings.ToLower(btn.Type) {
+		case "url", "link":
+			buttonAction = map[string]interface{}{
+				"type": "url",
+				"url": map[string]string{
+					"id":    btn.ID,
+					"title": btn.Text,
+					"url":   btn.URL,
+				},
+			}
+		case "phone", "call":
+			buttonAction = map[string]interface{}{
+				"type": "phone_number",
+				"phone_number": map[string]string{
+					"id":          btn.ID,
+					"title":       btn.Text,
+					"phone_number": btn.Phone,
+				},
+			}
+		case "reply", "response", "":
+			fallthrough
+		default:
+			// Focar em reply buttons primeiro (mais propensos a funcionar)
+			buttonAction = map[string]interface{}{
+				"type": "reply",
+				"reply": map[string]string{
+					"id":    btn.ID,
+					"title": btn.Text,
+				},
+			}
+		}
+
+		// Serializar o JSON do botão
+		buttonActionBytes, err := json.Marshal(buttonAction)
+		if err != nil {
+			return "", fmt.Errorf("failed to serialize button action: %w", err)
+		}
+
+		// Usar NATIVE_FLOW com NativeFlowInfo contendo o JSON no formato Cloud API
+		waButton := &waE2E.ButtonsMessage_Button{
 			ButtonID: proto.String(btn.ID),
 			ButtonText: &waE2E.ButtonsMessage_Button_ButtonText{
 				DisplayText: proto.String(btn.Text),
 			},
-			Type: waE2E.ButtonsMessage_Button_RESPONSE.Enum(),
+			Type: waE2E.ButtonsMessage_Button_NATIVE_FLOW.Enum(),
+			NativeFlowInfo: &waE2E.ButtonsMessage_Button_NativeFlowInfo{
+				Name:       proto.String("quick_reply"), // Para reply buttons
+				ParamsJSON: proto.String(string(buttonActionBytes)),
+			},
 		}
+
+		// Ajustar nome conforme o tipo
+		if btn.Type == "url" || btn.Type == "link" {
+			waButton.NativeFlowInfo.Name = proto.String("cta_url")
+		} else if btn.Type == "phone" || btn.Type == "call" {
+			waButton.NativeFlowInfo.Name = proto.String("cta_call")
+		}
+
+		waButtons[i] = waButton
+
+		m.logger.WithFields(logrus.Fields{
+			"index":          i,
+			"id":             btn.ID,
+			"text":           btn.Text,
+			"type":           btn.Type,
+			"nativeFlowName": waButton.NativeFlowInfo.GetName(),
+			"paramsJSON":     string(buttonActionBytes),
+		}).Info("SendButtons: botão construído com formato Cloud API")
 	}
 
-	// Build message
 	buttonsMsg := &waE2E.ButtonsMessage{
 		ContentText: proto.String(text),
-		FooterText:  proto.String(footer),
 		Buttons:     waButtons,
 		HeaderType:  waE2E.ButtonsMessage_EMPTY.Enum(),
 	}
+	if footer != "" {
+		buttonsMsg.FooterText = proto.String(footer)
+	}
 
-	// Handle header
+	// ============================================================
+	// ABORDAGEM 2: InteractiveMessage com NativeFlowMessage (fallback)
+	// Usando formato Cloud API dentro do ButtonParamsJSON
+	// ============================================================
+	nativeButtons := make([]*waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton, len(buttons))
+	for i, btn := range buttons {
+		if btn.ID == "" {
+			btn.ID = fmt.Sprintf("btn_%d", i+1)
+		}
+		
+		// Construir JSON no formato Cloud API (estilo interactive → action → buttons)
+		var buttonAction map[string]interface{}
+		switch strings.ToLower(btn.Type) {
+		case "url", "link":
+			buttonAction = map[string]interface{}{
+				"type": "url",
+				"url": map[string]string{
+					"id":    btn.ID,
+					"title": btn.Text,
+					"url":   btn.URL,
+				},
+			}
+		case "phone", "call":
+			buttonAction = map[string]interface{}{
+				"type": "phone_number",
+				"phone_number": map[string]string{
+					"id":          btn.ID,
+					"title":       btn.Text,
+					"phone_number": btn.Phone,
+				},
+			}
+		case "reply", "response", "":
+			fallthrough
+		default:
+			// Focar em reply buttons primeiro (mais propensos a funcionar)
+			buttonAction = map[string]interface{}{
+				"type": "reply",
+				"reply": map[string]string{
+					"id":    btn.ID,
+					"title": btn.Text,
+				},
+			}
+		}
+		
+		buttonActionBytes, _ := json.Marshal(buttonAction)
+		
+		// Determinar nome do NativeFlowButton
+		nativeFlowName := "quick_reply"
+		if btn.Type == "url" || btn.Type == "link" {
+			nativeFlowName = "cta_url"
+		} else if btn.Type == "phone" || btn.Type == "call" {
+			nativeFlowName = "cta_call"
+		}
+		
+		nativeButtons[i] = &waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+			Name:             proto.String(nativeFlowName),
+			ButtonParamsJSON: proto.String(string(buttonActionBytes)),
+		}
+	}
+
+	// ============================================================
+	// ABORDAGEM 2B: InteractiveMessage com ShopMessage para botões
+	// Alternativa que pode funcionar melhor
+	// ============================================================
+	// Botões no formato cta_url ou cta_copy
+	nativeButtonsAlt := make([]*waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton, len(buttons))
+	for i, btn := range buttons {
+		if btn.ID == "" {
+			btn.ID = fmt.Sprintf("btn_%d", i+1)
+		}
+		// Formato alternativo com estrutura mais completa
+		buttonParams := map[string]interface{}{
+			"display_text": btn.Text,
+			"id":           btn.ID,
+			"index":        i,
+		}
+		buttonParamsBytes, _ := json.Marshal(buttonParams)
+		nativeButtonsAlt[i] = &waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+			Name:             proto.String("quick_reply"),
+			ButtonParamsJSON: proto.String(string(buttonParamsBytes)),
+		}
+	}
+
+	interactiveMsg := &waE2E.InteractiveMessage{
+		Header: &waE2E.InteractiveMessage_Header{
+			Title:              proto.String(""),
+			HasMediaAttachment: proto.Bool(false),
+		},
+		Body: &waE2E.InteractiveMessage_Body{
+			Text: proto.String(text),
+		},
+		InteractiveMessage: &waE2E.InteractiveMessage_NativeFlowMessage_{
+			NativeFlowMessage: &waE2E.InteractiveMessage_NativeFlowMessage{
+				Buttons:           nativeButtons,
+				MessageVersion:    proto.Int32(1),
+				MessageParamsJSON: proto.String(buildCloudAPIInteractiveJSON(text, footer, buttons)),
+			},
+		},
+	}
+	if footer != "" {
+		interactiveMsg.Footer = &waE2E.InteractiveMessage_Footer{
+			Text: proto.String(footer),
+		}
+	}
+
+	// Handle header if provided
 	if header != nil {
+		m.logger.Debug("SendButtons: processando header")
+
 		switch header.Type {
 		case "text":
-			buttonsMsg.HeaderType = waE2E.ButtonsMessage_TEXT.Enum()
-			buttonsMsg.Header = &waE2E.ButtonsMessage_Text{
-				Text: header.Text,
-			}
+			interactiveMsg.Header.Title = proto.String(header.Text)
+			interactiveMsg.Header.HasMediaAttachment = proto.Bool(false)
+
 		case "image":
 			if header.MediaData != nil {
 				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaImage)
 				if err != nil {
+					m.logger.Error("SendButtons: falha no upload da imagem do header")
 					return "", fmt.Errorf("failed to upload header image: %w", err)
 				}
-				buttonsMsg.HeaderType = waE2E.ButtonsMessage_IMAGE.Enum()
-				buttonsMsg.Header = &waE2E.ButtonsMessage_ImageMessage{
+				interactiveMsg.Header.HasMediaAttachment = proto.Bool(true)
+				interactiveMsg.Header.Media = &waE2E.InteractiveMessage_Header_ImageMessage{
 					ImageMessage: &waE2E.ImageMessage{
 						URL:           proto.String(uploaded.URL),
 						DirectPath:    proto.String(uploaded.DirectPath),
@@ -1181,14 +1562,16 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 					},
 				}
 			}
+
 		case "video":
 			if header.MediaData != nil {
 				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaVideo)
 				if err != nil {
+					m.logger.Error("SendButtons: falha no upload do vídeo do header")
 					return "", fmt.Errorf("failed to upload header video: %w", err)
 				}
-				buttonsMsg.HeaderType = waE2E.ButtonsMessage_VIDEO.Enum()
-				buttonsMsg.Header = &waE2E.ButtonsMessage_VideoMessage{
+				interactiveMsg.Header.HasMediaAttachment = proto.Bool(true)
+				interactiveMsg.Header.Media = &waE2E.InteractiveMessage_Header_VideoMessage{
 					VideoMessage: &waE2E.VideoMessage{
 						URL:           proto.String(uploaded.URL),
 						DirectPath:    proto.String(uploaded.DirectPath),
@@ -1200,14 +1583,16 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 					},
 				}
 			}
+
 		case "document":
 			if header.MediaData != nil {
 				uploaded, err := client.WAClient.Upload(ctx, header.MediaData, whatsmeow.MediaDocument)
 				if err != nil {
+					m.logger.Error("SendButtons: falha no upload do documento do header")
 					return "", fmt.Errorf("failed to upload header document: %w", err)
 				}
-				buttonsMsg.HeaderType = waE2E.ButtonsMessage_DOCUMENT.Enum()
-				buttonsMsg.Header = &waE2E.ButtonsMessage_DocumentMessage{
+				interactiveMsg.Header.HasMediaAttachment = proto.Bool(true)
+				interactiveMsg.Header.Media = &waE2E.InteractiveMessage_Header_DocumentMessage{
 					DocumentMessage: &waE2E.DocumentMessage{
 						URL:           proto.String(uploaded.URL),
 						DirectPath:    proto.String(uploaded.DirectPath),
@@ -1223,75 +1608,350 @@ func (m *Manager) SendButtons(ctx context.Context, instanceID uuid.UUID, to, tex
 		}
 	}
 
-	msg := &waE2E.Message{
-		ButtonsMessage: buttonsMsg,
+	// ============================================================
+	// ESTRATÉGIA DE ENVIO EM CASCATA
+	// Tenta diferentes formatos até encontrar um que funcione
+	// ============================================================
+
+	var resp whatsmeow.SendResponse
+	var sendErr error
+	var successMethod string
+
+	// TENTATIVA 1: ButtonsMessage com NATIVE_FLOW + ViewOnceMessage
+	m.logger.WithFields(logrus.Fields{
+		"jid":          jid.String(),
+		"buttonsCount": len(buttons),
+	}).Info("SendButtons: tentativa 1 - ButtonsMessage NATIVE_FLOW + ViewOnceMessage")
+	resp, sendErr = client.WAClient.SendMessage(ctx, jid, &waE2E.Message{
+		ViewOnceMessage: &waE2E.FutureProofMessage{
+			Message: &waE2E.Message{
+				ButtonsMessage: buttonsMsg,
+			},
+		},
+	})
+	if sendErr == nil {
+		successMethod = "ButtonsMessage NATIVE_FLOW + ViewOnceMessage"
+	} else {
+		m.logger.Warn("SendButtons: tentativa 1 falhou")
+
+		// TENTATIVA 2: ButtonsMessage com NATIVE_FLOW sem envelope
+		m.logger.Info("SendButtons: tentativa 2 - ButtonsMessage NATIVE_FLOW sem envelope")
+		resp, sendErr = client.WAClient.SendMessage(ctx, jid, &waE2E.Message{
+			ButtonsMessage: buttonsMsg,
+		})
+		if sendErr == nil {
+			successMethod = "ButtonsMessage NATIVE_FLOW"
+		} else {
+			m.logger.Warn("SendButtons: tentativa 2 falhou")
+
+			// TENTATIVA 3: ButtonsMessage com RESPONSE (formato tradicional)
+			m.logger.Info("SendButtons: tentativa 3 - ButtonsMessage RESPONSE")
+			// Reconstruir botões com tipo RESPONSE
+			responseButtons := make([]*waE2E.ButtonsMessage_Button, len(buttons))
+			for i, btn := range buttons {
+				btnID := btn.ID
+				if btnID == "" {
+					btnID = fmt.Sprintf("btn_%d", i+1)
+				}
+				responseButtons[i] = &waE2E.ButtonsMessage_Button{
+					ButtonID: proto.String(btnID),
+					ButtonText: &waE2E.ButtonsMessage_Button_ButtonText{
+						DisplayText: proto.String(btn.Text),
+					},
+					Type: waE2E.ButtonsMessage_Button_RESPONSE.Enum(),
+				}
+			}
+			responseButtonsMsg := &waE2E.ButtonsMessage{
+				ContentText: proto.String(text),
+				Buttons:     responseButtons,
+				HeaderType:  waE2E.ButtonsMessage_EMPTY.Enum(),
+			}
+			if footer != "" {
+				responseButtonsMsg.FooterText = proto.String(footer)
+			}
+
+			resp, sendErr = client.WAClient.SendMessage(ctx, jid, &waE2E.Message{
+				ViewOnceMessage: &waE2E.FutureProofMessage{
+					Message: &waE2E.Message{
+						ButtonsMessage: responseButtonsMsg,
+					},
+				},
+			})
+			if sendErr == nil {
+				successMethod = "ButtonsMessage RESPONSE + ViewOnceMessage"
+			} else {
+				m.logger.Warn("SendButtons: tentativa 3 falhou")
+
+				// TENTATIVA 4: InteractiveMessage com NativeFlowMessage
+				m.logger.Info("SendButtons: tentativa 4 - InteractiveMessage NativeFlowMessage")
+				resp, sendErr = client.WAClient.SendMessage(ctx, jid, &waE2E.Message{
+					InteractiveMessage: interactiveMsg,
+				})
+				if sendErr == nil {
+					successMethod = "InteractiveMessage NativeFlowMessage"
+				} else {
+					m.logger.Warn("SendButtons: tentativa 4 falhou")
+
+					// TENTATIVA 5: InteractiveMessage com ViewOnceMessage
+					m.logger.Info("SendButtons: tentativa 5 - InteractiveMessage + ViewOnceMessage")
+					resp, sendErr = client.WAClient.SendMessage(ctx, jid, &waE2E.Message{
+						ViewOnceMessage: &waE2E.FutureProofMessage{
+							Message: &waE2E.Message{
+								InteractiveMessage: interactiveMsg,
+							},
+						},
+					})
+					if sendErr == nil {
+						successMethod = "InteractiveMessage + ViewOnceMessage"
+					}
+				}
+			}
+		}
 	}
 
-	if client.WAClient == nil {
-		return "", fmt.Errorf("WhatsApp client is not initialized")
+	if sendErr != nil {
+		m.logger.Error("SendButtons: todas as tentativas falharam")
+		return "", fmt.Errorf("failed to send buttons message to %s after 5 attempts: %w", jid.String(), sendErr)
 	}
 
-	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
-	if err != nil {
-		return "", fmt.Errorf("failed to send buttons message: %w", err)
-	}
 
+	m.logger.WithFields(logrus.Fields{
+		"messageID":      resp.ID,
+		"jid":            jid.String(),
+		"method":         successMethod,
+		"serverTimestamp": resp.Timestamp,
+	}).Info("SendButtons: mensagem enviada com sucesso")
 	m.emitMessageSent(instanceID, jid, "button", resp.ID)
 
 	return resp.ID, nil
 }
 
-// SendList sends a list message using whatsmeow protobufs
+// SendList sends a list message using InteractiveMessage with NativeFlowMessage
+// This is the format currently supported by WhatsApp (2024/2025)
+// Reference: https://github.com/tulir/whatsmeow/discussions/711
+// Reference: UAZAPI documentation https://www.postman.com/augustofcs/uazapi-v2/documentation
 func (m *Manager) SendList(ctx context.Context, instanceID uuid.UUID, to, title, description, buttonText, footer string, sections []ListSectionData) (string, error) {
+	m.logger.WithFields(logrus.Fields{
+		"instanceID": instanceID.String(),
+		"to":         to,
+	}).Info("SendList: iniciando envio de mensagem de lista")
+	// Validações
+	if title == "" {
+		m.logger.Error("SendList: título é obrigatório")
+		return "", fmt.Errorf("list title is required")
+	}
+
+	if buttonText == "" {
+		m.logger.Error("SendList: texto do botão é obrigatório")
+		return "", fmt.Errorf("button text is required")
+	}
+
+	if len(sections) == 0 {
+		m.logger.Error("SendList: pelo menos uma seção é necessária")
+		return "", fmt.Errorf("at least one section is required")
+	}
+
+	// Validar total de rows (WhatsApp limita a 10 rows por seção tipicamente)
+	totalRows := 0
+	for _, section := range sections {
+		if len(section.Rows) == 0 {
+			m.logger.Warn("SendList: seção sem linhas será ignorada")
+		}
+		totalRows += len(section.Rows)
+	}
+
+	if totalRows == 0 {
+		m.logger.Error("SendList: nenhuma linha encontrada nas seções")
+		return "", fmt.Errorf("at least one row is required in sections")
+	}
+
 	client, exists := m.GetClient(instanceID)
 	if !exists {
-		return "", fmt.Errorf("client not found")
+		m.logger.Error("SendList: cliente não encontrado")
+		return "", fmt.Errorf("client not found for instance %s", instanceID.String())
+	}
+
+	if client.WAClient == nil {
+		m.logger.Error("SendList: cliente WhatsApp não inicializado")
+		return "", fmt.Errorf("WhatsApp client is not initialized")
 	}
 
 	jid, err := types.ParseJID(to)
 	if err != nil {
-		return "", fmt.Errorf("invalid JID: %w", err)
+		return "", fmt.Errorf("invalid JID '%s': %w", to, err)
 	}
 
-	// Build sections
-	waSections := make([]*waE2E.ListMessage_Section, len(sections))
+	m.logger.Debug("SendList: construindo seções para NativeFlowMessage")
+	// Build sections in JSON format for NativeFlowMessage
+	type listRow struct {
+		ID          string `json:"id"`
+		Title       string `json:"title"`
+		Description string `json:"description,omitempty"`
+	}
+	type listSection struct {
+		Title string    `json:"title"`
+		Rows  []listRow `json:"rows"`
+	}
+
+	jsonSections := make([]listSection, 0, len(sections))
 	for i, section := range sections {
+		if len(section.Rows) == 0 {
+			continue
+		}
+
+		rows := make([]listRow, len(section.Rows))
+		for j, row := range section.Rows {
+			rowID := row.ID
+			if rowID == "" {
+				rowID = fmt.Sprintf("row_%d_%d", i+1, j+1)
+			}
+			rows[j] = listRow{
+				ID:          rowID,
+				Title:       row.Title,
+				Description: row.Description,
+			}
+		}
+
+		jsonSections = append(jsonSections, listSection{
+			Title: section.Title,
+			Rows:  rows,
+		})
+
+		m.logger.Debug("SendList: seção construída")
+	}
+
+	// Build button params JSON for list
+	// Formato esperado pelo WhatsApp para listas
+	type listButtonParams struct {
+		Title    string        `json:"title"`
+		Sections []listSection `json:"sections"`
+	}
+
+	buttonParams := listButtonParams{
+		Title:    buttonText,
+		Sections: jsonSections,
+	}
+
+	buttonParamsBytes, err := json.Marshal(buttonParams)
+	if err != nil {
+		m.logger.Error("SendList: falha ao serializar parâmetros do botão")
+		return "", fmt.Errorf("failed to serialize button params: %w", err)
+	}
+
+	// Build NativeFlowMessage with single_select list
+	nativeButton := &waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+		Name:             proto.String("single_select"),
+		ButtonParamsJSON: proto.String(string(buttonParamsBytes)),
+	}
+
+	// Build InteractiveMessage
+	// O campo NativeFlowMessage é um oneof, então precisa ser atribuído via wrapper
+	interactiveMsg := &waE2E.InteractiveMessage{
+		Header: &waE2E.InteractiveMessage_Header{
+			Title:              proto.String(title),
+			HasMediaAttachment: proto.Bool(false),
+		},
+		Body: &waE2E.InteractiveMessage_Body{
+			Text: proto.String(description),
+		},
+		InteractiveMessage: &waE2E.InteractiveMessage_NativeFlowMessage_{
+			NativeFlowMessage: &waE2E.InteractiveMessage_NativeFlowMessage{
+				Buttons:        []*waE2E.InteractiveMessage_NativeFlowMessage_NativeFlowButton{nativeButton},
+				MessageVersion: proto.Int32(1),
+			},
+		},
+	}
+
+	// Footer é opcional
+	if footer != "" {
+		interactiveMsg.Footer = &waE2E.InteractiveMessage_Footer{
+			Text: proto.String(footer),
+		}
+	}
+
+	// Construir também ListMessage tradicional para fallback
+	waSections := make([]*waE2E.ListMessage_Section, 0, len(sections))
+	for i, section := range sections {
+		if len(section.Rows) == 0 {
+			continue
+		}
 		rows := make([]*waE2E.ListMessage_Row, len(section.Rows))
 		for j, row := range section.Rows {
+			rowID := row.ID
+			if rowID == "" {
+				rowID = fmt.Sprintf("row_%d_%d", i+1, j+1)
+			}
 			rows[j] = &waE2E.ListMessage_Row{
-				RowID:       proto.String(row.ID),
+				RowID:       proto.String(rowID),
 				Title:       proto.String(row.Title),
 				Description: proto.String(row.Description),
 			}
 		}
-		waSections[i] = &waE2E.ListMessage_Section{
+		waSections = append(waSections, &waE2E.ListMessage_Section{
 			Title: proto.String(section.Title),
 			Rows:  rows,
-		}
+		})
 	}
 
 	listMsg := &waE2E.ListMessage{
-		Title:       proto.String(title),
-		Description: proto.String(description),
-		ButtonText:  proto.String(buttonText),
-		FooterText:  proto.String(footer),
-		ListType:    waE2E.ListMessage_SINGLE_SELECT.Enum(),
-		Sections:    waSections,
+		Title:      proto.String(title),
+		ButtonText: proto.String(buttonText),
+		ListType:   waE2E.ListMessage_SINGLE_SELECT.Enum(),
+		Sections:   waSections,
+	}
+	if description != "" {
+		listMsg.Description = proto.String(description)
+	}
+	if footer != "" {
+		listMsg.FooterText = proto.String(footer)
 	}
 
+	// Tentar primeiro com ListMessage + ViewOnceMessage
 	msg := &waE2E.Message{
-		ListMessage: listMsg,
+		ViewOnceMessage: &waE2E.FutureProofMessage{
+			Message: &waE2E.Message{
+				ListMessage: listMsg,
+			},
+		},
 	}
 
-	if client.WAClient == nil {
-		return "", fmt.Errorf("WhatsApp client is not initialized")
-	}
 
 	resp, err := client.WAClient.SendMessage(ctx, jid, msg)
-	if err != nil {
-		return "", fmt.Errorf("failed to send list message: %w", err)
+	
+	// Se falhar com erro 405, tentar sem ViewOnceMessage
+	if err != nil && strings.Contains(err.Error(), "405") {
+		m.logger.Warn("SendList: erro 405 com ViewOnceMessage, tentando sem envelope")
+		fallbackMsg := &waE2E.Message{
+			ListMessage: listMsg,
+		}
+
+		resp, err = client.WAClient.SendMessage(ctx, jid, fallbackMsg)
+		if err != nil {
+			m.logger.Warn("SendList: erro também sem envelope, tentando InteractiveMessage")
+			// Última tentativa: InteractiveMessage
+			interactiveFallback := &waE2E.Message{
+				InteractiveMessage: interactiveMsg,
+			}
+
+			resp, err = client.WAClient.SendMessage(ctx, jid, interactiveFallback)
+			if err != nil {
+				m.logger.Error("SendList: falha em todas as tentativas")
+				return "", fmt.Errorf("failed to send list message to %s: %w", jid.String(), err)
+			}
+			m.logger.Info("SendList: sucesso com InteractiveMessage (último fallback)")
+		} else {
+			m.logger.Info("SendList: sucesso sem ViewOnceMessage")
+		}
+	} else if err != nil {
+		m.logger.Error("SendList: falha ao enviar mensagem de lista")
+		return "", fmt.Errorf("failed to send list message to %s: %w", jid.String(), err)
 	}
 
+	m.logger.WithFields(logrus.Fields{
+		"messageID":      resp.ID,
+		"jid":            jid.String(),
+		"serverTimestamp": resp.Timestamp,
+	}).Info("SendList: mensagem de lista enviada com sucesso")
 	m.emitMessageSent(instanceID, jid, "list", resp.ID)
 
 	return resp.ID, nil
@@ -1312,9 +1972,11 @@ func (m *Manager) emitMessageSent(instanceID uuid.UUID, to types.JID, messageTyp
 
 // ButtonData represents button data for SendButtons
 type ButtonData struct {
-	ID   string
-	Text string
-	Type string
+	ID     string // buttonId
+	Text   string // displayText
+	Type   string // reply, url, phone
+	URL    string // For URL buttons
+	Phone  string // For phone buttons
 }
 
 // HeaderData represents header data for interactive messages
@@ -1358,3 +2020,4 @@ func decodeBase64Media(data string) ([]byte, error) {
 	}
 	return base64.StdEncoding.DecodeString(data)
 }
+

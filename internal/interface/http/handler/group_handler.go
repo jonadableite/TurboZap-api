@@ -12,18 +12,18 @@ import (
 	"github.com/jonadableite/turbozap-api/pkg/validator"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // GroupHandler handles group-related requests
 type GroupHandler struct {
 	instanceRepo repository.InstanceRepository
 	waManager    *whatsapp.Manager
-	logger       *zap.Logger
+	logger       *logrus.Logger
 }
 
 // NewGroupHandler creates a new group handler
-func NewGroupHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *zap.Logger) *GroupHandler {
+func NewGroupHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *GroupHandler {
 	return &GroupHandler{
 		instanceRepo: instanceRepo,
 		waManager:    waManager,
@@ -39,7 +39,7 @@ func (h *GroupHandler) getInstanceAndValidate(c *fiber.Ctx) (*entity.Instance, *
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return nil, nil, response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -90,7 +90,7 @@ func (h *GroupHandler) CreateGroup(c *fiber.Ctx) error {
 		Participants: participants,
 	})
 	if err != nil {
-		h.logger.Error("Failed to create group", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to create group")
 		return response.InternalServerError(c, "Failed to create group")
 	}
 
@@ -109,7 +109,7 @@ func (h *GroupHandler) ListGroups(c *fiber.Ctx) error {
 
 	groups, err := client.WAClient.GetJoinedGroups(c.Context())
 	if err != nil {
-		h.logger.Error("Failed to list groups", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to list groups")
 		return response.InternalServerError(c, "Failed to list groups")
 	}
 
@@ -165,7 +165,7 @@ func (h *GroupHandler) GetGroupInfo(c *fiber.Ctx) error {
 
 	groupInfo, err := client.WAClient.GetGroupInfo(c.Context(), jid)
 	if err != nil {
-		h.logger.Error("Failed to get group info", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get group info")
 		return response.InternalServerError(c, "Failed to get group info")
 	}
 
@@ -264,7 +264,7 @@ func (h *GroupHandler) ManageParticipants(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		h.logger.Error("Failed to manage participants", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to manage participants")
 		return response.InternalServerError(c, "Failed to manage participants")
 	}
 
@@ -316,7 +316,7 @@ func (h *GroupHandler) JoinGroup(c *fiber.Ctx) error {
 
 	groupJID, err := client.WAClient.JoinGroupWithLink(c.Context(), inviteCode)
 	if err != nil {
-		h.logger.Error("Failed to join group", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to join group")
 		return response.InternalServerError(c, "Failed to join group: "+err.Error())
 	}
 
@@ -357,7 +357,7 @@ func (h *GroupHandler) LeaveGroup(c *fiber.Ctx) error {
 
 	err = client.WAClient.LeaveGroup(c.Context(), groupJID)
 	if err != nil {
-		h.logger.Error("Failed to leave group", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to leave group")
 		return response.InternalServerError(c, "Failed to leave group")
 	}
 
@@ -402,7 +402,7 @@ func (h *GroupHandler) GetInviteLink(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		h.logger.Error("Failed to get invite link", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get invite link")
 		return response.InternalServerError(c, "Failed to get invite link")
 	}
 
@@ -443,7 +443,7 @@ func (h *GroupHandler) UpdateGroupInfo(c *fiber.Ctx) error {
 	if req.Name != "" {
 		err = client.WAClient.SetGroupName(c.Context(), groupJID, req.Name)
 		if err != nil {
-			h.logger.Error("Failed to update group name", zap.Error(err))
+			h.logger.WithError(err).Error("Failed to update group name")
 			return response.InternalServerError(c, "Failed to update group name")
 		}
 	}
@@ -452,7 +452,7 @@ func (h *GroupHandler) UpdateGroupInfo(c *fiber.Ctx) error {
 	if req.Topic != "" {
 		err = client.WAClient.SetGroupTopic(c.Context(), groupJID, "", "", req.Topic)
 		if err != nil {
-			h.logger.Error("Failed to update group topic", zap.Error(err))
+			h.logger.WithError(err).Error("Failed to update group topic")
 			return response.InternalServerError(c, "Failed to update group topic")
 		}
 	}

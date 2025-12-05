@@ -7,18 +7,18 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // WebhookHandler handles webhook-related requests
 type WebhookHandler struct {
 	instanceRepo repository.InstanceRepository
 	webhookRepo  repository.WebhookRepository
-	logger       *zap.Logger
+	logger       *logrus.Logger
 }
 
 // NewWebhookHandler creates a new webhook handler
-func NewWebhookHandler(instanceRepo repository.InstanceRepository, webhookRepo repository.WebhookRepository, logger *zap.Logger) *WebhookHandler {
+func NewWebhookHandler(instanceRepo repository.InstanceRepository, webhookRepo repository.WebhookRepository, logger *logrus.Logger) *WebhookHandler {
 	return &WebhookHandler{
 		instanceRepo: instanceRepo,
 		webhookRepo:  webhookRepo,
@@ -35,7 +35,7 @@ func (h *WebhookHandler) SetWebhook(c *fiber.Ctx) error {
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -76,7 +76,7 @@ func (h *WebhookHandler) SetWebhook(c *fiber.Ctx) error {
 	}
 
 	if err := h.webhookRepo.Upsert(c.Context(), webhook); err != nil {
-		h.logger.Error("Failed to save webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to save webhook")
 		return response.InternalServerError(c, "Failed to save webhook configuration")
 	}
 
@@ -92,7 +92,7 @@ func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -101,7 +101,7 @@ func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
 
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)
 	if err != nil {
-		h.logger.Error("Failed to get webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get webhook")
 		return response.InternalServerError(c, "Failed to get webhook configuration")
 	}
 
@@ -127,7 +127,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -135,7 +135,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 	}
 
 	if err := h.webhookRepo.DeleteByInstance(c.Context(), instance.ID); err != nil {
-		h.logger.Error("Failed to delete webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to delete webhook")
 		return response.InternalServerError(c, "Failed to delete webhook configuration")
 	}
 
@@ -153,7 +153,7 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -162,7 +162,7 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)
 	if err != nil {
-		h.logger.Error("Failed to get webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get webhook")
 		return response.InternalServerError(c, "Failed to get webhook")
 	}
 
@@ -171,7 +171,7 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 	}
 
 	if err := h.webhookRepo.SetEnabled(c.Context(), webhook.ID, true); err != nil {
-		h.logger.Error("Failed to enable webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to enable webhook")
 		return response.InternalServerError(c, "Failed to enable webhook")
 	}
 
@@ -190,7 +190,7 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -199,7 +199,7 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)
 	if err != nil {
-		h.logger.Error("Failed to get webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get webhook")
 		return response.InternalServerError(c, "Failed to get webhook")
 	}
 
@@ -208,7 +208,7 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 	}
 
 	if err := h.webhookRepo.SetEnabled(c.Context(), webhook.ID, false); err != nil {
-		h.logger.Error("Failed to disable webhook", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to disable webhook")
 		return response.InternalServerError(c, "Failed to disable webhook")
 	}
 

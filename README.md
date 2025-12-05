@@ -27,7 +27,11 @@
 ## ✨ Características
 
 - **Multi-instância**: Gerencie múltiplos números de WhatsApp simultaneamente
-- **Mensagens Interativas**: Suporte a botões e listas usando protobufs nativos do WhatsApp
+- **Mensagens Interativas**: Suporte completo a botões e listas usando protobufs nativos do WhatsApp (`waE2E`)
+  - Botões com até 3 opções e suporte a headers (texto, imagem, vídeo, documento)
+  - Listas com múltiplas seções e linhas
+  - Renderização garantida em todos os dispositivos (Android, iOS, Web) via `ViewOnceMessage/FutureProofMessage`
+  - Validações automáticas e logs detalhados para depuração
 - **WebSocket**: Eventos em tempo real para integração
 - **Webhooks**: Notificações HTTP para eventos de mensagens
 - **Filas de Mensagens**: RabbitMQ para alta vazão e confiabilidade
@@ -234,6 +238,28 @@ curl -X POST http://localhost:8080/instance/create \
 
 ### Enviar Mensagem com Botões
 
+> **Nota**: As mensagens com botões são automaticamente envolvidas em `ViewOnceMessage/FutureProofMessage` para garantir renderização correta em todos os dispositivos (Android, iOS, Web).
+
+**Exemplo básico (sem header):**
+
+```bash
+curl -X POST http://localhost:8080/message/minha-instancia/button \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "5511999999999",
+    "text": "Escolha uma opção:",
+    "footer": "Powered by TurboZap",
+    "buttons": [
+      {"id": "btn_1", "text": "👍 Sim"},
+      {"id": "btn_2", "text": "👎 Não"},
+      {"id": "btn_3", "text": "🤔 Talvez"}
+    ]
+  }'
+```
+
+**Exemplo com header de texto:**
+
 ```bash
 curl -X POST http://localhost:8080/message/minha-instancia/button \
   -H "X-API-Key: your-api-key" \
@@ -254,7 +280,99 @@ curl -X POST http://localhost:8080/message/minha-instancia/button \
   }'
 ```
 
+**Exemplo com header de imagem:**
+
+```bash
+curl -X POST http://localhost:8080/message/minha-instancia/button \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "5511999999999",
+    "text": "Escolha uma opção:",
+    "footer": "Powered by TurboZap",
+    "buttons": [
+      {"id": "btn_1", "text": "👍 Sim"},
+      {"id": "btn_2", "text": "👎 Não"}
+    ],
+    "header": {
+      "type": "image",
+      "media_url": "https://exemplo.com/imagem.jpg",
+      "mime_type": "image/jpeg"
+    }
+  }'
+```
+
+**Exemplo com header de vídeo:**
+
+```bash
+curl -X POST http://localhost:8080/message/minha-instancia/button \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "5511999999999",
+    "text": "Assista ao vídeo e escolha:",
+    "footer": "Powered by TurboZap",
+    "buttons": [
+      {"id": "btn_1", "text": "Gostei"},
+      {"id": "btn_2", "text": "Não gostei"}
+    ],
+    "header": {
+      "type": "video",
+      "media_url": "https://exemplo.com/video.mp4",
+      "mime_type": "video/mp4"
+    }
+  }'
+```
+
+**Exemplo com header de documento:**
+
+```bash
+curl -X POST http://localhost:8080/message/minha-instancia/button \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "5511999999999",
+    "text": "Baixe o documento e escolha:",
+    "footer": "Powered by TurboZap",
+    "buttons": [
+      {"id": "btn_1", "text": "Aceitar"},
+      {"id": "btn_2", "text": "Recusar"}
+    ],
+    "header": {
+      "type": "document",
+      "media_url": "https://exemplo.com/documento.pdf",
+      "mime_type": "application/pdf",
+      "file_name": "contrato.pdf"
+    }
+  }'
+```
+
+**Parâmetros:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `to` | string | Sim | Número do destinatário (com código do país) |
+| `text` | string | Sim | Texto principal da mensagem |
+| `footer` | string | Não | Texto do rodapé |
+| `buttons` | array | Sim | Array com 1-3 botões |
+| `buttons[].id` | string | Não* | ID único do botão (gerado automaticamente se vazio) |
+| `buttons[].text` | string | Sim | Texto exibido no botão |
+| `header` | object | Não | Cabeçalho da mensagem (text, image, video ou document) |
+| `header.type` | string | Sim** | Tipo do header: `text`, `image`, `video` ou `document` |
+| `header.text` | string | Sim** | Texto do header (quando `type` é `text`) |
+| `header.media_url` | string | Sim** | URL da mídia (quando `type` é `image`, `video` ou `document`) |
+| `header.base64` | string | Não | Dados da mídia em base64 (alternativa a `media_url`) |
+| `header.mime_type` | string | Sim** | Tipo MIME da mídia |
+| `header.file_name` | string | Não | Nome do arquivo (quando `type` é `document`) |
+
+\* Se não fornecido, será gerado automaticamente como `btn_1`, `btn_2`, etc.  
+\** Obrigatório dependendo do tipo de header escolhido
+
 ### Enviar Lista
+
+> **Nota**: As mensagens de lista são automaticamente envolvidas em `ViewOnceMessage/FutureProofMessage` para garantir renderização correta em todos os dispositivos (Android, iOS, Web).
+
+**Exemplo básico:**
 
 ```bash
 curl -X POST http://localhost:8080/message/minha-instancia/list \
@@ -277,13 +395,75 @@ curl -X POST http://localhost:8080/message/minha-instancia/list \
       {
         "title": "ℹ️ Informações",
         "rows": [
-          {"id": "info_1", "title": "Sobre nós"},
-          {"id": "info_2", "title": "Contato"}
+          {"id": "info_1", "title": "Sobre nós", "description": "Conheça nossa empresa"},
+          {"id": "info_2", "title": "Contato", "description": "Entre em contato conosco"}
         ]
       }
     ]
   }'
 ```
+
+**Exemplo com múltiplas seções:**
+
+```bash
+curl -X POST http://localhost:8080/message/minha-instancia/list \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "5511999999999",
+    "title": "Central de Atendimento",
+    "description": "Escolha o departamento desejado:",
+    "button_text": "Ver Opções",
+    "footer": "Atendimento 24h",
+    "sections": [
+      {
+        "title": "📞 Suporte",
+        "rows": [
+          {"id": "sup_1", "title": "Suporte Técnico", "description": "Problemas técnicos"},
+          {"id": "sup_2", "title": "Suporte Comercial", "description": "Dúvidas comerciais"}
+        ]
+      },
+      {
+        "title": "💳 Vendas",
+        "rows": [
+          {"id": "vendas_1", "title": "Novos Produtos", "description": "Conheça nossos produtos"},
+          {"id": "vendas_2", "title": "Promoções", "description": "Ofertas especiais"}
+        ]
+      },
+      {
+        "title": "📋 Outros",
+        "rows": [
+          {"id": "outros_1", "title": "Falar com Atendente", "description": "Atendimento humano"}
+        ]
+      }
+    ]
+  }'
+```
+
+**Parâmetros:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `to` | string | Sim | Número do destinatário (com código do país) |
+| `title` | string | Sim | Título da lista (máximo de caracteres conforme limites do WhatsApp) |
+| `description` | string | Não | Descrição da lista |
+| `button_text` | string | Sim | Texto do botão que abre a lista |
+| `footer` | string | Não | Texto do rodapé |
+| `sections` | array | Sim | Array com 1 ou mais seções |
+| `sections[].title` | string | Sim | Título da seção |
+| `sections[].rows` | array | Sim | Array com as linhas da seção (pelo menos 1 linha) |
+| `sections[].rows[].id` | string | Não* | ID único da linha (gerado automaticamente se vazio) |
+| `sections[].rows[].title` | string | Sim | Título da linha |
+| `sections[].rows[].description` | string | Não | Descrição da linha |
+
+\* Se não fornecido, será gerado automaticamente como `row_1_1`, `row_1_2`, etc.
+
+**Limitações:**
+
+- Máximo de **3 botões** por mensagem de botões
+- Máximo de **10 linhas por seção** (recomendado pelo WhatsApp)
+- Títulos e descrições têm limites de caracteres conforme especificação do WhatsApp
+- Seções vazias (sem linhas) são automaticamente ignoradas
 
 ### Configurar Webhook por Instância
 
@@ -567,13 +747,34 @@ Esses headers serão incluídos em todas as requisições do webhook.
 
 | Recurso | WhatsApp Web (whatsmeow) | Cloud API |
 |---------|-------------------------|-----------|
-| Botões | ✅ Limitado | ✅ Completo |
-| Listas | ✅ Limitado | ✅ Completo |
+| Botões | ✅ Suportado (até 3 botões) | ✅ Completo |
+| Listas | ✅ Suportado (até 10 linhas/seção) | ✅ Completo |
 | Carrossel | ❌ Não suportado | ✅ Suportado |
 | Templates | ❌ Não suportado | ✅ Suportado |
 | Custo | Gratuito | Pago por mensagem |
 
-> **Nota**: Mensagens interativas (botões/listas) podem ter suporte limitado em alguns dispositivos ou versões do WhatsApp.
+### Mensagens Interativas
+
+**Botões:**
+- Máximo de **3 botões** por mensagem
+- Tipo de botão: apenas `RESPONSE` (resposta rápida)
+- Suporte completo em Android, iOS e WhatsApp Web
+- Mensagens são automaticamente envolvidas em `ViewOnceMessage/FutureProofMessage` para compatibilidade entre dispositivos
+
+**Listas:**
+- Máximo de **10 linhas por seção** (recomendado)
+- Tipo de lista: `SINGLE_SELECT` (seleção única)
+- Suporte completo em Android, iOS e WhatsApp Web
+- Mensagens são automaticamente envolvidas em `ViewOnceMessage/FutureProofMessage` para compatibilidade entre dispositivos
+- Seções vazias são automaticamente ignoradas
+
+**Validações Automáticas:**
+- IDs de botões/linhas são gerados automaticamente se não fornecidos
+- Listas de botões com mais de 3 itens são automaticamente truncadas
+- Validação de parâmetros obrigatórios antes do envio
+- Logs detalhados para depuração
+
+> **Nota**: As mensagens interativas são renderizadas corretamente em todos os dispositivos graças ao envelopamento `ViewOnceMessage/FutureProofMessage`. Isso garante compatibilidade entre Android, iOS e WhatsApp Web, mesmo em versões antigas do aplicativo.
 
 ## 📊 Monitoramento
 

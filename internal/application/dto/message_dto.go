@@ -81,14 +81,29 @@ type SendPollRequest struct {
 }
 
 // SendButtonRequest represents a request to send a button message
+// Supports multiple formats:
+// - Format 1: {to, text, footer, buttons, header}
+// - Format 2: {phone, caption, title, footer, image: {url}, buttons} (UAZAPI format)
 type SendButtonRequest struct {
-	To       string                `json:"to" validate:"required"`
-	Text     string                `json:"text" validate:"required"`
+	// Standard fields
+	To       string                `json:"to,omitempty"`
+	Text     string                `json:"text,omitempty"`
 	Footer   string                `json:"footer,omitempty"`
 	Buttons  []ButtonRequest       `json:"buttons" validate:"required,min=1,max=3"`
 	Header   *MessageHeaderRequest `json:"header,omitempty"`
 	MediaURL string                `json:"media_url,omitempty"`
 	MimeType string                `json:"mime_type,omitempty"`
+	
+	// UAZAPI format compatibility
+	Phone   string       `json:"phone,omitempty"`   // Alternative to "to"
+	Caption string       `json:"caption,omitempty"`  // Alternative to "text"
+	Title   string       `json:"title,omitempty"`   // Header title
+	Image   *ImageData   `json:"image,omitempty"`    // Image at root level
+}
+
+// ImageData represents image data
+type ImageData struct {
+	URL string `json:"url"`
 }
 
 // MessageHeaderRequest represents a header for interactive messages
@@ -102,10 +117,22 @@ type MessageHeaderRequest struct {
 }
 
 // ButtonRequest represents a button
+// Supports the correct format: buttonId, buttonText with displayText, and type (reply/url/phone)
 type ButtonRequest struct {
-	ID   string `json:"id" validate:"required"`
-	Text string `json:"text" validate:"required,max=20"`
-	Type string `json:"type,omitempty"` // RESPONSE, URL, CALL
+	ButtonID   string          `json:"buttonId" validate:"required"`
+	ButtonText ButtonTextData  `json:"buttonText" validate:"required"`
+	Type       string          `json:"type" validate:"required,oneof=reply url phone"`
+	URL        string          `json:"url,omitempty"`   // Required if type is "url"
+	Phone      string          `json:"phone,omitempty"`  // Required if type is "phone"
+	
+	// Legacy fields for backward compatibility
+	ID   string `json:"id,omitempty"`
+	Text string `json:"text,omitempty"`
+}
+
+// ButtonTextData represents button text with displayText
+type ButtonTextData struct {
+	DisplayText string `json:"displayText" validate:"required,max=20"`
 }
 
 // SendListRequest represents a request to send a list message

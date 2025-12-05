@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -21,8 +21,8 @@ const (
 	colorGray    = "\033[90m"
 )
 
-// LoggerMiddleware creates a logging middleware
-func LoggerMiddleware(logger *zap.Logger) fiber.Handler {
+// LoggerMiddleware creates a logging middleware with beautiful logrus formatting
+func LoggerMiddleware(logger *logrus.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
 
@@ -31,41 +31,46 @@ func LoggerMiddleware(logger *zap.Logger) fiber.Handler {
 
 		// Calculate duration
 		duration := time.Since(start)
+		durationStr := formatDuration(duration)
 
 		// Get status code
 		status := c.Response().StatusCode()
 
-		// Compose colorful log line for quick debugging
-		statusIcon, statusColor := statusStyle(status)
-		methodColor := methodStyle(c.Method())
-		durationColor := durationStyle(duration)
-		durationStr := duration.Round(time.Microsecond).String()
-		instanceLabel := ""
-		if instanceName := c.Locals("instanceName"); instanceName != nil {
-			instanceLabel = fmt.Sprintf(" %s[%s]%s", colorMagenta, instanceName.(string), colorReset)
+		// Build metadata
+		metadata := logrus.Fields{
+			"method":   c.Method(),
+			"path":     c.Path(),
+			"status":   status,
+			"duration": durationStr,
+			"ip":       c.IP(),
+			"user_agent": truncateString(c.Get("User-Agent"), 80),
 		}
-		userAgent := truncateString(c.Get("User-Agent"), 80)
-		logLine := fmt.Sprintf("%s%s %s%-6s%s %s%s%s %s%3d%s %s%-10s%s %s%-18s%s %sua=%s%s%s",
-			statusColor, statusIcon, methodColor, c.Method(), colorReset,
-			colorBold, c.Path(), colorReset,
-			statusColor, status, colorReset,
-			durationColor, durationStr, colorReset,
-			colorCyan, fmt.Sprintf("ip=%s", c.IP()), colorReset, instanceLabel,
-			colorGray, userAgent, colorReset,
-		)
 
-		logger.Info(logLine,
-			zap.String("method", c.Method()),
-			zap.String("path", c.Path()),
-			zap.String("status_icon", statusIcon),
-			zap.Int("status", status),
-			zap.Duration("duration", duration),
-			zap.String("ip", c.IP()),
-			zap.String("user_agent", c.Get("User-Agent")),
-		)
+		// Add instance name if available
+		if instanceName := c.Locals("instanceName"); instanceName != nil {
+			metadata["instance"] = instanceName.(string)
+		}
+
+		// Log with appropriate level based on status
+		entry := logger.WithFields(metadata)
+		if status >= 500 {
+			entry.Error("HTTP Request")
+		} else if status >= 400 {
+			entry.Warn("HTTP Request")
+		} else {
+			entry.Info("HTTP Request")
+		}
 
 		return err
 	}
+}
+
+// formatDuration formats duration as "44ms" or "1.2s"
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.2fs", d.Seconds())
 }
 
 func statusStyle(status int) (string, string) {
@@ -118,15 +123,15 @@ func truncateString(s string, length int) string {
 }
 
 // RecoverMiddleware creates a recovery middleware that logs panics
-func RecoverMiddleware(logger *zap.Logger) fiber.Handler {
+func RecoverMiddleware(logger *logrus.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.Error("Panic recovered",
-					zap.Any("panic", r),
-					zap.String("method", c.Method()),
-					zap.String("path", c.Path()),
-				)
+				logger.WithFields(logrus.Fields{
+					"panic":  r,
+					"method": c.Method(),
+					"path":   c.Path(),
+				}).Error("Panic recovered")
 
 				c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"success": false,

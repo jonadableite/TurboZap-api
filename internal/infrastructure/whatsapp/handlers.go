@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,14 +12,14 @@ import (
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // EventHandler handles WhatsApp events for a client
 type EventHandler struct {
 	instanceID   uuid.UUID
 	instanceName string
-	logger       *zap.Logger
+	logger       *logrus.Logger
 	dispatcher   WebhookDispatcher
 	waClient     *whatsmeow.Client
 	onQRCode     func(string)
@@ -32,7 +33,7 @@ type WebhookDispatcher interface {
 }
 
 // NewEventHandler creates a new event handler
-func NewEventHandler(instanceID uuid.UUID, instanceName string, logger *zap.Logger, dispatcher WebhookDispatcher) *EventHandler {
+func NewEventHandler(instanceID uuid.UUID, instanceName string, logger *logrus.Logger, dispatcher WebhookDispatcher) *EventHandler {
 	return &EventHandler{
 		instanceID:   instanceID,
 		instanceName: instanceName,
@@ -63,6 +64,16 @@ func (h *EventHandler) SetWAClient(client *whatsmeow.Client) {
 
 // Handle processes WhatsApp events
 func (h *EventHandler) Handle(evt interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.WithFields(logrus.Fields{
+				"instance":  h.instanceName,
+				"panic":     r,
+				"eventType": fmt.Sprintf("%T", evt),
+			}).Warn("Handle: recovered from panic while processing event")
+		}
+	}()
+
 	switch v := evt.(type) {
 	case *events.QR:
 		h.handleQR(v)
@@ -95,13 +106,15 @@ func (h *EventHandler) handleQR(evt *events.QR) {
 	}
 
 	qrCode := evt.Codes[0]
-	h.logger.Info("QR code received", zap.String("instance", h.instanceName))
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+	}).Info("QR code received")
 
 	// Generate QR code image
 	generator := NewQRCodeGenerator()
 	qrImage, err := generator.Generate(qrCode, 256)
 	if err != nil {
-		h.logger.Error("Failed to generate QR code image", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to generate QR code image")
 		return
 	}
 
@@ -118,7 +131,9 @@ func (h *EventHandler) handleQR(evt *events.QR) {
 }
 
 func (h *EventHandler) handleConnected(evt *events.Connected) {
-	h.logger.Info("Connected to WhatsApp", zap.String("instance", h.instanceName))
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+	}).Info("Connected to WhatsApp")
 
 	// Get connection info from client
 	var phone, name, pic string
@@ -147,32 +162,94 @@ func (h *EventHandler) handleConnected(evt *events.Connected) {
 }
 
 func (h *EventHandler) handleDisconnected(evt *events.Disconnected) {
-	h.logger.Info("Disconnected from WhatsApp", zap.String("instance", h.instanceName))
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.WithFields(logrus.Fields{
+				"instance": h.instanceName,
+				"panic":    r,
+			}).Warn("handleDisconnected: recovered from panic")
+		}
+	}()
+
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+	}).Info("Disconnected from WhatsApp")
 
 	if h.onDisconnect != nil {
-		h.onDisconnect()
+		// Call disconnect handler with error handling
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					h.logger.WithFields(logrus.Fields{
+						"instance": h.instanceName,
+						"panic":    r,
+					}).Warn("handleDisconnected: recovered from panic in onDisconnect callback")
+				}
+			}()
+			h.onDisconnect()
+		}()
 	}
 
-	// Dispatch webhook
-	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventConnectionUpdate, dto.ConnectionUpdateData{
-		Status: "disconnected",
-	})
+	// Dispatch webhook with error handling
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+					h.logger.WithFields(logrus.Fields{
+						"instance": h.instanceName,
+						"panic":    r,
+					}).Warn("handleDisconnected: recovered from panic in webhook dispatch")
+			}
+		}()
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventConnectionUpdate, dto.ConnectionUpdateData{
+			Status: "disconnected",
+		})
+	}()
 }
 
 func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut) {
-	h.logger.Info("Logged out from WhatsApp",
-		zap.String("instance", h.instanceName),
-		zap.String("reason", evt.Reason.String()),
-	)
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.WithFields(logrus.Fields{
+				"instance": h.instanceName,
+				"panic":    r,
+			}).Warn("handleLoggedOut: recovered from panic")
+		}
+	}()
+
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+		"reason":   evt.Reason.String(),
+	}).Info("Logged out from WhatsApp")
 
 	if h.onDisconnect != nil {
-		h.onDisconnect()
+		// Call disconnect handler with error handling
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					h.logger.WithFields(logrus.Fields{
+						"instance": h.instanceName,
+						"panic":    r,
+					}).Warn("handleLoggedOut: recovered from panic in onDisconnect callback")
+				}
+			}()
+			h.onDisconnect()
+		}()
 	}
 
-	// Dispatch webhook
-	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventConnectionUpdate, dto.ConnectionUpdateData{
-		Status: "logged_out",
-	})
+	// Dispatch webhook with error handling
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+					h.logger.WithFields(logrus.Fields{
+						"instance": h.instanceName,
+						"panic":    r,
+					}).Warn("handleLoggedOut: recovered from panic in webhook dispatch")
+			}
+		}()
+		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventConnectionUpdate, dto.ConnectionUpdateData{
+			Status: "logged_out",
+		})
+	}()
 }
 
 func (h *EventHandler) handleMessage(evt *events.Message) {
@@ -252,12 +329,12 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 		msgEvent.Type = "unknown"
 	}
 
-	h.logger.Debug("Message received",
-		zap.String("instance", h.instanceName),
-		zap.String("id", msgEvent.MessageID),
-		zap.String("type", msgEvent.Type),
-		zap.String("from", msgEvent.From),
-	)
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+		"id":       msgEvent.MessageID,
+		"type":    msgEvent.Type,
+		"from":    msgEvent.From,
+	}).Debug("Message received")
 
 	// Dispatch webhook
 	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessageReceived, msgEvent)
@@ -360,10 +437,10 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync) {
 	}
 
 	syncType := evt.Data.GetSyncType().String()
-	h.logger.Debug("History sync received",
-		zap.String("instance", h.instanceName),
-		zap.String("type", syncType),
-	)
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+		"type":     syncType,
+	}).Debug("History sync received")
 
 	if messages := evt.Data.GetStatusV3Messages(); len(messages) > 0 {
 		h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessagesSet, dto.SyncSummaryData{
@@ -393,11 +470,11 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync) {
 }
 
 func (h *EventHandler) handlePushName(evt *events.PushName) {
-	h.logger.Debug("Push name update",
-		zap.String("instance", h.instanceName),
-		zap.String("jid", evt.JID.String()),
-		zap.String("name", evt.NewPushName),
-	)
+	h.logger.WithFields(logrus.Fields{
+		"instance": h.instanceName,
+		"jid":      evt.JID.String(),
+		"name":     evt.NewPushName,
+	}).Debug("Push name update")
 
 	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventContactsUpdate, dto.ContactUpdateEvent{
 		JID:      evt.JID.String(),

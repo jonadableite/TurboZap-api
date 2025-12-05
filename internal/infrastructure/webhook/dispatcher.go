@@ -15,13 +15,13 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
 	"github.com/jonadableite/turbozap-api/pkg/config"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // Dispatcher handles webhook event dispatching
 type Dispatcher struct {
 	config      config.WebhookConfig
-	logger      *zap.Logger
+	logger      *logrus.Logger
 	webhookRepo repository.WebhookRepository
 	instanceMap map[uuid.UUID]string // maps instance ID to instance name
 	httpClient  *http.Client
@@ -29,7 +29,7 @@ type Dispatcher struct {
 }
 
 // NewDispatcher creates a new webhook dispatcher
-func NewDispatcher(cfg config.WebhookConfig, logger *zap.Logger) *Dispatcher {
+func NewDispatcher(cfg config.WebhookConfig, logger *logrus.Logger) *Dispatcher {
 	return &Dispatcher{
 		config:      cfg,
 		logger:      logger,
@@ -91,10 +91,9 @@ func (d *Dispatcher) dispatchInstanceWebhook(ctx context.Context, instanceID uui
 
 	webhook, err := d.webhookRepo.GetByInstance(ctx, instanceID)
 	if err != nil {
-		d.logger.Error("Failed to get webhook config",
-			zap.String("instance_id", instanceID.String()),
-			zap.Error(err),
-		)
+		d.logger.WithError(err).WithFields(logrus.Fields{
+			"instance_id": instanceID.String(),
+		}).Error("Failed to get webhook config")
 		return
 	}
 
@@ -156,30 +155,28 @@ func (d *Dispatcher) sendWithRetry(ctx context.Context, target webhookTarget, pa
 
 		err := d.send(ctx, target, payload)
 		if err == nil {
-			d.logger.Debug("Webhook delivered successfully",
-				zap.String("url", target.URL),
-				zap.String("event", string(payload.Event)),
-				zap.String("target", target.Label),
-			)
+			d.logger.WithFields(logrus.Fields{
+				"url":    target.URL,
+				"event":  string(payload.Event),
+				"target": target.Label,
+			}).Debug("Webhook delivered successfully")
 			return
 		}
 
 		lastErr = err
-		d.logger.Warn("Webhook delivery failed",
-			zap.String("url", target.URL),
-			zap.String("event", string(payload.Event)),
-			zap.Int("attempt", attempt+1),
-			zap.String("target", target.Label),
-			zap.Error(err),
-		)
+		d.logger.WithError(err).WithFields(logrus.Fields{
+			"url":     target.URL,
+			"event":   string(payload.Event),
+			"attempt": attempt + 1,
+			"target":  target.Label,
+		}).Warn("Webhook delivery failed")
 	}
 
-	d.logger.Error("Webhook delivery failed after all retries",
-		zap.String("url", target.URL),
-		zap.String("event", string(payload.Event)),
-		zap.String("target", target.Label),
-		zap.Error(lastErr),
-	)
+	d.logger.WithError(lastErr).WithFields(logrus.Fields{
+		"url":    target.URL,
+		"event":  string(payload.Event),
+		"target": target.Label,
+	}).Error("Webhook delivery failed after all retries")
 }
 
 func (d *Dispatcher) send(ctx context.Context, target webhookTarget, payload entity.WebhookPayload) error {

@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
 	"github.com/jonadableite/turbozap-api/pkg/config"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // WebSocketHub manages WebSocket connections and broadcasting
@@ -19,7 +19,7 @@ type WebSocketHub struct {
 	broadcast  chan *WebSocketMessage
 	register   chan *WebSocketClient
 	unregister chan *WebSocketClient
-	logger     *zap.Logger
+	logger     *logrus.Logger
 	mu         sync.RWMutex
 }
 
@@ -41,7 +41,7 @@ type WebSocketMessage struct {
 }
 
 // NewWebSocketHub creates a new WebSocket hub
-func NewWebSocketHub(logger *zap.Logger) *WebSocketHub {
+func NewWebSocketHub(logger *logrus.Logger) *WebSocketHub {
 	hub := &WebSocketHub{
 		clients:    make(map[*WebSocketClient]bool),
 		broadcast:  make(chan *WebSocketMessage, 256),
@@ -62,10 +62,10 @@ func (h *WebSocketHub) run() {
 			h.mu.Lock()
 			h.clients[client] = true
 			h.mu.Unlock()
-			h.logger.Debug("🔌 WebSocket client connected",
-				zap.String("client_id", client.ID),
-				zap.String("instance_id", client.InstanceID.String()),
-			)
+			h.logger.WithFields(logrus.Fields{
+				"client_id":  client.ID,
+				"instance_id": client.InstanceID.String(),
+			}).Debug("🔌 WebSocket client connected")
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -74,9 +74,9 @@ func (h *WebSocketHub) run() {
 				close(client.Send)
 			}
 			h.mu.Unlock()
-			h.logger.Debug("🔌 WebSocket client disconnected",
-				zap.String("client_id", client.ID),
-			)
+			h.logger.WithFields(logrus.Fields{
+				"client_id": client.ID,
+			}).Debug("🔌 WebSocket client disconnected")
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
@@ -104,7 +104,7 @@ func (h *WebSocketHub) run() {
 func (h *WebSocketHub) encodeMessage(msg *WebSocketMessage) []byte {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		h.logger.Error("Failed to marshal WebSocket message", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to marshal WebSocket message")
 		return nil
 	}
 	return data
@@ -150,11 +150,11 @@ func (h *WebSocketHub) GetClientsByInstance(instanceID uuid.UUID) int {
 type WebSocketHandler struct {
 	hub    *WebSocketHub
 	config *config.Config
-	logger *zap.Logger
+	logger *logrus.Logger
 }
 
 // NewWebSocketHandler creates a new WebSocket handler
-func NewWebSocketHandler(hub *WebSocketHub, cfg *config.Config, logger *zap.Logger) *WebSocketHandler {
+func NewWebSocketHandler(hub *WebSocketHub, cfg *config.Config, logger *logrus.Logger) *WebSocketHandler {
 	return &WebSocketHandler{
 		hub:    hub,
 		config: cfg,
@@ -243,10 +243,9 @@ func (h *WebSocketHandler) readPump(client *WebSocketClient) {
 		_, message, err := client.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				h.logger.Warn("WebSocket read error",
-					zap.String("client_id", client.ID),
-					zap.Error(err),
-				)
+				h.logger.WithError(err).WithFields(logrus.Fields{
+					"client_id": client.ID,
+				}).Warn("WebSocket read error")
 			}
 			break
 		}
@@ -272,10 +271,9 @@ func (h *WebSocketHandler) writePump(client *WebSocketClient) {
 			}
 
 			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
-				h.logger.Warn("WebSocket write error",
-					zap.String("client_id", client.ID),
-					zap.Error(err),
-				)
+				h.logger.WithError(err).WithFields(logrus.Fields{
+					"client_id": client.ID,
+				}).Warn("WebSocket write error")
 				return
 			}
 
@@ -295,10 +293,9 @@ func (h *WebSocketHandler) handleClientMessage(client *WebSocketClient, message 
 	}
 
 	if err := json.Unmarshal(message, &msg); err != nil {
-		h.logger.Warn("Failed to parse client message",
-			zap.String("client_id", client.ID),
-			zap.Error(err),
-		)
+		h.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ID,
+		}).Warn("Failed to parse client message")
 		return
 	}
 
@@ -320,19 +317,19 @@ func (h *WebSocketHandler) handleClientMessage(client *WebSocketClient, message 
 		if err := json.Unmarshal(msg.Data, &subscribeData); err == nil {
 			if instanceID, err := uuid.Parse(subscribeData.InstanceID); err == nil {
 				client.InstanceID = instanceID
-				h.logger.Debug("Client subscribed to instance",
-					zap.String("client_id", client.ID),
-					zap.String("instance_id", instanceID.String()),
-				)
+				h.logger.WithFields(logrus.Fields{
+					"client_id":  client.ID,
+					"instance_id": instanceID.String(),
+				}).Debug("Client subscribed to instance")
 			}
 		}
 
 	case "unsubscribe":
 		// Unsubscribe from instance
 		client.InstanceID = uuid.Nil
-		h.logger.Debug("Client unsubscribed from instance",
-			zap.String("client_id", client.ID),
-		)
+		h.logger.WithFields(logrus.Fields{
+			"client_id": client.ID,
+		}).Debug("Client unsubscribed from instance")
 
 	case "ack":
 		// Acknowledge receipt of event
@@ -340,10 +337,10 @@ func (h *WebSocketHandler) handleClientMessage(client *WebSocketClient, message 
 			EventID string `json:"event_id"`
 		}
 		if err := json.Unmarshal(msg.Data, &ackData); err == nil {
-			h.logger.Debug("Event acknowledged",
-				zap.String("client_id", client.ID),
-				zap.String("event_id", ackData.EventID),
-			)
+			h.logger.WithFields(logrus.Fields{
+				"client_id": client.ID,
+				"event_id":  ackData.EventID,
+			}).Debug("Event acknowledged")
 		}
 	}
 }
@@ -363,11 +360,11 @@ const (
 // WebSocketDispatcher implements webhook dispatcher interface for WebSocket
 type WebSocketDispatcher struct {
 	hub    *WebSocketHub
-	logger *zap.Logger
+	logger *logrus.Logger
 }
 
 // NewWebSocketDispatcher creates a new WebSocket dispatcher
-func NewWebSocketDispatcher(hub *WebSocketHub, logger *zap.Logger) *WebSocketDispatcher {
+func NewWebSocketDispatcher(hub *WebSocketHub, logger *logrus.Logger) *WebSocketDispatcher {
 	return &WebSocketDispatcher{
 		hub:    hub,
 		logger: logger,
@@ -379,9 +376,9 @@ func (d *WebSocketDispatcher) Dispatch(instanceID uuid.UUID, event entity.Webhoo
 	wsEvent := string(event)
 	d.hub.BroadcastToInstance(instanceID, wsEvent, data)
 
-	d.logger.Debug("📡 Event dispatched via WebSocket",
-		zap.String("event", wsEvent),
-		zap.String("instance_id", instanceID.String()),
-	)
+	d.logger.WithFields(logrus.Fields{
+		"event":       wsEvent,
+		"instance_id": instanceID.String(),
+	}).Debug("📡 Event dispatched via WebSocket")
 }
 

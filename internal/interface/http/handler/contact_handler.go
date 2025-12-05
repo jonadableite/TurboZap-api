@@ -10,18 +10,18 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 // ContactHandler handles contact-related requests
 type ContactHandler struct {
 	instanceRepo repository.InstanceRepository
 	waManager    *whatsapp.Manager
-	logger       *zap.Logger
+	logger       *logrus.Logger
 }
 
 // NewContactHandler creates a new contact handler
-func NewContactHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *zap.Logger) *ContactHandler {
+func NewContactHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *ContactHandler {
 	return &ContactHandler{
 		instanceRepo: instanceRepo,
 		waManager:    waManager,
@@ -37,7 +37,7 @@ func (h *ContactHandler) getInstanceAndClient(c *fiber.Ctx) (*entity.Instance, *
 
 	instance, err := h.instanceRepo.GetByName(c.Context(), instanceName)
 	if err != nil {
-		h.logger.Error("Failed to get instance", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get instance")
 		return nil, nil, response.InternalServerError(c, "Failed to get instance")
 	}
 	if instance == nil {
@@ -83,7 +83,9 @@ func (h *ContactHandler) CheckNumbers(c *fiber.Ctx) error {
 		// Check if number is on WhatsApp
 		resp, err := client.WAClient.IsOnWhatsApp(c.Context(), []string{"+" + cleanNumber})
 		if err != nil {
-			h.logger.Error("Failed to check number", zap.Error(err), zap.String("number", cleanNumber))
+			h.logger.WithError(err).WithFields(logrus.Fields{
+				"number": cleanNumber,
+			}).Error("Failed to check number")
 			results = append(results, entity.CheckNumberResponse{
 				Number: number,
 				Exists: false,
@@ -139,7 +141,7 @@ func (h *ContactHandler) GetProfilePicture(c *fiber.Ctx) error {
 
 	picInfo, err := client.WAClient.GetProfilePictureInfo(c.Context(), jid, &whatsmeow.GetProfilePictureParams{})
 	if err != nil {
-		h.logger.Error("Failed to get profile picture", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get profile picture")
 		return response.Success(c, entity.ProfilePicResponse{
 			JID:        jidStr,
 			ProfilePic: "",
@@ -241,7 +243,7 @@ func (h *ContactHandler) BlockContact(c *fiber.Ctx) error {
 	// Block contact
 	_, err = client.WAClient.UpdateBlocklist(c.Context(), jid, events.BlocklistChangeActionBlock)
 	if err != nil {
-		h.logger.Error("Failed to block contact", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to block contact")
 		return response.InternalServerError(c, "Failed to block contact")
 	}
 
@@ -281,7 +283,7 @@ func (h *ContactHandler) UnblockContact(c *fiber.Ctx) error {
 	// Unblock contact
 	_, err = client.WAClient.UpdateBlocklist(c.Context(), jid, events.BlocklistChangeActionUnblock)
 	if err != nil {
-		h.logger.Error("Failed to unblock contact", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to unblock contact")
 		return response.InternalServerError(c, "Failed to unblock contact")
 	}
 
@@ -302,7 +304,7 @@ func (h *ContactHandler) ListContacts(c *fiber.Ctx) error {
 	// Get all contacts from store
 	contacts, err := client.WAClient.Store.Contacts.GetAllContacts(c.Context())
 	if err != nil {
-		h.logger.Error("Failed to get contacts", zap.Error(err))
+		h.logger.WithError(err).Error("Failed to get contacts")
 		return response.InternalServerError(c, "Failed to get contacts")
 	}
 
