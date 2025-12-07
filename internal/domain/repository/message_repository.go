@@ -39,4 +39,13 @@ type MessageRepository interface {
 
 	// DeleteByInstance deletes all messages for an instance
 	DeleteByInstance(ctx context.Context, instanceID uuid.UUID) error
+
+	// CountToday counts messages sent/received today
+	CountToday(ctx context.Context, instanceID *uuid.UUID) (int64, error)
+
+	// CountTotal counts total messages
+	CountTotal(ctx context.Context, instanceID *uuid.UUID) (int64, error)
+
+	// CountByDateRange counts messages within a date range
+	CountByDateRange(ctx context.Context, instanceID *uuid.UUID, start, end time.Time) (int64, error)
 }

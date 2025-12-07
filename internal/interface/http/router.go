@@ -4,7 +4,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
+	infraRepo "github.com/jonadableite/turbozap-api/internal/infrastructure/repository"
 	"github.com/jonadableite/turbozap-api/internal/infrastructure/whatsapp"
 	"github.com/jonadableite/turbozap-api/internal/interface/http/handler"
 	"github.com/jonadableite/turbozap-api/internal/interface/http/middleware"
@@ -16,6 +18,7 @@ import (
 func NewRouter(
 	cfg *config.Config,
 	logger *logrus.Logger,
+	pool *pgxpool.Pool,
 	instanceRepo repository.InstanceRepository,
 	webhookRepo repository.WebhookRepository,
 	waManager *whatsapp.Manager,
@@ -40,14 +43,18 @@ func NewRouter(
 	app.Get("/health", healthCheck)
 	app.Get("/", info)
 
+	// Initialize message repository for stats
+	messageRepo := infraRepo.NewMessagePostgresRepository(pool)
+
 	// Create handlers
 	instanceHandler := handler.NewInstanceHandler(instanceRepo, waManager, logger)
-	messageHandler := handler.NewMessageHandler(instanceRepo, waManager, logger)
+	messageHandler := handler.NewMessageHandler(instanceRepo, messageRepo, waManager, logger)
 	groupHandler := handler.NewGroupHandler(instanceRepo, waManager, logger)
 	contactHandler := handler.NewContactHandler(instanceRepo, waManager, logger)
 	presenceHandler := handler.NewPresenceHandler(instanceRepo, waManager, logger)
 	webhookHandler := handler.NewWebhookHandler(instanceRepo, webhookRepo, logger)
 	profileHandler := handler.NewProfileHandler(instanceRepo, waManager, logger)
+	statsHandler := handler.NewStatsHandler(messageRepo, logger)
 	
 	// Create SSE hub and handler
 	sseHub := handler.NewSSEHub(logger)
@@ -140,6 +147,10 @@ func NewRouter(
 	sse.Get("/", sseHandler.StreamAll)                 // SSE stream for all instances
 	sse.Get("/:instance/info", sseHandler.Info)        // Get SSE connection info
 
+	// Stats routes
+	stats := api.Group("/stats")
+	stats.Get("/messages", statsHandler.GetMessageStats) // Get message statistics
+
 	// Legacy routes (without /api prefix) for backwards compatibility and easier manual testing
 	legacy := app.Group("/instance", middleware.AuthMiddleware(cfg, instanceRepo))
 	legacy.Post("/create", instanceHandler.Create)
@@ -182,6 +193,10 @@ func NewRouter(
 	legacySSE := app.Group("/sse", middleware.AuthMiddleware(cfg, instanceRepo))
 	legacySSE.Get("/:instance", sseHandler.Stream)
 	legacySSE.Get("/", sseHandler.StreamAll)
+
+	// Legacy stats routes (without /api prefix)
+	legacyStats := app.Group("/stats", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyStats.Get("/messages", statsHandler.GetMessageStats)
 
 	return app
 }

@@ -55,7 +55,11 @@ api.interceptors.response.use(
       error.response?.data?.error?.message ||
       error.message ||
       "Erro desconhecido";
-    if (process.env.NODE_ENV !== "production") {
+    
+    // Don't log errors for optional endpoints like webhook events
+    const isOptionalEndpoint = error.config?.url?.includes('/webhook/events');
+    
+    if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
       // eslint-disable-next-line no-console
       console.error("API Error:", message);
     }

@@ -64,8 +64,11 @@ func main() {
 	webhookDispatcher := webhook.NewDispatcher(cfg.Webhook, logrusLogger)
 	webhookDispatcher.SetWebhookRepository(webhookRepo)
 
+	// Initialize message repository
+	messageRepo := repository.NewMessagePostgresRepository(db)
+
 	// Initialize WhatsApp manager
-	waManager := whatsapp.NewManager(cfg, db, logrusLogger, webhookDispatcher, instanceRepo)
+	waManager := whatsapp.NewManager(cfg, db, logrusLogger, webhookDispatcher, instanceRepo, messageRepo)
 
 	// Restore existing instances and auto-reconnect
 	ctx := context.Background()
@@ -77,7 +80,7 @@ func main() {
 	}
 
 	// Initialize HTTP router
-	router := http.NewRouter(cfg, logrusLogger, instanceRepo, webhookRepo, waManager)
+	router := http.NewRouter(cfg, logrusLogger, db, instanceRepo, webhookRepo, waManager)
 
 	// Start server in goroutine
 	go func() {

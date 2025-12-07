@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jonadableite/turbozap-api/internal/application/dto"
 	"github.com/jonadableite/turbozap-api/internal/domain/entity"
+	"github.com/jonadableite/turbozap-api/internal/domain/repository"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
@@ -21,6 +22,7 @@ type EventHandler struct {
 	instanceName string
 	logger       *logrus.Logger
 	dispatcher   WebhookDispatcher
+	messageRepo  repository.MessageRepository
 	waClient     *whatsmeow.Client
 	onQRCode     func(string)
 	onConnected  func(string, string, string)
@@ -34,12 +36,13 @@ type WebhookDispatcher interface {
 }
 
 // NewEventHandler creates a new event handler
-func NewEventHandler(instanceID uuid.UUID, instanceName string, logger *logrus.Logger, dispatcher WebhookDispatcher) *EventHandler {
+func NewEventHandler(instanceID uuid.UUID, instanceName string, logger *logrus.Logger, dispatcher WebhookDispatcher, messageRepo repository.MessageRepository) *EventHandler {
 	return &EventHandler{
 		instanceID:   instanceID,
 		instanceName: instanceName,
 		logger:       logger,
 		dispatcher:   dispatcher,
+		messageRepo:  messageRepo,
 	}
 }
 
@@ -337,6 +340,33 @@ func (h *EventHandler) handleMessage(evt *events.Message) {
 		"type":    msgEvent.Type,
 		"from":    msgEvent.From,
 	}).Debug("Message received")
+
+	// Save message to database
+	if h.messageRepo != nil {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			message := entity.NewMessage(
+				h.instanceID,
+				msgEvent.To,
+				entity.MessageType(msgEvent.Type),
+			)
+			message.MessageID = msgEvent.MessageID
+			message.RemoteJID = msgEvent.From
+			message.FromMe = msgEvent.FromMe
+			message.Content = msgEvent.Content
+			message.MediaCaption = msgEvent.Caption
+			message.MediaMimeType = msgEvent.MediaMimeType
+			message.QuotedMsgID = msgEvent.QuotedMsgID
+			message.Timestamp = msgEvent.Timestamp
+			message.Status = entity.MessageStatusSent
+
+			if err := h.messageRepo.Create(ctx, message); err != nil {
+				h.logger.WithError(err).Warn("Failed to save message to database")
+			}
+		}()
+	}
 
 	// Dispatch webhook
 	h.dispatcher.Dispatch(h.instanceID, entity.WebhookEventMessageReceived, msgEvent)

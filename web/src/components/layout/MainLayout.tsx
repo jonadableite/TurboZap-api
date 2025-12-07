@@ -1,6 +1,7 @@
 'use client';
 
 import { Sidebar } from './Sidebar';
+import { ToastProvider } from '@/components/ui';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -8,14 +9,15 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-[var(--rocket-gray-900)]">
-      <div className="flex min-h-screen w-full">
-        <Sidebar />
+    <ToastProvider>
+      <div className="min-h-screen bg-[var(--rocket-gray-900)]">
+        <div className="flex min-h-screen w-full">
+          <Sidebar />
 
-        <div className="flex-1 min-h-screen overflow-y-auto bg-[var(--rocket-gray-900)]/95">
-          {children}
+          <div className="flex-1 min-h-screen overflow-y-auto bg-[var(--rocket-gray-900)]/95">
+            {children}
+          </div>
         </div>
-      </div>
 
       {/* Background decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -34,7 +36,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           }}
         />
       </div>
-    </div>
+      </div>
+    </ToastProvider>
   );
 }
 

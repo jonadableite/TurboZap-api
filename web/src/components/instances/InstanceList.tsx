@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Smartphone, Plus, RefreshCw, Search, Key } from 'lucide-react';
+import { Plus, RefreshCw, Search, Key } from 'lucide-react';
 import { useState } from 'react';
 import {
   Button,
@@ -14,7 +14,9 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  LottieIcon,
 } from '@/components/ui';
+import smartphoneAnimation from '../../../public/responsivo.json';
 import FancyButton from '@/components/ui/FancyButton';
 import FancySearch from '@/components/ui/FancySearch';
 import FancyPattern from '@/components/ui/FancyPattern';
@@ -105,7 +107,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
   if (isError) {
     return (
       <EmptyState
-        icon={<Smartphone className="w-12 h-12" />}
+        icon={<LottieIcon animationData={smartphoneAnimation} className="w-12 h-12" />}
         title="Erro ao carregar instâncias"
         description="Não foi possível carregar as instâncias. Verifique sua conexão."
         action={
@@ -183,7 +185,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
       {/* Empty state */}
       {instances.length === 0 && (
         <EmptyState
-          icon={<Smartphone className="w-16 h-16" />}
+          icon={<LottieIcon animationData={smartphoneAnimation} className="w-16 h-16" />}
           title="Nenhuma instância"
           description="Você ainda não criou nenhuma instância. Crie sua primeira instância para começar a usar a API."
           action={

@@ -95,7 +95,7 @@ func (f *BeautifulFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 
 	// Build main line: 🚀  INFO  2025-02-05 12:31:13 | POST /login | 200 | 44ms
-	b.WriteString(fmt.Sprintf("%s  %s%s%s%s%s  %s%s%s%s%s | ",
+	b.WriteString(fmt.Sprintf("%s  %s%s%s  %s | ",
 		emoji,
 		colorBold+levelColor, levelLabel, colorReset,
 		timestamp,
@@ -142,7 +142,7 @@ func (f *BeautifulFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// Build HTTP info line
 	if method != "" && path != "" {
-		b.WriteString(fmt.Sprintf("%s%s%s %s%s%s%s%s | ",
+		b.WriteString(fmt.Sprintf("%s%s%s %s%s%s | ",
 			colorBrightCyan, method, colorReset,
 			colorBrightWhite, path, colorReset,
 		))
@@ -155,7 +155,7 @@ func (f *BeautifulFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		} else if strings.HasPrefix(status, "3") {
 			statusColor = colorBrightYellow
 		}
-		b.WriteString(fmt.Sprintf("%s%s%s%s%s | ",
+		b.WriteString(fmt.Sprintf("%s%s%s | ",
 			statusColor, status, colorReset,
 		))
 	}

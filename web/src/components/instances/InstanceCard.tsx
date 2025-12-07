@@ -13,6 +13,7 @@ import {
   WifiOff,
   Copy,
   Check,
+  Settings,
 } from 'lucide-react';
 import { cn, getStatusLabel, formatPhone, formatDate } from '@/lib/utils';
 import { Card, Badge, Button, Modal, ModalFooter } from '@/components/ui';
@@ -25,6 +26,7 @@ import {
   useConnectInstance,
 } from '@/hooks/useInstances';
 import type { Instance } from '@/types';
+import { useRouter } from 'next/navigation';
 
 interface InstanceCardProps {
   instance: Instance;
@@ -36,6 +38,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
 
   const connectMutation = useConnectInstance();
   const restartMutation = useRestartInstance();
@@ -184,6 +187,17 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                   className="absolute right-0 top-full mt-1 z-20 w-48 py-1 bg-[var(--rocket-gray-700)] rounded-lg border border-[var(--rocket-gray-600)] shadow-xl"
                 >
                   <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      router.push(`/instances/${instance.name}/settings`);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Configurações
+                  </button>
+                  <div className="h-px bg-[var(--rocket-gray-600)] my-1" />
+                  <button
                     onClick={handleRestart}
                     disabled={isLoading}
                     className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
@@ -201,6 +215,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                       Desconectar
                     </button>
                   )}
+                  <div className="h-px bg-[var(--rocket-gray-600)] my-1" />
                   <button
                     onClick={() => {
                       setShowMenu(false);

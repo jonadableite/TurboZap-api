@@ -255,3 +255,65 @@ func (r *messagePostgresRepository) scanMessages(ctx context.Context, query stri
 	return messages, nil
 }
 
+// CountToday counts messages sent/received today
+func (r *messagePostgresRepository) CountToday(ctx context.Context, instanceID *uuid.UUID) (int64, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM messages 
+		WHERE DATE(created_at) = CURRENT_DATE
+	`
+	args := []interface{}{}
+	
+	if instanceID != nil {
+		query += ` AND instance_id = $1`
+		args = append(args, *instanceID)
+	}
+	
+	var count int64
+	err := r.pool.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count messages today: %w", err)
+	}
+	return count, nil
+}
+
+// CountTotal counts total messages
+func (r *messagePostgresRepository) CountTotal(ctx context.Context, instanceID *uuid.UUID) (int64, error) {
+	query := `SELECT COUNT(*) FROM messages`
+	args := []interface{}{}
+	
+	if instanceID != nil {
+		query += ` WHERE instance_id = $1`
+		args = append(args, *instanceID)
+	}
+	
+	var count int64
+	err := r.pool.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count total messages: %w", err)
+	}
+	return count, nil
+}
+
+// CountByDateRange counts messages within a date range
+func (r *messagePostgresRepository) CountByDateRange(ctx context.Context, instanceID *uuid.UUID, start, end time.Time) (int64, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM messages 
+		WHERE timestamp >= $1 AND timestamp <= $2
+	`
+	args := []interface{}{start, end}
+	
+	if instanceID != nil {
+		query += ` AND instance_id = $3`
+		args = append(args, *instanceID)
+	}
+	
+	var count int64
+	err := r.pool.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count messages by date range: %w", err)
+	}
+	return count, nil
+}
+

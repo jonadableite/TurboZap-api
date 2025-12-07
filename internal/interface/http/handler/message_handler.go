@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -22,14 +23,16 @@ import (
 // MessageHandler handles message-related requests
 type MessageHandler struct {
 	instanceRepo repository.InstanceRepository
+	messageRepo  repository.MessageRepository
 	waManager    *whatsapp.Manager
 	logger       *logrus.Logger
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(instanceRepo repository.InstanceRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *MessageHandler {
+func NewMessageHandler(instanceRepo repository.InstanceRepository, messageRepo repository.MessageRepository, waManager *whatsapp.Manager, logger *logrus.Logger) *MessageHandler {
 	return &MessageHandler{
 		instanceRepo: instanceRepo,
+		messageRepo:  messageRepo,
 		waManager:    waManager,
 		logger:       logger,
 	}
@@ -114,6 +117,25 @@ func (h *MessageHandler) SendText(c *fiber.Ctx) error {
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to send text message")
 		return response.InternalServerError(c, "Failed to send message")
+	}
+
+	// Save message to database
+	if h.messageRepo != nil {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			message := entity.NewMessage(instance.ID, jid, entity.MessageTypeText)
+			message.MessageID = msgID
+			message.FromMe = true
+			message.Content = req.Text
+			message.Timestamp = time.Now()
+			message.Status = entity.MessageStatusSent
+
+			if err := h.messageRepo.Create(ctx, message); err != nil {
+				h.logger.WithError(err).Warn("Failed to save sent message to database")
+			}
+		}()
 	}
 
 	return response.Success(c, dto.MessageResponse{

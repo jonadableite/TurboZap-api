@@ -242,7 +242,5 @@ func (h *WebhookHandler) ListWebhookEvents(c *fiber.Ctx) error {
 		eventStrings[i] = string(e)
 	}
 
-	return response.Success(c, fiber.Map{
-		"events": eventStrings,
-	})
+	return response.Success(c, eventStrings)
 }

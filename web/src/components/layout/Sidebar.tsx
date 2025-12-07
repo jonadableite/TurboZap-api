@@ -3,18 +3,13 @@
 import { LottieIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  Users,
-  Webhook,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Webhook } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
+import settingsAnimation from "../../../public/definicoes.json";
 import dashboardAnimation from "../../../public/grafico-de-barras.json";
 import htmlAnimation from "../../../public/html.json";
 import instanceAnimation from "../../../public/responsivo.json";
@@ -65,7 +60,7 @@ const bottomNavItems: NavItem[] = [
   },
   {
     label: "Configurações",
-    icon: <Settings className="w-5 h-5" />,
+    icon: <LottieIcon animationData={settingsAnimation} className="w-5 h-5" />,
     href: "/settings",
   },
 ];
@@ -124,7 +119,12 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          // For dashboard (root path), match exactly "/" or ""
+          // For other routes, match exact path or if pathname starts with the href
+          const isActive =
+            item.href === "/"
+              ? pathname === "/" || pathname === ""
+              : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href}>
               <motion.div
@@ -232,5 +232,3 @@ export function Sidebar() {
     </motion.aside>
   );
 }
-
-export default Sidebar;

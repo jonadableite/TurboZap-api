@@ -34,6 +34,7 @@ type Manager struct {
 	logger       *logrus.Logger
 	dispatcher   WebhookDispatcher
 	instanceRepo repository.InstanceRepository
+	messageRepo  repository.MessageRepository
 	container    *sqlstore.Container
 	clients      map[uuid.UUID]*Client
 	mu           sync.RWMutex
@@ -52,7 +53,7 @@ type Client struct {
 }
 
 // NewManager creates a new WhatsApp manager
-func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *logrus.Logger, dispatcher WebhookDispatcher, instanceRepo repository.InstanceRepository) *Manager {
+func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *logrus.Logger, dispatcher WebhookDispatcher, instanceRepo repository.InstanceRepository, messageRepo repository.MessageRepository) *Manager {
 	// Create whatsmeow logger
 	waLogger := waLog.Stdout("whatsmeow", "INFO", true)
 
@@ -77,6 +78,7 @@ func NewManager(cfg *config.Config, pool *pgxpool.Pool, logger *logrus.Logger, d
 		logger:       logger,
 		dispatcher:   dispatcher,
 		instanceRepo: instanceRepo,
+		messageRepo:  messageRepo,
 		container:    container,
 		clients:      make(map[uuid.UUID]*Client),
 	}
@@ -148,7 +150,7 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 	}
 
 	// Create event handler
-	handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher)
+		handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher, m.messageRepo)
 	handler.SetWAClient(waClient)
 
 	client := &Client{
