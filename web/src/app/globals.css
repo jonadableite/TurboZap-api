@@ -36,19 +36,30 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
   @keyframes accordion-down {
-    from { height: 0 }
-    to { height: var(--radix-accordion-content-height) }
+    from {
+      height: 0
+    }
+
+    to {
+      height: var(--radix-accordion-content-height)
+    }
   }
+
   @keyframes accordion-up {
-    from { height: var(--radix-accordion-content-height) }
-    to { height: 0 }
+    from {
+      height: var(--radix-accordion-content-height)
+    }
+
+    to {
+      height: 0
+    }
   }
 }
 
 @layer base {
   :root {
     /* Rocketseat-inspired Dark Theme converted to HSL for Shadcn compatibility */
-    
+
     /* Background: #09090a */
     --background: 240 5% 4%;
     /* Foreground: #e1e1e6 */
@@ -72,7 +83,8 @@
 
     /* Muted: #202024 */
     --muted: 240 6% 13%;
-    --muted-foreground: 240 5% 64%; /* #a9a9b2 */
+    --muted-foreground: 240 5% 64%;
+    /* #a9a9b2 */
 
     /* Accent: #202024 */
     --accent: 240 6% 13%;
@@ -96,11 +108,11 @@
     --rocket-purple: #8257e5;
     --rocket-purple-dark: #633bbc;
     --rocket-purple-darker: #4b2e91;
-    
+
     --rocket-green-light: #1ef7a3;
     --rocket-green: #04d361;
     --rocket-green-dark: #03a84e;
-    
+
     --rocket-gray-900: #09090a;
     --rocket-gray-800: #121214;
     --rocket-gray-700: #202024;
@@ -111,7 +123,7 @@
     --rocket-gray-200: #a9a9b2;
     --rocket-gray-100: #c4c4cc;
     --rocket-gray-50: #e1e1e6;
-    
+
     --rocket-danger: #f75a68;
     --rocket-warning: #fba94c;
     --rocket-info: #81d8f7;
@@ -122,41 +134,85 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-[var(--rocket-gray-900)] text-foreground antialiased;
   }
 }
 
 /* Animations from previous config */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px var(--rocket-purple), 0 0 10px var(--rocket-purple); }
-  50% { box-shadow: 0 0 10px var(--rocket-purple), 0 0 20px var(--rocket-purple); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--rocket-purple), 0 0 10px var(--rocket-purple);
+  }
+
+  50% {
+    box-shadow: 0 0 10px var(--rocket-purple), 0 0 20px var(--rocket-purple);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.animate-slide-up { animation: slideUp 0.4s ease-out; }
-.animate-slide-down { animation: slideDown 0.4s ease-out; }
-.animate-pulse-glow { animation: pulse-glow 2s infinite; }
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.4s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
 .animate-shimmer {
   background: linear-gradient(90deg, transparent, rgba(130, 87, 229, 0.1), transparent);
   background-size: 200% 100%;
@@ -168,9 +224,11 @@
   0% {
     background-position: 0% 0%;
   }
+
   50% {
     background-position: 100% 100%;
   }
+
   100% {
     background-position: 0% 0%;
   }

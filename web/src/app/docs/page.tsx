@@ -511,26 +511,26 @@ ENVIRONMENT=production`}
           </div>
 
           {/* Próximos passos */}
-          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-lg p-6">
+          <div className="bg-linear-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-lg p-6">
             <h3 className="text-lg font-semibold mb-3">🎉 Pronto! E agora?</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Você já tem a API rodando! Explore os próximos passos:
             </p>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <span>Configure <Link href="/docs/webhooks" className="text-primary hover:underline">webhooks</Link> para receber eventos em tempo real</span>
               </li>
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <span>Explore a <Link href="/docs/api" className="text-primary hover:underline">documentação completa da API</Link></span>
               </li>
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <span>Envie <Link href="/docs/api/messages" className="text-primary hover:underline">mídias, botões e listas</Link></span>
               </li>
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <span>Acesse o <Link href="/instances" className="text-primary hover:underline">Dashboard</Link> para gerenciar suas instâncias</span>
               </li>
             </ul>
@@ -574,7 +574,7 @@ ENVIRONMENT=production`}
         </section>
 
         {/* CTA */}
-        <section className="p-8 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+        <section className="p-8 rounded-xl bg-linear-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl font-bold mb-2">Pronto para começar?</h3>

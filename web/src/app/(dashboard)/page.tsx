@@ -3,10 +3,8 @@
 import { CreateInstanceModal } from "@/components/instances";
 import { Header } from "@/components/layout";
 import {
-  AnimatedCard,
   Badge,
   Button,
-  Card,
   LottieIcon,
   Spinner,
 } from "@/components/ui";
@@ -144,40 +142,34 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <AnimatedCard>
-              <Card className="bg-transparent border-0 shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--rocket-gray-400)]">
-                      Total Instâncias
-                    </p>
-                    {isLoading ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <p className="text-3xl font-bold text-[var(--rocket-gray-50)]">
-                        {instances.length}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-[var(--rocket-purple)]/20 flex items-center justify-center">
-                    <LottieIcon
-                      animationData={smartphoneAnimation}
-                      className="w-6 h-6"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center gap-1 text-sm">
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-[var(--rocket-gray-400)]">
+                  Total Instâncias
+                </p>
+                <div className="w-10 h-10 rounded-lg bg-[var(--rocket-purple)]/10 flex items-center justify-center">
                   <LottieIcon
-                    animationData={trendingAnimation}
-                    className="w-4 h-4"
+                    animationData={smartphoneAnimation}
+                    className="w-5 h-5"
                   />
-                  <span className="text-[var(--rocket-green)]">+12%</span>
-                  <span className="text-[var(--rocket-gray-400)]">
-                    vs mês anterior
-                  </span>
                 </div>
-              </Card>
-            </AnimatedCard>
+              </div>
+              {isLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <p className="text-2xl font-semibold text-[var(--rocket-gray-50)] mb-3">
+                  {instances.length}
+                </p>
+              )}
+              <div className="flex items-center gap-1 text-xs text-[var(--rocket-gray-400)]">
+                <LottieIcon
+                  animationData={trendingAnimation}
+                  className="w-3 h-3"
+                />
+                <span className="text-[var(--rocket-green)]">+12%</span>
+                <span>vs mês anterior</span>
+              </div>
+            </div>
           </motion.div>
 
           {/* Connected */}
@@ -186,50 +178,46 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <AnimatedCard>
-              <Card className="bg-transparent border-[var(--rocket-green)]/30 border shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--rocket-gray-400)]">
-                      Conectadas
-                    </p>
-                    {isLoading ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <p className="text-3xl font-bold text-[var(--rocket-green)]">
-                        {connectedCount}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-[var(--rocket-green)]/20 flex items-center justify-center">
-                    <LottieIcon
-                      animationData={activityAnimation}
-                      className="w-6 h-6"
-                    />
-                  </div>
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-[var(--rocket-gray-400)]">
+                  Conectadas
+                </p>
+                <div className="w-10 h-10 rounded-lg bg-[var(--rocket-green)]/10 flex items-center justify-center">
+                  <LottieIcon
+                    animationData={activityAnimation}
+                    className="w-5 h-5"
+                  />
                 </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-[var(--rocket-gray-700)] rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: instances.length
-                          ? `${(connectedCount / instances.length) * 100}%`
-                          : "0%",
-                      }}
-                      transition={{ delay: 0.5, duration: 0.8 }}
-                      className="h-full bg-[var(--rocket-green)] rounded-full"
-                    />
-                  </div>
-                  <span className="text-sm text-[var(--rocket-gray-400)]">
-                    {instances.length
-                      ? Math.round((connectedCount / instances.length) * 100)
-                      : 0}
-                    %
-                  </span>
+              </div>
+              {isLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <p className="text-2xl font-semibold text-[var(--rocket-green)] mb-3">
+                  {connectedCount}
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-[#29292e] rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: instances.length
+                        ? `${(connectedCount / instances.length) * 100}%`
+                        : "0%",
+                    }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                    className="h-full bg-[var(--rocket-green)] rounded-full"
+                  />
                 </div>
-              </Card>
-            </AnimatedCard>
+                <span className="text-xs text-[var(--rocket-gray-400)]">
+                  {instances.length
+                    ? Math.round((connectedCount / instances.length) * 100)
+                    : 0}
+                  %
+                </span>
+              </div>
+            </div>
           </motion.div>
 
           {/* Disconnected */}
@@ -238,43 +226,37 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <AnimatedCard>
-              <Card className="bg-transparent border-[var(--rocket-danger)]/30 border shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--rocket-gray-400)]">
-                      Desconectadas
-                    </p>
-                    {isLoading ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <p className="text-3xl font-bold text-[var(--rocket-danger)]">
-                        {disconnectedCount}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-[var(--rocket-danger)]/20 flex items-center justify-center">
-                    <LottieIcon
-                      animationData={clockAnimation}
-                      className="w-6 h-6"
-                    />
-                  </div>
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-[var(--rocket-gray-400)]">
+                  Desconectadas
+                </p>
+                <div className="w-10 h-10 rounded-lg bg-[var(--rocket-danger)]/10 flex items-center justify-center">
+                  <LottieIcon
+                    animationData={clockAnimation}
+                    className="w-5 h-5"
+                  />
                 </div>
-                {disconnectedCount > 0 && (
-                  <div className="mt-4">
-                    <Link href="/instances">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-center"
-                      >
-                        Reconectar
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </Card>
-            </AnimatedCard>
+              </div>
+              {isLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <p className="text-2xl font-semibold text-[var(--rocket-danger)] mb-3">
+                  {disconnectedCount}
+                </p>
+              )}
+              {disconnectedCount > 0 && (
+                <Link href="/instances">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-xs h-8"
+                  >
+                    Reconectar
+                  </Button>
+                </Link>
+              )}
+            </div>
           </motion.div>
 
           {/* Messages Today */}
@@ -283,42 +265,38 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <AnimatedCard>
-              <Card className="bg-transparent border-0 shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--rocket-gray-400)]">
-                      Mensagens Hoje
-                    </p>
-                    {statsLoading ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <p className="text-3xl font-bold text-[var(--rocket-gray-50)]">
-                        {messagesToday.toLocaleString("pt-BR")}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-[var(--rocket-info)]/20 flex items-center justify-center">
-                    <LottieIcon
-                      animationData={messageAnimation}
-                      className="w-6 h-6"
-                    />
-                  </div>
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-[var(--rocket-gray-400)]">
+                  Mensagens Hoje
+                </p>
+                <div className="w-10 h-10 rounded-lg bg-[var(--rocket-info)]/10 flex items-center justify-center">
+                  <LottieIcon
+                    animationData={messageAnimation}
+                    className="w-5 h-5"
+                  />
                 </div>
-                <div className="mt-4 flex items-center gap-1 text-sm">
-                  <span className="text-[var(--rocket-gray-400)]">Total:</span>
-                  <span className="text-[var(--rocket-info)] font-semibold">
-                    {messagesTotal.toLocaleString("pt-BR")}
-                  </span>
-                </div>
-              </Card>
-            </AnimatedCard>
+              </div>
+              {statsLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <p className="text-2xl font-semibold text-[var(--rocket-gray-50)] mb-3">
+                  {messagesToday.toLocaleString("pt-BR")}
+                </p>
+              )}
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-[var(--rocket-gray-400)]">Total:</span>
+                <span className="text-[var(--rocket-info)] font-medium">
+                  {messagesTotal.toLocaleString("pt-BR")}
+                </span>
+              </div>
+            </div>
           </motion.div>
         </div>
 
         {/* Quick Actions */}
         <div>
-          <h3 className="text-lg font-semibold text-[var(--rocket-gray-50)] mb-4">
+          <h3 className="text-base font-semibold text-[var(--rocket-gray-50)] mb-4">
             Ações rápidas
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -329,29 +307,29 @@ export default function DashboardPage() {
                   ? setShowCreateModal(true)
                   : router.push("/settings")
               }
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               className={cn(
-                "p-6 rounded-xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] transition-colors text-left group",
+                "p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] transition-colors text-left group",
                 canCreateInstance
-                  ? "hover:border-[var(--rocket-purple)]/50"
+                  ? "hover:border-[#29292e]"
                   : "opacity-60 border-dashed cursor-pointer"
               )}
             >
-              <div className="w-12 h-12 rounded-xl bg-[var(--rocket-purple)]/20 flex items-center justify-center mb-4 group-hover:bg-[var(--rocket-purple)]/30 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-purple)]/10 flex items-center justify-center mb-3 group-hover:bg-[var(--rocket-purple)]/20 transition-colors">
                 <LottieIcon
                   animationData={smartphoneAnimation}
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                 />
               </div>
-              <h4 className="font-semibold text-[var(--rocket-gray-50)] mb-1">
+              <h4 className="font-medium text-sm text-[var(--rocket-gray-50)] mb-1">
                 Nova Instância
               </h4>
-              <p className="text-sm text-[var(--rocket-gray-400)]">
+              <p className="text-xs text-[var(--rocket-gray-400)]">
                 Crie uma nova conexão WhatsApp
               </p>
               {!canCreateInstance && (
-                <p className="text-xs text-[var(--rocket-warning)] mt-3">
+                <p className="text-xs text-[var(--rocket-warning)] mt-2">
                   Configure sua API Key para habilitar
                 </p>
               )}
@@ -359,41 +337,41 @@ export default function DashboardPage() {
 
             {/* Send Message */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="p-6 rounded-xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] text-left opacity-60 cursor-not-allowed"
+              whileHover={{ scale: 1.01 }}
+              className="p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] text-left opacity-60 cursor-not-allowed"
             >
-              <div className="w-12 h-12 rounded-xl bg-[var(--rocket-green)]/20 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-green)]/10 flex items-center justify-center mb-3">
                 <LottieIcon
                   animationData={messageAnimation}
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                 />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-semibold text-[var(--rocket-gray-50)]">
+                <h4 className="font-medium text-sm text-[var(--rocket-gray-50)]">
                   Enviar Mensagem
                 </h4>
                 <Badge>Em breve</Badge>
               </div>
-              <p className="text-sm text-[var(--rocket-gray-400)]">
+              <p className="text-xs text-[var(--rocket-gray-400)]">
                 Envie mensagens em massa
               </p>
             </motion.div>
 
             {/* Configure Webhook */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="p-6 rounded-xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] text-left opacity-60 cursor-not-allowed"
+              whileHover={{ scale: 1.01 }}
+              className="p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] text-left opacity-60 cursor-not-allowed"
             >
-              <div className="w-12 h-12 rounded-xl bg-[var(--rocket-warning)]/20 flex items-center justify-center mb-4">
-                <Webhook className="w-6 h-6 text-[var(--rocket-warning)]" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-warning)]/10 flex items-center justify-center mb-3">
+                <Webhook className="w-5 h-5 text-[var(--rocket-warning)]" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-semibold text-[var(--rocket-gray-50)]">
+                <h4 className="font-medium text-sm text-[var(--rocket-gray-50)]">
                   Configurar Webhook
                 </h4>
                 <Badge>Em breve</Badge>
               </div>
-              <p className="text-sm text-[var(--rocket-gray-400)]">
+              <p className="text-xs text-[var(--rocket-gray-400)]">
                 Receba eventos em tempo real
               </p>
             </motion.div>
@@ -404,7 +382,7 @@ export default function DashboardPage() {
         {instances.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--rocket-gray-50)]">
+              <h3 className="text-base font-semibold text-[var(--rocket-gray-50)]">
                 Instâncias recentes
               </h3>
               <Link href="/instances">
@@ -430,20 +408,20 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="group">
+                  <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-4 group hover:border-[#29292e] transition-colors">
                     <div className="flex items-center gap-3">
                       <div
                         className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center",
+                          "w-9 h-9 rounded-lg flex items-center justify-center",
                           instance.status === "connected"
-                            ? "bg-[var(--rocket-green)]/20"
-                            : "bg-[var(--rocket-gray-700)]"
+                            ? "bg-[var(--rocket-green)]/10"
+                            : "bg-[#29292e]"
                         )}
                       >
                         <LottieIcon
                           animationData={smartphoneAnimation}
                           className={cn(
-                            "w-5 h-5",
+                            "w-4 h-4",
                             instance.status === "connected"
                               ? "text-[var(--rocket-green)]"
                               : "text-[var(--rocket-gray-400)]"
@@ -451,10 +429,10 @@ export default function DashboardPage() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-[var(--rocket-gray-50)] truncate">
+                        <h4 className="font-medium text-sm text-[var(--rocket-gray-50)] truncate">
                           {instance.profileName || instance.name}
                         </h4>
-                        <p className="text-sm text-[var(--rocket-gray-400)]">
+                        <p className="text-xs text-[var(--rocket-gray-400)]">
                           {instance.status === "connected"
                             ? "Conectado"
                             : "Desconectado"}
@@ -469,7 +447,7 @@ export default function DashboardPage() {
                         {instance.status === "connected" ? "Online" : "Offline"}
                       </Badge>
                     </div>
-                  </Card>
+                  </div>
                 </motion.div>
               ))}
             </div>
