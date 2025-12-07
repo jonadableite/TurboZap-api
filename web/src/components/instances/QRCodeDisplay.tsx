@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { RefreshCw, Smartphone, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
@@ -17,6 +17,17 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
   const [timeLeft, setTimeLeft] = useState(60);
   const { data: qrCode, isLoading, isError, refetch } = useInstanceQRCode(instanceName);
   const { data: status } = useInstanceStatus(instanceName);
+  const refetchRef = useRef(refetch);
+
+  // Keep refetch ref updated
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // Stable refetch function
+  const handleRefetch = useCallback(() => {
+    refetchRef.current();
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -26,7 +37,7 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          refetch();
+          refetchRef.current();
           return 60;
         }
         return prev - 1;
@@ -34,14 +45,19 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [qrCode, refetch]);
+  }, [qrCode]);
 
   // Check for connection
+  const onConnectedRef = useRef(onConnected);
   useEffect(() => {
-    if (status?.status === 'connected' && onConnected) {
-      onConnected();
+    onConnectedRef.current = onConnected;
+  }, [onConnected]);
+
+  useEffect(() => {
+    if (status?.status === 'connected' && onConnectedRef.current) {
+      onConnectedRef.current();
     }
-  }, [status?.status, onConnected]);
+  }, [status?.status]);
 
   // Connected state
   if (status?.status === 'connected') {
@@ -92,7 +108,7 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
         <p className="text-[var(--rocket-gray-400)] text-center mb-4">
           Não foi possível gerar o QR Code. Tente novamente.
         </p>
-        <Button onClick={() => refetch()} leftIcon={<RefreshCw className="w-4 h-4" />}>
+        <Button onClick={handleRefetch} leftIcon={<RefreshCw className="w-4 h-4" />}>
           Tentar novamente
         </Button>
       </div>
@@ -180,7 +196,7 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
         variant="ghost"
         size="sm"
         className="mt-6"
-        onClick={() => refetch()}
+        onClick={handleRefetch}
         leftIcon={<RefreshCw className="w-4 h-4" />}
       >
         Gerar novo QR Code

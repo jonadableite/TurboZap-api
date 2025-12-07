@@ -22,10 +22,10 @@ const StyledWrapper = styled.div<{ $color: string }>`
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none; /* Garante que não bloqueie cliques */
+  pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  border-radius: inherit; /* Tenta herdar o border radius do pai */
+  border-radius: inherit;
 
   /*
   More comprehensive version at shenanigans.shoghisimon.ca/collection/css-rain-bg/
@@ -61,9 +61,7 @@ const StyledWrapper = styled.div<{ $color: string }>`
     width: 100%;
     height: 100%;
     --c: ${props => props.$color};
-    background-color: transparent; /* Alterado de #000 para transparent para respeitar tema do card */
-    /* Removemos o background image sólido para permitir overlay */
-    
+    background-color: transparent; /* Mantendo transparente para preservar a cor de fundo do card */
     background-image: radial-gradient(4px 100px at 0px 235px, var(--c), #0000),
       radial-gradient(4px 100px at 300px 235px, var(--c), #0000),
       radial-gradient(1.5px 1.5px at 150px 117.5px, var(--c) 100%, #0000 150%),
@@ -139,9 +137,9 @@ const StyledWrapper = styled.div<{ $color: string }>`
       300px 210px,
       300px 158px,
       300px 158px,
-      300px 158px; /* Ajustei o último índice para evitar erro */
+      300px 158px;
     animation: hi 150s linear infinite;
-    opacity: 0.5; /* Opacidade para não brigar com o texto */
+    opacity: 0.6;
   }
 
   @keyframes hi {

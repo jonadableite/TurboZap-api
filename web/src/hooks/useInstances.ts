@@ -13,9 +13,11 @@ export function useInstances() {
   return useQuery<Instance[]>({
     queryKey: INSTANCES_QUERY_KEY,
     queryFn: instanceApi.list,
-    refetchInterval: 10000, // Refetch every 10 seconds
-    staleTime: 5000,
+    refetchInterval: 30000, // Refetch every 30 seconds (reduced from 10s)
+    staleTime: 15000, // Data is fresh for 15 seconds
     enabled: hasApiKey,
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, // Only refetch on mount
   });
 }
 
@@ -26,7 +28,8 @@ export function useInstance(name: string) {
     queryKey: ['instance', name],
     queryFn: () => instanceApi.get(name),
     enabled: !!name && hasApiKey,
-    refetchInterval: 5000,
+    refetchInterval: 15000, // Refetch every 15 seconds (reduced from 5s)
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -37,7 +40,8 @@ export function useInstanceStatus(name: string) {
     queryKey: ['instance', name, 'status'],
     queryFn: () => instanceApi.getStatus(name),
     enabled: !!name && hasApiKey,
-    refetchInterval: 3000,
+    refetchInterval: 10000, // Refetch every 10 seconds (reduced from 3s)
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -48,8 +52,9 @@ export function useInstanceQRCode(name: string, enabled: boolean = true) {
     queryKey: ['instance', name, 'qrcode'],
     queryFn: () => instanceApi.getQRCode(name),
     enabled: enabled && !!name && hasApiKey,
-    refetchInterval: 15000, // QR code refreshes every 15 seconds
+    refetchInterval: 30000, // QR code refreshes every 30 seconds (reduced from 15s)
     retry: 3,
+    refetchOnWindowFocus: false,
   });
 }
 
