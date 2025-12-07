@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Play, Copy, Check, Loader2, ChevronRight, ChevronDown, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge, Button, Input, Modal } from "@/components/ui";
+import { useApiConfig } from "@/hooks/useApiConfig";
 
 interface Param {
   name: string;
@@ -62,6 +63,7 @@ export function ApiPlayground({
   bodyParams = [],
   queryParams = [],
 }: ApiPlaygroundProps) {
+  const { apiKey: storedApiKey, apiUrl: storedApiUrl } = useApiConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
@@ -69,6 +71,13 @@ export function ApiPlayground({
   const [apiKey, setApiKey] = useState("");
   const [activeTab, setActiveTab] = useState("response"); // response, code
   const [selectedLang, setSelectedLang] = useState("JavaScript");
+
+  // Auto-fill API key from storage
+  useEffect(() => {
+    if (storedApiKey && !apiKey) {
+      setApiKey(storedApiKey);
+    }
+  }, [storedApiKey, apiKey]);
 
   // Initialize params with defaults
   useState(() => {
@@ -81,6 +90,10 @@ export function ApiPlayground({
 
   const handleParamChange = (name: string, value: string) => {
     setParams(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getBaseUrl = () => {
+    return storedApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
   };
 
   const getFullUrl = () => {
@@ -100,8 +113,8 @@ export function ApiPlayground({
       url += `?${queryParts.join("&")}`;
     }
 
-    // Base URL (assuming localhost for demo, in prod would be from env)
-    return `http://localhost:8080${url}`;
+    // Base URL from config or env
+    return `${getBaseUrl()}${url}`;
   };
 
   const generateCode = () => {
