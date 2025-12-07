@@ -344,3 +344,63 @@ func (h *InstanceHandler) Delete(c *fiber.Ctx) error {
 		"message": "Instance deleted successfully",
 	})
 }
+
+// UpdateName updates the name of an instance
+func (h *InstanceHandler) UpdateName(c *fiber.Ctx) error {
+	name := c.Params("name")
+	if name == "" {
+		return response.BadRequest(c, "Instance name is required")
+	}
+
+	var req dto.UpdateInstanceNameRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	// Validate new instance name
+	if !validator.InstanceName(req.Name) {
+		return response.BadRequest(c, "Invalid new instance name. Use only alphanumeric, underscore, and hyphen characters")
+	}
+
+	// Get the instance
+	instance, err := h.instanceRepo.GetByName(c.Context(), name)
+	if err != nil {
+		h.logger.WithError(err).Error("Failed to get instance")
+		return response.InternalServerError(c, "Failed to update instance name")
+	}
+	if instance == nil {
+		return response.NotFound(c, "Instance not found")
+	}
+
+	// Check if new name already exists (if different from current)
+	if req.Name != instance.Name {
+		exists, err := h.instanceRepo.Exists(c.Context(), req.Name)
+		if err != nil {
+			h.logger.WithError(err).Error("Failed to check instance existence")
+			return response.InternalServerError(c, "Failed to update instance name")
+		}
+		if exists {
+			return response.Conflict(c, "Instance with this name already exists")
+		}
+	}
+
+	oldName := instance.Name
+	instance.Name = req.Name
+
+	// Update in database
+	if err := h.instanceRepo.Update(c.Context(), instance); err != nil {
+		h.logger.WithError(err).Error("Failed to update instance name")
+		return response.InternalServerError(c, "Failed to update instance name")
+	}
+
+	h.logger.WithFields(logrus.Fields{
+		"old_name": oldName,
+		"new_name": req.Name,
+	}).Info("Instance name updated")
+
+	return response.Success(c, dto.UpdateInstanceNameResponse{
+		OldName: oldName,
+		NewName: req.Name,
+		Message: "Instance name updated successfully",
+	})
+}

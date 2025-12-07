@@ -111,50 +111,50 @@ go run ./cmd/api
 
 ### Variáveis de Ambiente
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `SERVER_PORT` | Porta do servidor HTTP | `8080` |
-| `SERVER_HOST` | Host do servidor | `0.0.0.0` |
-| `API_KEY` | Chave de API global | - |
-| `DATABASE_URL` | URL do PostgreSQL | - |
-| `RABBITMQ_URL` | URL do RabbitMQ | `amqp://guest:guest@localhost:5672/` |
-| `REDIS_URL` | URL do Redis | `redis://localhost:6379` |
-| `MINIO_ENDPOINT` | Endpoint do MinIO | `localhost:9000` |
-| `MINIO_ACCESS_KEY` | Access key do MinIO | `minioadmin` |
-| `MINIO_SECRET_KEY` | Secret key do MinIO | `minioadmin` |
-| `LOG_LEVEL` | Nível de log | `info` |
+| Variável           | Descrição              | Padrão                               |
+| ------------------ | ---------------------- | ------------------------------------ |
+| `SERVER_PORT`      | Porta do servidor HTTP | `8080`                               |
+| `SERVER_HOST`      | Host do servidor       | `0.0.0.0`                            |
+| `API_KEY`          | Chave de API global    | -                                    |
+| `DATABASE_URL`     | URL do PostgreSQL      | -                                    |
+| `RABBITMQ_URL`     | URL do RabbitMQ        | `amqp://guest:guest@localhost:5672/` |
+| `REDIS_URL`        | URL do Redis           | `redis://localhost:6379`             |
+| `MINIO_ENDPOINT`   | Endpoint do MinIO      | `localhost:9000`                     |
+| `MINIO_ACCESS_KEY` | Access key do MinIO    | `minioadmin`                         |
+| `MINIO_SECRET_KEY` | Secret key do MinIO    | `minioadmin`                         |
+| `LOG_LEVEL`        | Nível de log           | `info`                               |
 
 ### Variáveis de Webhook Global
 
 O TurboZap suporta webhooks globais que recebem eventos de todas as instâncias. Configure as seguintes variáveis de ambiente:
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `WEBHOOK_GLOBAL_ENABLED` | Habilita webhook global | `false` |
-| `WEBHOOK_GLOBAL_URL` | URL base do webhook global | - |
-| `WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS` | Usa URL específica por evento | `false` |
-| `WEBHOOK_GLOBAL_BASE64` | Codifica payload em base64 | `false` |
-| `WEBHOOK_EVENTS_APPLICATION_STARTUP` | Evento de inicialização | `false` |
-| `WEBHOOK_EVENTS_QRCODE_UPDATED` | Evento de QR code atualizado | `true` |
-| `WEBHOOK_EVENTS_CONNECTION_UPDATE` | Evento de atualização de conexão | `true` |
-| `WEBHOOK_EVENTS_MESSAGES_SET` | Evento de sincronização de mensagens | `false` |
-| `WEBHOOK_EVENTS_MESSAGES_UPSERT` | Evento de nova mensagem | `true` |
-| `WEBHOOK_EVENTS_MESSAGES_UPDATE` | Evento de atualização de mensagem | `true` |
-| `WEBHOOK_EVENTS_MESSAGES_DELETE` | Evento de mensagem deletada | `true` |
-| `WEBHOOK_EVENTS_SEND_MESSAGE` | Evento de mensagem enviada | `true` |
-| `WEBHOOK_EVENTS_CONTACTS_SET` | Evento de sincronização de contatos | `false` |
-| `WEBHOOK_EVENTS_CONTACTS_UPSERT` | Evento de contato atualizado | `false` |
-| `WEBHOOK_EVENTS_CONTACTS_UPDATE` | Evento de atualização de contato | `false` |
-| `WEBHOOK_EVENTS_PRESENCE_UPDATE` | Evento de atualização de presença | `true` |
-| `WEBHOOK_EVENTS_CHATS_SET` | Evento de sincronização de chats | `false` |
-| `WEBHOOK_EVENTS_CHATS_UPDATE` | Evento de atualização de chat | `false` |
-| `WEBHOOK_EVENTS_CHATS_UPSERT` | Evento de novo chat | `false` |
-| `WEBHOOK_EVENTS_CHATS_DELETE` | Evento de chat deletado | `false` |
-| `WEBHOOK_EVENTS_GROUPS_UPSERT` | Evento de grupo criado/atualizado | `true` |
-| `WEBHOOK_EVENTS_GROUPS_UPDATE` | Evento de atualização de grupo | `true` |
-| `WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE` | Evento de participantes do grupo | `true` |
-| `WEBHOOK_EVENTS_ERRORS` | Eventos de erro | `false` |
-| `WEBHOOK_EVENTS_ERRORS_WEBHOOK` | URL específica para erros | - |
+| Variável                                   | Descrição                            | Padrão  |
+| ------------------------------------------ | ------------------------------------ | ------- |
+| `WEBHOOK_GLOBAL_ENABLED`                   | Habilita webhook global              | `false` |
+| `WEBHOOK_GLOBAL_URL`                       | URL base do webhook global           | -       |
+| `WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS`         | Usa URL específica por evento        | `false` |
+| `WEBHOOK_GLOBAL_BASE64`                    | Codifica payload em base64           | `false` |
+| `WEBHOOK_EVENTS_APPLICATION_STARTUP`       | Evento de inicialização              | `false` |
+| `WEBHOOK_EVENTS_QRCODE_UPDATED`            | Evento de QR code atualizado         | `true`  |
+| `WEBHOOK_EVENTS_CONNECTION_UPDATE`         | Evento de atualização de conexão     | `true`  |
+| `WEBHOOK_EVENTS_MESSAGES_SET`              | Evento de sincronização de mensagens | `false` |
+| `WEBHOOK_EVENTS_MESSAGES_UPSERT`           | Evento de nova mensagem              | `true`  |
+| `WEBHOOK_EVENTS_MESSAGES_UPDATE`           | Evento de atualização de mensagem    | `true`  |
+| `WEBHOOK_EVENTS_MESSAGES_DELETE`           | Evento de mensagem deletada          | `true`  |
+| `WEBHOOK_EVENTS_SEND_MESSAGE`              | Evento de mensagem enviada           | `true`  |
+| `WEBHOOK_EVENTS_CONTACTS_SET`              | Evento de sincronização de contatos  | `false` |
+| `WEBHOOK_EVENTS_CONTACTS_UPSERT`           | Evento de contato atualizado         | `false` |
+| `WEBHOOK_EVENTS_CONTACTS_UPDATE`           | Evento de atualização de contato     | `false` |
+| `WEBHOOK_EVENTS_PRESENCE_UPDATE`           | Evento de atualização de presença    | `true`  |
+| `WEBHOOK_EVENTS_CHATS_SET`                 | Evento de sincronização de chats     | `false` |
+| `WEBHOOK_EVENTS_CHATS_UPDATE`              | Evento de atualização de chat        | `false` |
+| `WEBHOOK_EVENTS_CHATS_UPSERT`              | Evento de novo chat                  | `false` |
+| `WEBHOOK_EVENTS_CHATS_DELETE`              | Evento de chat deletado              | `false` |
+| `WEBHOOK_EVENTS_GROUPS_UPSERT`             | Evento de grupo criado/atualizado    | `true`  |
+| `WEBHOOK_EVENTS_GROUPS_UPDATE`             | Evento de atualização de grupo       | `true`  |
+| `WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE` | Evento de participantes do grupo     | `true`  |
+| `WEBHOOK_EVENTS_ERRORS`                    | Eventos de erro                      | `false` |
+| `WEBHOOK_EVENTS_ERRORS_WEBHOOK`            | URL específica para erros            | -       |
 
 **Exemplo de configuração no `.env`:**
 
@@ -176,54 +176,87 @@ WEBHOOK_EVENTS_GROUPS_UPSERT=true
 
 ### Instâncias
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `POST` | `/instance/create` | Criar nova instância |
-| `GET` | `/instance/list` | Listar todas as instâncias |
-| `GET` | `/instance/:name` | Obter detalhes de uma instância |
-| `GET` | `/instance/:name/status` | Obter status de conexão |
-| `GET` | `/instance/:name/qrcode` | Obter QR code para conexão |
-| `POST` | `/instance/:name/connect` | Conectar instância |
-| `POST` | `/instance/:name/restart` | Reiniciar instância |
-| `POST` | `/instance/:name/logout` | Desconectar da sessão |
-| `DELETE` | `/instance/:name` | Deletar instância |
+| Método   | Endpoint                  | Descrição                       |
+| -------- | ------------------------- | ------------------------------- |
+| `POST`   | `/instance/create`        | Criar nova instância            |
+| `GET`    | `/instance/list`          | Listar todas as instâncias      |
+| `GET`    | `/instance/:name`         | Obter detalhes de uma instância |
+| `GET`    | `/instance/:name/status`  | Obter status de conexão         |
+| `GET`    | `/instance/:name/qrcode`  | Obter QR code para conexão      |
+| `POST`   | `/instance/:name/connect` | Conectar instância              |
+| `POST`   | `/instance/:name/restart` | Reiniciar instância             |
+| `POST`   | `/instance/:name/logout`  | Desconectar da sessão           |
+| `DELETE` | `/instance/:name`         | Deletar instância               |
+| `PUT`    | `/instance/:name/name`    | Atualizar nome da instância     |
 
 ### Mensagens
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `POST` | `/message/:instance/text` | Enviar mensagem de texto |
-| `POST` | `/message/:instance/media` | Enviar mídia (imagem/vídeo/documento) |
-| `POST` | `/message/:instance/audio` | Enviar áudio/voz |
-| `POST` | `/message/:instance/sticker` | Enviar sticker |
-| `POST` | `/message/:instance/location` | Enviar localização |
-| `POST` | `/message/:instance/contact` | Enviar cartão de contato |
-| `POST` | `/message/:instance/reaction` | Enviar reação |
-| `POST` | `/message/:instance/poll` | Enviar enquete |
-| `POST` | `/message/:instance/button` | Enviar mensagem com botões |
-| `POST` | `/message/:instance/list` | Enviar mensagem de lista |
+| Método | Endpoint                      | Descrição                             |
+| ------ | ----------------------------- | ------------------------------------- |
+| `POST` | `/message/:instance/text`     | Enviar mensagem de texto              |
+| `POST` | `/message/:instance/media`    | Enviar mídia (imagem/vídeo/documento) |
+| `POST` | `/message/:instance/audio`    | Enviar áudio/voz                      |
+| `POST` | `/message/:instance/sticker`  | Enviar sticker                        |
+| `POST` | `/message/:instance/location` | Enviar localização                    |
+| `POST` | `/message/:instance/contact`  | Enviar cartão de contato              |
+| `POST` | `/message/:instance/reaction` | Enviar reação                         |
+| `POST` | `/message/:instance/poll`     | Enviar enquete                        |
+| `POST` | `/message/:instance/button`   | Enviar mensagem com botões            |
+| `POST` | `/message/:instance/list`     | Enviar mensagem de lista              |
 
 ### Grupos
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/group/:instance/list` | Listar grupos |
-| `GET` | `/group/:instance/:jid` | Obter info do grupo |
-| `POST` | `/group/:instance/create` | Criar grupo |
-| `POST` | `/group/:instance/:jid/leave` | Sair do grupo |
-| `POST` | `/group/:instance/:jid/participants/add` | Adicionar participantes |
-| `POST` | `/group/:instance/:jid/participants/remove` | Remover participantes |
+| Método | Endpoint                                    | Descrição               |
+| ------ | ------------------------------------------- | ----------------------- |
+| `GET`  | `/group/:instance/list`                     | Listar grupos           |
+| `GET`  | `/group/:instance/:jid`                     | Obter info do grupo     |
+| `POST` | `/group/:instance/create`                   | Criar grupo             |
+| `POST` | `/group/:instance/:jid/leave`               | Sair do grupo           |
+| `POST` | `/group/:instance/:jid/participants/add`    | Adicionar participantes |
+| `POST` | `/group/:instance/:jid/participants/remove` | Remover participantes   |
 
 ### Webhooks
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/webhook/:instance` | Obter configuração de webhook |
-| `POST` | `/webhook/:instance/set` | Configurar webhook |
-| `DELETE` | `/webhook/:instance` | Remover webhook |
-| `POST` | `/webhook/:instance/enable` | Habilitar webhook |
-| `POST` | `/webhook/:instance/disable` | Desabilitar webhook |
-| `GET` | `/webhook/events` | Listar todos os eventos disponíveis |
+| Método   | Endpoint                     | Descrição                           |
+| -------- | ---------------------------- | ----------------------------------- |
+| `GET`    | `/webhook/:instance`         | Obter configuração de webhook       |
+| `POST`   | `/webhook/:instance/set`     | Configurar webhook                  |
+| `DELETE` | `/webhook/:instance`         | Remover webhook                     |
+| `POST`   | `/webhook/:instance/enable`  | Habilitar webhook                   |
+| `POST`   | `/webhook/:instance/disable` | Desabilitar webhook                 |
+| `GET`    | `/webhook/events`            | Listar todos os eventos disponíveis |
+
+### Perfil e Privacidade
+
+| Método | Endpoint                     | Descrição                           |
+| ------ | ---------------------------- | ----------------------------------- |
+| `GET`  | `/profile/:instance/privacy` | Obter configurações de privacidade  |
+| `POST` | `/profile/:instance/privacy` | Alterar configuração de privacidade |
+| `POST` | `/profile/:instance/status`  | Alterar "recado/about" do perfil    |
+
+**Configurações de Privacidade disponíveis:**
+
+- `group_add` - Quem pode adicionar em grupos (all, contacts, contact_blacklist, none)
+- `last_seen` - Visto por último (all, contacts, contact_blacklist, none)
+- `status` - Status/Stories (all, contacts, contact_blacklist, none)
+- `profile` - Foto de perfil (all, contacts, contact_blacklist, none)
+- `read_receipts` - Confirmação de leitura (all, none)
+- `online` - Status online (all, match_last_seen)
+- `call_add` - Chamadas (all, known)
+
+### Chamadas
+
+| Método | Endpoint                 | Descrição                 |
+| ------ | ------------------------ | ------------------------- |
+| `POST` | `/call/:instance/reject` | Rejeitar chamada recebida |
+
+### SSE (Server-Sent Events)
+
+| Método | Endpoint              | Descrição                                |
+| ------ | --------------------- | ---------------------------------------- |
+| `GET`  | `/sse/:instance`      | Stream SSE para uma instância específica |
+| `GET`  | `/sse/`               | Stream SSE global (todas as instâncias)  |
+| `GET`  | `/sse/:instance/info` | Informações de conexões SSE              |
 
 ## 📨 Exemplos de Uso
 
@@ -349,24 +382,24 @@ curl -X POST http://localhost:8080/message/minha-instancia/button \
 
 **Parâmetros:**
 
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| `to` | string | Sim | Número do destinatário (com código do país) |
-| `text` | string | Sim | Texto principal da mensagem |
-| `footer` | string | Não | Texto do rodapé |
-| `buttons` | array | Sim | Array com 1-3 botões |
-| `buttons[].id` | string | Não* | ID único do botão (gerado automaticamente se vazio) |
-| `buttons[].text` | string | Sim | Texto exibido no botão |
-| `header` | object | Não | Cabeçalho da mensagem (text, image, video ou document) |
-| `header.type` | string | Sim** | Tipo do header: `text`, `image`, `video` ou `document` |
-| `header.text` | string | Sim** | Texto do header (quando `type` é `text`) |
-| `header.media_url` | string | Sim** | URL da mídia (quando `type` é `image`, `video` ou `document`) |
-| `header.base64` | string | Não | Dados da mídia em base64 (alternativa a `media_url`) |
-| `header.mime_type` | string | Sim** | Tipo MIME da mídia |
-| `header.file_name` | string | Não | Nome do arquivo (quando `type` é `document`) |
+| Campo              | Tipo   | Obrigatório | Descrição                                                     |
+| ------------------ | ------ | ----------- | ------------------------------------------------------------- |
+| `to`               | string | Sim         | Número do destinatário (com código do país)                   |
+| `text`             | string | Sim         | Texto principal da mensagem                                   |
+| `footer`           | string | Não         | Texto do rodapé                                               |
+| `buttons`          | array  | Sim         | Array com 1-3 botões                                          |
+| `buttons[].id`     | string | Não\*       | ID único do botão (gerado automaticamente se vazio)           |
+| `buttons[].text`   | string | Sim         | Texto exibido no botão                                        |
+| `header`           | object | Não         | Cabeçalho da mensagem (text, image, video ou document)        |
+| `header.type`      | string | Sim\*\*     | Tipo do header: `text`, `image`, `video` ou `document`        |
+| `header.text`      | string | Sim\*\*     | Texto do header (quando `type` é `text`)                      |
+| `header.media_url` | string | Sim\*\*     | URL da mídia (quando `type` é `image`, `video` ou `document`) |
+| `header.base64`    | string | Não         | Dados da mídia em base64 (alternativa a `media_url`)          |
+| `header.mime_type` | string | Sim\*\*     | Tipo MIME da mídia                                            |
+| `header.file_name` | string | Não         | Nome do arquivo (quando `type` é `document`)                  |
 
 \* Se não fornecido, será gerado automaticamente como `btn_1`, `btn_2`, etc.  
-\** Obrigatório dependendo do tipo de header escolhido
+\*\* Obrigatório dependendo do tipo de header escolhido
 
 ### Enviar Lista
 
@@ -442,19 +475,19 @@ curl -X POST http://localhost:8080/message/minha-instancia/list \
 
 **Parâmetros:**
 
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| `to` | string | Sim | Número do destinatário (com código do país) |
-| `title` | string | Sim | Título da lista (máximo de caracteres conforme limites do WhatsApp) |
-| `description` | string | Não | Descrição da lista |
-| `button_text` | string | Sim | Texto do botão que abre a lista |
-| `footer` | string | Não | Texto do rodapé |
-| `sections` | array | Sim | Array com 1 ou mais seções |
-| `sections[].title` | string | Sim | Título da seção |
-| `sections[].rows` | array | Sim | Array com as linhas da seção (pelo menos 1 linha) |
-| `sections[].rows[].id` | string | Não* | ID único da linha (gerado automaticamente se vazio) |
-| `sections[].rows[].title` | string | Sim | Título da linha |
-| `sections[].rows[].description` | string | Não | Descrição da linha |
+| Campo                           | Tipo   | Obrigatório | Descrição                                                           |
+| ------------------------------- | ------ | ----------- | ------------------------------------------------------------------- |
+| `to`                            | string | Sim         | Número do destinatário (com código do país)                         |
+| `title`                         | string | Sim         | Título da lista (máximo de caracteres conforme limites do WhatsApp) |
+| `description`                   | string | Não         | Descrição da lista                                                  |
+| `button_text`                   | string | Sim         | Texto do botão que abre a lista                                     |
+| `footer`                        | string | Não         | Texto do rodapé                                                     |
+| `sections`                      | array  | Sim         | Array com 1 ou mais seções                                          |
+| `sections[].title`              | string | Sim         | Título da seção                                                     |
+| `sections[].rows`               | array  | Sim         | Array com as linhas da seção (pelo menos 1 linha)                   |
+| `sections[].rows[].id`          | string | Não\*       | ID único da linha (gerado automaticamente se vazio)                 |
+| `sections[].rows[].title`       | string | Sim         | Título da linha                                                     |
+| `sections[].rows[].description` | string | Não         | Descrição da linha                                                  |
 
 \* Se não fornecido, será gerado automaticamente como `row_1_1`, `row_1_2`, etc.
 
@@ -500,11 +533,7 @@ curl -X GET http://localhost:8080/webhook/minha-instancia \
     "url": "https://meu-servidor.com/webhook",
     "webhook_by_events": false,
     "webhook_base64": false,
-    "events": [
-      "message.received",
-      "message.ack",
-      "connection.update"
-    ]
+    "events": ["message.received", "message.ack", "connection.update"]
   }
 }
 ```
@@ -514,11 +543,13 @@ curl -X GET http://localhost:8080/webhook/minha-instancia \
 Conecte-se ao WebSocket para receber eventos em tempo real:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8080/ws?token=your-api-key&instance_id=uuid');
+const ws = new WebSocket(
+  "ws://localhost:8080/ws?token=your-api-key&instance_id=uuid"
+);
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  console.log('Evento:', data.event, data.data);
+  console.log("Evento:", data.event, data.data);
 };
 
 // Eventos disponíveis:
@@ -544,27 +575,27 @@ Configure um webhook global que recebe eventos de todas as instâncias através 
 
 ### Eventos Disponíveis
 
-| Evento | Descrição | Slug (para webhook_by_events) |
-|--------|-----------|-------------------------------|
-| `application_startup` | Inicialização da aplicação | `application-startup` |
-| `qrcode.updated` | Novo QR code gerado | `qrcode-updated` |
-| `connection.update` | Mudança no status de conexão | `connection-update` |
-| `messages.set` | Sincronização inicial de mensagens | `messages-set` |
-| `message.received` | Nova mensagem recebida | `messages-upsert` |
-| `messages.update` | Atualização de mensagem (status) | `messages-update` |
-| `messages.delete` | Mensagem deletada | `messages-delete` |
-| `message.sent` | Mensagem enviada pela API | `send-message` |
-| `contacts.set` | Sincronização inicial de contatos | `contacts-set` |
-| `contacts.upsert` | Contato criado/atualizado | `contacts-upsert` |
-| `contacts.update` | Atualização de contato | `contacts-update` |
-| `presence.update` | Atualização de presença | `presence-update` |
-| `chats.set` | Sincronização inicial de chats | `chats-set` |
-| `chats.update` | Atualização de chat | `chats-update` |
-| `chats.upsert` | Novo chat criado | `chats-upsert` |
-| `chats.delete` | Chat deletado | `chats-delete` |
-| `groups.upsert` | Grupo criado/atualizado | `groups-upsert` |
-| `groups.update` | Atualização de grupo | `groups-update` |
-| `group.participants.update` | Mudança em participantes | `group-participants-update` |
+| Evento                      | Descrição                          | Slug (para webhook_by_events) |
+| --------------------------- | ---------------------------------- | ----------------------------- |
+| `application_startup`       | Inicialização da aplicação         | `application-startup`         |
+| `qrcode.updated`            | Novo QR code gerado                | `qrcode-updated`              |
+| `connection.update`         | Mudança no status de conexão       | `connection-update`           |
+| `messages.set`              | Sincronização inicial de mensagens | `messages-set`                |
+| `message.received`          | Nova mensagem recebida             | `messages-upsert`             |
+| `messages.update`           | Atualização de mensagem (status)   | `messages-update`             |
+| `messages.delete`           | Mensagem deletada                  | `messages-delete`             |
+| `message.sent`              | Mensagem enviada pela API          | `send-message`                |
+| `contacts.set`              | Sincronização inicial de contatos  | `contacts-set`                |
+| `contacts.upsert`           | Contato criado/atualizado          | `contacts-upsert`             |
+| `contacts.update`           | Atualização de contato             | `contacts-update`             |
+| `presence.update`           | Atualização de presença            | `presence-update`             |
+| `chats.set`                 | Sincronização inicial de chats     | `chats-set`                   |
+| `chats.update`              | Atualização de chat                | `chats-update`                |
+| `chats.upsert`              | Novo chat criado                   | `chats-upsert`                |
+| `chats.delete`              | Chat deletado                      | `chats-delete`                |
+| `groups.upsert`             | Grupo criado/atualizado            | `groups-upsert`               |
+| `groups.update`             | Atualização de grupo               | `groups-update`               |
+| `group.participants.update` | Mudança em participantes           | `group-participants-update`   |
 
 ### Webhook por Eventos (`webhook_by_events`)
 
@@ -609,9 +640,11 @@ O payload acima seria enviado como uma string base64 no corpo da requisição, c
 
 ```javascript
 const base64Payload = req.body; // String base64
-const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf-8'));
-console.log('Evento:', payload.event);
-console.log('Dados:', payload.data);
+const payload = JSON.parse(
+  Buffer.from(base64Payload, "base64").toString("utf-8")
+);
+console.log("Evento:", payload.event);
+console.log("Dados:", payload.data);
 ```
 
 ### Configuração de Webhook por Instância
@@ -673,16 +706,18 @@ WEBHOOK_EVENTS_QRCODE_UPDATED=true
 **Handler no seu servidor (Express.js exemplo):**
 
 ```javascript
-app.post('/webhooks/turbozap/messages-upsert', (req, res) => {
+app.post("/webhooks/turbozap/messages-upsert", (req, res) => {
   // Decodificar payload base64
   const base64Payload = req.body;
-  const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf-8'));
-  
-  console.log('Instância:', payload.instance);
-  console.log('Mensagem:', payload.data);
-  
+  const payload = JSON.parse(
+    Buffer.from(base64Payload, "base64").toString("utf-8")
+  );
+
+  console.log("Instância:", payload.instance);
+  console.log("Mensagem:", payload.data);
+
   // Processar mensagem...
-  
+
   res.status(200).json({ received: true });
 });
 ```
@@ -713,14 +748,14 @@ curl -X POST http://localhost:8080/webhook/minha-instancia/set \
 **Handler no seu servidor:**
 
 ```javascript
-app.post('/webhooks/instancia-1', (req, res) => {
+app.post("/webhooks/instancia-1", (req, res) => {
   const payload = req.body; // Já é um objeto JSON
-  
-  console.log('Evento:', payload.event);
-  console.log('Dados:', payload.data);
-  
+
+  console.log("Evento:", payload.event);
+  console.log("Dados:", payload.data);
+
   // Processar evento...
-  
+
   res.status(200).json({ received: true });
 });
 ```
@@ -745,23 +780,25 @@ Esses headers serão incluídos em todas as requisições do webhook.
 
 ### WhatsApp Web vs Cloud API
 
-| Recurso | WhatsApp Web (whatsmeow) | Cloud API |
-|---------|-------------------------|-----------|
-| Botões | ✅ Suportado (até 3 botões) | ✅ Completo |
-| Listas | ✅ Suportado (até 10 linhas/seção) | ✅ Completo |
-| Carrossel | ❌ Não suportado | ✅ Suportado |
-| Templates | ❌ Não suportado | ✅ Suportado |
-| Custo | Gratuito | Pago por mensagem |
+| Recurso   | WhatsApp Web (whatsmeow)           | Cloud API         |
+| --------- | ---------------------------------- | ----------------- |
+| Botões    | ✅ Suportado (até 3 botões)        | ✅ Completo       |
+| Listas    | ✅ Suportado (até 10 linhas/seção) | ✅ Completo       |
+| Carrossel | ❌ Não suportado                   | ✅ Suportado      |
+| Templates | ❌ Não suportado                   | ✅ Suportado      |
+| Custo     | Gratuito                           | Pago por mensagem |
 
 ### Mensagens Interativas
 
 **Botões:**
+
 - Máximo de **3 botões** por mensagem
 - Tipo de botão: apenas `RESPONSE` (resposta rápida)
 - Suporte completo em Android, iOS e WhatsApp Web
 - Mensagens são automaticamente envolvidas em `ViewOnceMessage/FutureProofMessage` para compatibilidade entre dispositivos
 
 **Listas:**
+
 - Máximo de **10 linhas por seção** (recomendado)
 - Tipo de lista: `SINGLE_SELECT` (seleção única)
 - Suporte completo em Android, iOS e WhatsApp Web
@@ -769,6 +806,7 @@ Esses headers serão incluídos em todas as requisições do webhook.
 - Seções vazias são automaticamente ignoradas
 
 **Validações Automáticas:**
+
 - IDs de botões/linhas são gerados automaticamente se não fornecidos
 - Listas de botões com mais de 3 itens são automaticamente truncadas
 - Validação de parâmetros obrigatórios antes do envio

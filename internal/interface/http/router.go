@@ -47,6 +47,11 @@ func NewRouter(
 	contactHandler := handler.NewContactHandler(instanceRepo, waManager, logger)
 	presenceHandler := handler.NewPresenceHandler(instanceRepo, waManager, logger)
 	webhookHandler := handler.NewWebhookHandler(instanceRepo, webhookRepo, logger)
+	profileHandler := handler.NewProfileHandler(instanceRepo, waManager, logger)
+	
+	// Create SSE hub and handler
+	sseHub := handler.NewSSEHub(logger)
+	sseHandler := handler.NewSSEHandler(instanceRepo, logger, sseHub)
 
 	// API routes (authenticated)
 	api := app.Group("/api", middleware.AuthMiddleware(cfg, instanceRepo))
@@ -62,6 +67,7 @@ func NewRouter(
 	instance.Put("/:name/restart", instanceHandler.Restart)
 	instance.Post("/:name/logout", instanceHandler.Logout)
 	instance.Delete("/:name", instanceHandler.Delete)
+	instance.Put("/:name/name", instanceHandler.UpdateName) // Update instance name
 
 	// Message routes
 	message := api.Group("/message/:instance")
@@ -107,6 +113,16 @@ func NewRouter(
 	presence.Post("/clear", presenceHandler.ClearPresence)
 	presence.Post("/subscribe", presenceHandler.SubscribePresence)
 
+	// Profile routes (privacy, status, calls)
+	profile := api.Group("/profile/:instance")
+	profile.Get("/privacy", profileHandler.GetPrivacySettings)
+	profile.Post("/privacy", profileHandler.SetPrivacySetting)
+	profile.Post("/status", profileHandler.SetProfileStatus)
+	
+	// Call routes
+	call := api.Group("/call/:instance")
+	call.Post("/reject", profileHandler.RejectCall)
+
 	// Webhook routes
 	webhook := api.Group("/webhook/:instance")
 	webhook.Post("/set", webhookHandler.SetWebhook)
@@ -117,6 +133,12 @@ func NewRouter(
 
 	// Webhook events list (public info)
 	api.Get("/webhook/events", webhookHandler.ListWebhookEvents)
+	
+	// SSE routes (Server-Sent Events)
+	sse := api.Group("/sse")
+	sse.Get("/:instance", sseHandler.Stream)           // SSE stream for specific instance
+	sse.Get("/", sseHandler.StreamAll)                 // SSE stream for all instances
+	sse.Get("/:instance/info", sseHandler.Info)        // Get SSE connection info
 
 	// Legacy routes (without /api prefix) for backwards compatibility and easier manual testing
 	legacy := app.Group("/instance", middleware.AuthMiddleware(cfg, instanceRepo))
@@ -129,6 +151,7 @@ func NewRouter(
 	legacy.Put("/:name/restart", instanceHandler.Restart)
 	legacy.Post("/:name/logout", instanceHandler.Logout)
 	legacy.Delete("/:name", instanceHandler.Delete)
+	legacy.Put("/:name/name", instanceHandler.UpdateName)
 
 	// Legacy message routes (without /api prefix)
 	legacyMessage := app.Group("/message/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
@@ -144,9 +167,25 @@ func NewRouter(
 	legacyMessage.Post("/list", messageHandler.SendList)
 	legacyMessage.Post("/carousel", messageHandler.SendCarousel)
 	legacyMessage.Post("/story", messageHandler.SendStory)
+	
+	// Legacy profile routes (without /api prefix)
+	legacyProfile := app.Group("/profile/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyProfile.Get("/privacy", profileHandler.GetPrivacySettings)
+	legacyProfile.Post("/privacy", profileHandler.SetPrivacySetting)
+	legacyProfile.Post("/status", profileHandler.SetProfileStatus)
+	
+	// Legacy call routes (without /api prefix)
+	legacyCall := app.Group("/call/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyCall.Post("/reject", profileHandler.RejectCall)
+	
+	// Legacy SSE routes (without /api prefix)
+	legacySSE := app.Group("/sse", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacySSE.Get("/:instance", sseHandler.Stream)
+	legacySSE.Get("/", sseHandler.StreamAll)
 
 	return app
 }
+
 
 func healthCheck(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
