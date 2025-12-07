@@ -1,21 +1,17 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { Zap, Eye, EyeOff, PenLine } from "lucide-react";
+import { CodeBlock } from "@/components/docs/terminal";
+import { Zap } from "lucide-react";
+import Link from "next/link";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
-  { id: "tipos", title: "Tipos de presença", level: 2 },
-  { id: "definir", title: "Definir presença", level: 2 },
+  { id: "endpoints", title: "Endpoints", level: 2 },
 ];
 
-const presenceTypes = [
-  { type: "available", description: "Online - mostra que você está disponível", color: "green" },
-  { type: "unavailable", description: "Offline - esconde o status online", color: "gray" },
-  { type: "composing", description: "Digitando... - mostra animação de digitação", color: "blue" },
-  { type: "recording", description: "Gravando áudio... - mostra indicador de gravação", color: "red" },
-  { type: "paused", description: "Parou de digitar - remove o indicador", color: "yellow" },
+const endpoints = [
+  { method: "POST" as const, path: "/presence/:instance/available", description: "Definir como disponível", href: "/docs/api/presence/set" },
 ];
 
 export default function PresenceReferencePage() {
@@ -30,7 +26,7 @@ export default function PresenceReferencePage() {
 
         <h1 className="text-4xl font-bold tracking-tight mb-4">Presença</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Controle o status de presença da sua instância
+          Controle o status de presença no WhatsApp
         </p>
 
         {/* Visão Geral */}
@@ -44,104 +40,46 @@ export default function PresenceReferencePage() {
 
           <div className="space-y-4 text-muted-foreground">
             <p>
-              A API de presença permite controlar como sua instância aparece 
-              para outros usuários. Você pode:
+              A API de presença permite controlar o status de presença no WhatsApp:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Mostrar que está online ou offline</li>
-              <li>Simular digitação ("está escrevendo...")</li>
-              <li>Simular gravação de áudio</li>
-              <li>Inscrever-se para receber atualizações de presença de contatos</li>
+              <li><strong>Disponível:</strong> Marca o usuário como online/disponível</li>
+              <li><strong>Indisponível:</strong> Marca o usuário como offline</li>
+              <li><strong>Digitando:</strong> Indica que o usuário está digitando</li>
+              <li><strong>Gravando:</strong> Indica que o usuário está gravando áudio</li>
             </ul>
           </div>
         </section>
 
-        {/* Tipos de presença */}
-        <section id="tipos" className="mb-16 scroll-mt-20">
+        {/* Endpoints */}
+        <section id="endpoints" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Eye className="h-5 w-5 text-primary" />
+              <Zap className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold">Tipos de presença</h2>
+            <h2 className="text-2xl font-bold">Endpoints</h2>
           </div>
 
           <div className="space-y-3">
-            {presenceTypes.map((presence) => (
-              <div
-                key={presence.type}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card"
+            {endpoints.map((endpoint) => (
+              <Link
+                key={endpoint.path}
+                href={endpoint.href}
+                className="block group"
               >
-                <code className={`px-3 py-1 rounded text-sm font-bold bg-${presence.color}-500/20 text-${presence.color}-400`}>
-                  {presence.type}
-                </code>
-                <span className="text-muted-foreground">{presence.description}</span>
-              </div>
+                <div className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all">
+                  <span className="px-3 py-1.5 rounded-md text-xs font-bold border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    {endpoint.method}
+                  </span>
+                  <code className="text-sm text-gray-300 font-mono flex-1">
+                    {endpoint.path}
+                  </code>
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    {endpoint.description}
+                  </span>
+                </div>
+              </Link>
             ))}
-          </div>
-        </section>
-
-        {/* Definir presença */}
-        <section id="definir" className="mb-16 scroll-mt-20">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <PenLine className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold">Definir presença</h2>
-          </div>
-
-          <ApiEndpoint method="POST" path="/presence/:instance/set" />
-
-          <div className="space-y-6 mt-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Mostrar "digitando..."</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "type": "composing"
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Mostrar "gravando áudio..."</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "type": "recording"
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Parar indicador</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "type": "paused"
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Ficar online/offline</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "type": "available"  // ou "unavailable"
-}`}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 p-4 rounded-xl border border-primary/30 bg-primary/10">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-primary">Dica de UX:</strong> Simule digitação 
-              por 1-3 segundos antes de enviar uma mensagem para parecer mais 
-              natural e humano.
-            </p>
           </div>
         </section>
       </div>
@@ -150,4 +88,3 @@ export default function PresenceReferencePage() {
     </div>
   );
 }
-

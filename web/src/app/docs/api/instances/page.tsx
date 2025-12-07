@@ -1,8 +1,8 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { MessageCircle, Plus, List, QrCode, Power, LogOut } from "lucide-react";
+import { CodeBlock } from "@/components/docs/terminal";
+import { List, MessageCircle, Power } from "lucide-react";
 import Link from "next/link";
 
 const tocItems = [
@@ -13,13 +13,48 @@ const tocItems = [
 ];
 
 const endpoints = [
-  { method: "POST" as const, path: "/instance/create", description: "Criar nova instância", href: "/docs/api/instances/create" },
-  { method: "GET" as const, path: "/instance/list", description: "Listar todas as instâncias", href: "/docs/api/instances/list" },
-  { method: "GET" as const, path: "/instance/:name/status", description: "Status de uma instância", href: "/docs/api/instances/status" },
-  { method: "POST" as const, path: "/instance/:name/connect", description: "Conectar (gera QR Code)", href: "/docs/api/instances/connect" },
-  { method: "POST" as const, path: "/instance/:name/restart", description: "Reiniciar instância", href: "/docs/api/instances/restart" },
-  { method: "POST" as const, path: "/instance/:name/logout", description: "Desconectar instância", href: "/docs/api/instances/logout" },
-  { method: "DELETE" as const, path: "/instance/:name", description: "Deletar instância", href: "/docs/api/instances/delete" },
+  {
+    method: "POST" as const,
+    path: "/instance/create",
+    description: "Criar nova instância",
+    href: "/docs/api/instances/create",
+  },
+  {
+    method: "GET" as const,
+    path: "/instance/list",
+    description: "Listar todas as instâncias",
+    href: "/docs/api/instances/list",
+  },
+  {
+    method: "GET" as const,
+    path: "/instance/:name/status",
+    description: "Status de uma instância",
+    href: "/docs/api/instances/status",
+  },
+  {
+    method: "POST" as const,
+    path: "/instance/:name/connect",
+    description: "Conectar (gera QR Code)",
+    href: "/docs/api/instances/connect",
+  },
+  {
+    method: "POST" as const,
+    path: "/instance/:name/restart",
+    description: "Reiniciar instância",
+    href: "/docs/api/instances/restart",
+  },
+  {
+    method: "POST" as const,
+    path: "/instance/:name/logout",
+    description: "Desconectar instância",
+    href: "/docs/api/instances/logout",
+  },
+  {
+    method: "DELETE" as const,
+    path: "/instance/:name",
+    description: "Deletar instância",
+    href: "/docs/api/instances/delete",
+  },
 ];
 
 export default function InstancesReferencePage() {
@@ -48,8 +83,8 @@ export default function InstancesReferencePage() {
 
           <div className="space-y-4 text-muted-foreground">
             <p>
-              Uma <strong>instância</strong> representa uma conexão com um número 
-              de WhatsApp. Cada instância:
+              Uma <strong>instância</strong> representa uma conexão com um
+              número de WhatsApp. Cada instância:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Possui uma API Key única para autenticação</li>
@@ -133,44 +168,74 @@ export default function InstancesReferencePage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 font-semibold">Campo</th>
                   <th className="text-left py-3 px-4 font-semibold">Tipo</th>
-                  <th className="text-left py-3 px-4 font-semibold">Descrição</th>
+                  <th className="text-left py-3 px-4 font-semibold">
+                    Descrição
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>id</code></td>
+                  <td className="py-3 px-4">
+                    <code>id</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">UUID</td>
-                  <td className="py-3 px-4 text-muted-foreground">Identificador único</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Identificador único
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>name</code></td>
+                  <td className="py-3 px-4">
+                    <code>name</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string</td>
-                  <td className="py-3 px-4 text-muted-foreground">Nome da instância (único)</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Nome da instância (único)
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>api_key</code></td>
+                  <td className="py-3 px-4">
+                    <code>api_key</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string</td>
-                  <td className="py-3 px-4 text-muted-foreground">Chave de API para autenticação</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Chave de API para autenticação
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>status</code></td>
+                  <td className="py-3 px-4">
+                    <code>status</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string</td>
-                  <td className="py-3 px-4 text-muted-foreground">Status da conexão</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Status da conexão
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>phone_number</code></td>
+                  <td className="py-3 px-4">
+                    <code>phone_number</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string?</td>
-                  <td className="py-3 px-4 text-muted-foreground">Número conectado</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Número conectado
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>profile_name</code></td>
+                  <td className="py-3 px-4">
+                    <code>profile_name</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string?</td>
-                  <td className="py-3 px-4 text-muted-foreground">Nome do perfil</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Nome do perfil
+                  </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="py-3 px-4"><code>qr_code</code></td>
+                  <td className="py-3 px-4">
+                    <code>qr_code</code>
+                  </td>
                   <td className="py-3 px-4 text-muted-foreground">string?</td>
-                  <td className="py-3 px-4 text-muted-foreground">QR Code para conexão</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    QR Code para conexão
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -223,9 +288,7 @@ export default function InstancesReferencePage() {
               <span className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs font-bold">
                 error
               </span>
-              <span className="text-muted-foreground">
-                Erro na conexão
-              </span>
+              <span className="text-muted-foreground">Erro na conexão</span>
             </div>
           </div>
         </section>
@@ -235,4 +298,3 @@ export default function InstancesReferencePage() {
     </div>
   );
 }
-

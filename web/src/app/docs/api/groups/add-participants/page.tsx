@@ -2,22 +2,22 @@
 
 import { ApiDocLayout } from "@/components/docs/api-doc-layout";
 
-export default function SetStatusPage() {
+export default function AddParticipantsPage() {
   return (
     <div className="px-8 py-10 max-w-7xl">
       <div className="flex items-center gap-2 text-sm text-primary mb-6">
         <span>API</span>
         <span className="text-muted-foreground">/</span>
-        <span>Perfil & Privacidade</span>
+        <span>Grupos</span>
         <span className="text-muted-foreground">/</span>
-        <span>Alterar recado/about</span>
+        <span>Adicionar participantes</span>
       </div>
 
       <ApiDocLayout
         method="POST"
-        endpoint="/profile/:instance/status"
-        title="Alterar recado/about"
-        description="Altera o texto de 'recado' ou 'about' do perfil do WhatsApp."
+        endpoint="/group/:instance/:groupId/participants/add"
+        title="Adicionar participantes"
+        description="Adiciona participantes a um grupo existente."
         pathParams={[
           {
             name: "instance",
@@ -25,24 +25,30 @@ export default function SetStatusPage() {
             required: true,
             description: "Nome da instância",
           },
+          {
+            name: "groupId",
+            type: "string",
+            required: true,
+            description: "ID do grupo (JID)",
+          },
         ]}
         bodyParams={[
           {
-            name: "status",
-            type: "string",
+            name: "participants",
+            type: "array",
             required: true,
-            description: "Texto do recado/about (máximo 139 caracteres)",
+            description: "Array de números de telefone dos participantes a adicionar (com código do país)",
           },
         ]}
         responses={[
           {
             status: 200,
-            description: "Recado alterado com sucesso",
+            description: "Participantes adicionados com sucesso",
             example: {
               success: true,
               data: {
-                message: "Recado atualizado",
-                status: "Disponível para atendimento",
+                message: "Participantes adicionados",
+                added: ["5511999999999@s.whatsapp.net"],
               },
             },
           },
@@ -50,11 +56,12 @@ export default function SetStatusPage() {
         exampleResponse={{
           success: true,
           data: {
-            message: "Recado atualizado",
-            status: "Disponível para atendimento",
+            message: "Participantes adicionados",
+            added: ["5511999999999@s.whatsapp.net"],
           },
         }}
       />
     </div>
   );
 }
+

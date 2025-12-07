@@ -2,22 +2,22 @@
 
 import { ApiDocLayout } from "@/components/docs/api-doc-layout";
 
-export default function GetPrivacyPage() {
+export default function ListGroupsPage() {
   return (
     <div className="px-8 py-10 max-w-7xl">
       <div className="flex items-center gap-2 text-sm text-primary mb-6">
         <span>API</span>
         <span className="text-muted-foreground">/</span>
-        <span>Perfil & Privacidade</span>
+        <span>Grupos</span>
         <span className="text-muted-foreground">/</span>
-        <span>Obter privacidade</span>
+        <span>Listar grupos</span>
       </div>
 
       <ApiDocLayout
         method="GET"
-        endpoint="/profile/:instance/privacy"
-        title="Obter configurações de privacidade"
-        description="Retorna as configurações atuais de privacidade do perfil."
+        endpoint="/group/:instance/list"
+        title="Listar grupos"
+        description="Retorna uma lista de todos os grupos que a instância participa."
         pathParams={[
           {
             name: "instance",
@@ -29,17 +29,17 @@ export default function GetPrivacyPage() {
         responses={[
           {
             status: 200,
-            description: "Configurações de privacidade retornadas",
+            description: "Lista de grupos retornada com sucesso",
             example: {
               success: true,
               data: {
-                group_add: "all",
-                last_seen: "contacts",
-                status: "contacts",
-                profile: "contacts",
-                read_receipts: "all",
-                online: "all",
-                call_add: "all",
+                groups: [
+                  {
+                    id: "120363123456789012@g.us",
+                    name: "Meu Grupo",
+                    participants_count: 5,
+                  },
+                ],
               },
             },
           },
@@ -47,16 +47,17 @@ export default function GetPrivacyPage() {
         exampleResponse={{
           success: true,
           data: {
-            group_add: "all",
-            last_seen: "contacts",
-            status: "contacts",
-            profile: "contacts",
-            read_receipts: "all",
-            online: "all",
-            call_add: "all",
+            groups: [
+              {
+                id: "120363123456789012@g.us",
+                name: "Meu Grupo",
+                participants_count: 5,
+              },
+            ],
           },
         }}
       />
     </div>
   );
 }
+

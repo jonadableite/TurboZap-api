@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import FancyButton from '@/components/ui/FancyButton';
 import FancySearch from '@/components/ui/FancySearch';
+import FancyPattern from '@/components/ui/FancyPattern';
 import { InstanceCard } from './InstanceCard';
 import { useInstances } from '@/hooks/useInstances';
 import { useApiConfig } from '@/hooks/useApiConfig';
@@ -124,28 +125,37 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-5 rounded-2xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] shadow-inner shadow-black/20"
+            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] shadow-inner shadow-black/20"
           >
-            <p className="text-sm text-[var(--rocket-gray-400)]">Total</p>
-            <p className="text-2xl font-bold text-[var(--rocket-gray-50)]">{instances.length}</p>
+            <FancyPattern color="#8257e5" />
+            <div className="relative z-10">
+              <p className="text-sm text-[var(--rocket-gray-400)]">Total</p>
+              <p className="text-2xl font-bold text-[var(--rocket-gray-50)]">{instances.length}</p>
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="p-5 rounded-2xl bg-[var(--rocket-green)]/10 border border-[var(--rocket-green)]/30 shadow-inner shadow-[var(--rocket-green)]/10"
+            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-green)]/10 border border-[var(--rocket-green)]/30 shadow-inner shadow-[var(--rocket-green)]/10"
           >
-            <p className="text-sm text-[var(--rocket-green)]">Conectadas</p>
-            <p className="text-2xl font-bold text-[var(--rocket-green)]">{connectedCount}</p>
+            <FancyPattern color="#04d361" />
+            <div className="relative z-10">
+              <p className="text-sm text-[var(--rocket-green)]">Conectadas</p>
+              <p className="text-2xl font-bold text-[var(--rocket-green)]">{connectedCount}</p>
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="p-5 rounded-2xl bg-[var(--rocket-danger)]/10 border border-[var(--rocket-danger)]/30 shadow-inner shadow-[var(--rocket-danger)]/10"
+            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-danger)]/10 border border-[var(--rocket-danger)]/30 shadow-inner shadow-[var(--rocket-danger)]/10"
           >
-            <p className="text-sm text-[var(--rocket-danger)]">Desconectadas</p>
-            <p className="text-2xl font-bold text-[var(--rocket-danger)]">{disconnectedCount}</p>
+            <FancyPattern color="#f75a68" />
+            <div className="relative z-10">
+              <p className="text-sm text-[var(--rocket-danger)]">Desconectadas</p>
+              <p className="text-2xl font-bold text-[var(--rocket-danger)]">{disconnectedCount}</p>
+            </div>
           </motion.div>
         </div>
       )}

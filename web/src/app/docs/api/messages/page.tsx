@@ -2,29 +2,25 @@
 
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { MessageSquare, Send, Image, FileAudio, File, MapPin, Contact, Smile, List, LayoutGrid } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
   { id: "endpoints", title: "Endpoints", level: 2 },
-  { id: "formato-numero", title: "Formato do número", level: 2 },
-  { id: "tipos-mensagem", title: "Tipos de mensagem", level: 2 },
+  { id: "modelo", title: "Modelo de dados", level: 2 },
 ];
 
 const endpoints = [
-  { method: "POST" as const, path: "/message/:instance/text", description: "Enviar texto", icon: <MessageSquare className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/image", description: "Enviar imagem", icon: <Image className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/audio", description: "Enviar áudio/PTT", icon: <FileAudio className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/document", description: "Enviar documento", icon: <File className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/video", description: "Enviar vídeo", icon: <File className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/sticker", description: "Enviar sticker", icon: <Smile className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/location", description: "Enviar localização", icon: <MapPin className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/contact", description: "Enviar contato", icon: <Contact className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/reaction", description: "Enviar reação", icon: <Smile className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/poll", description: "Enviar enquete", icon: <List className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/buttons", description: "Enviar botões", icon: <LayoutGrid className="h-4 w-4" /> },
-  { method: "POST" as const, path: "/message/:instance/list", description: "Enviar lista", icon: <List className="h-4 w-4" /> },
+  { method: "POST" as const, path: "/message/:instance/text", description: "Enviar mensagem de texto", href: "/docs/api/messages/text" },
+  { method: "POST" as const, path: "/message/:instance/media", description: "Enviar mídia (imagem/vídeo/documento)", href: "/docs/api/messages/image" },
+  { method: "POST" as const, path: "/message/:instance/audio", description: "Enviar áudio/voz", href: "/docs/api/messages/audio" },
+  { method: "POST" as const, path: "/message/:instance/document", description: "Enviar documento", href: "/docs/api/messages/document" },
+  { method: "POST" as const, path: "/message/:instance/location", description: "Enviar localização", href: "/docs/api/messages/location" },
+  { method: "POST" as const, path: "/message/:instance/contact", description: "Enviar cartão de contato", href: "/docs/api/messages/contact" },
+  { method: "POST" as const, path: "/message/:instance/reaction", description: "Enviar reação", href: "/docs/api/messages/reaction" },
+  { method: "POST" as const, path: "/message/:instance/button", description: "Enviar mensagem com botões", href: "/docs/api/messages/buttons" },
+  { method: "POST" as const, path: "/message/:instance/list", description: "Enviar mensagem de lista", href: "/docs/api/messages/list" },
 ];
 
 export default function MessagesReferencePage() {
@@ -39,34 +35,35 @@ export default function MessagesReferencePage() {
 
         <h1 className="text-4xl font-bold tracking-tight mb-4">Mensagens</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Envie todos os tipos de mensagem suportados pelo WhatsApp
+          Envie diferentes tipos de mensagens através da API de mensagens
         </p>
 
         {/* Visão Geral */}
         <section id="visao-geral" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <MessageSquare className="h-5 w-5 text-primary" />
+              <MessageCircle className="h-5 w-5 text-primary" />
             </div>
             <h2 className="text-2xl font-bold">Visão geral</h2>
           </div>
 
           <div className="space-y-4 text-muted-foreground">
             <p>
-              A API de mensagens permite enviar diversos tipos de conteúdo para 
-              contatos e grupos do WhatsApp. Todos os endpoints seguem o padrão:
+              A API de mensagens permite enviar diversos tipos de conteúdo através do WhatsApp:
             </p>
-            
-            <div className="p-4 rounded-xl border border-border bg-card">
-              <code className="text-primary">
-                POST /message/:instance/:type
-              </code>
-            </div>
-
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li><strong>Texto:</strong> Mensagens de texto simples</li>
+              <li><strong>Mídia:</strong> Imagens, vídeos e documentos</li>
+              <li><strong>Áudio:</strong> Mensagens de voz e áudio</li>
+              <li><strong>Localização:</strong> Coordenadas geográficas</li>
+              <li><strong>Contato:</strong> Cartões de contato (vCard)</li>
+              <li><strong>Reações:</strong> Emojis de reação em mensagens</li>
+              <li><strong>Botões:</strong> Mensagens interativas com até 3 botões</li>
+              <li><strong>Listas:</strong> Mensagens com listas selecionáveis</li>
+            </ul>
             <p>
-              Onde <code className="px-1 py-0.5 bg-muted rounded text-sm">:instance</code> é 
-              o nome da sua instância e <code className="px-1 py-0.5 bg-muted rounded text-sm">:type</code> é 
-              o tipo de mensagem.
+              Todos os endpoints de mensagens requerem o parâmetro <code className="px-1.5 py-0.5 rounded bg-muted text-xs">:instance</code> no path,
+              que identifica qual instância do WhatsApp deve enviar a mensagem.
             </p>
           </div>
         </section>
@@ -80,151 +77,83 @@ export default function MessagesReferencePage() {
             <h2 className="text-2xl font-bold">Endpoints</h2>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-3">
             {endpoints.map((endpoint) => (
-              <div
+              <Link
                 key={endpoint.path}
-                className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all"
+                href={endpoint.href}
+                className="block group"
               >
-                <div className="p-2 rounded-lg bg-primary/10">
-                  {endpoint.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <code className="text-xs text-gray-400 font-mono block truncate">
+                <div className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all">
+                  <span className="px-3 py-1.5 rounded-md text-xs font-bold border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    {endpoint.method}
+                  </span>
+                  <code className="text-sm text-gray-300 font-mono flex-1">
                     {endpoint.path}
                   </code>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
                     {endpoint.description}
                   </span>
                 </div>
-                <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs font-bold">
-                  POST
-                </span>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
 
-        {/* Formato do número */}
-        <section id="formato-numero" className="mb-16 scroll-mt-20">
+        {/* Modelo */}
+        <section id="modelo" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Contact className="h-5 w-5 text-primary" />
+              <MessageCircle className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold">Formato do número</h2>
+            <h2 className="text-2xl font-bold">Resposta padrão</h2>
           </div>
 
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              O campo <code className="px-1 py-0.5 bg-muted rounded text-sm">to</code> deve 
-              conter o número do destinatário no formato internacional, apenas números:
-            </p>
-
-            <div className="grid gap-3">
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
-                <span className="text-green-500">✓</span>
-                <code className="text-sm">5511999999999</code>
-                <span className="text-sm text-muted-foreground">(Brasil, DDD 11)</span>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
-                <span className="text-green-500">✓</span>
-                <code className="text-sm">14155551234</code>
-                <span className="text-sm text-muted-foreground">(USA)</span>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
-                <span className="text-red-500">✗</span>
-                <code className="text-sm">+55 11 99999-9999</code>
-                <span className="text-sm text-muted-foreground">(com formatação)</span>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
-                <span className="text-red-500">✗</span>
-                <code className="text-sm">011999999999</code>
-                <span className="text-sm text-muted-foreground">(sem código do país)</span>
-              </div>
-            </div>
-
-            <p className="mt-4">
-              Para <strong>grupos</strong>, use o JID do grupo:
-            </p>
-
-            <div className="p-4 rounded-xl border border-border bg-card">
-              <code className="text-sm text-primary">
-                120363123456789012@g.us
-              </code>
-            </div>
-          </div>
-        </section>
-
-        {/* Tipos de mensagem */}
-        <section id="tipos-mensagem" className="mb-16 scroll-mt-20">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <MessageSquare className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold">Tipos de mensagem</h2>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Texto simples</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "text": "Olá! Como posso ajudar?"
+          <CodeBlock
+            title="Message Response"
+            language="json"
+            code={`{
+  "success": true,
+  "data": {
+    "message_id": "3EB0A1B2C3D4E5F6",
+    "status": "sent",
+    "timestamp": "2024-01-15T10:35:00.000Z"
+  }
 }`}
-              />
-            </div>
+          />
 
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Imagem com legenda</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "url": "https://exemplo.com/imagem.jpg",
-  "caption": "Confira nossa promoção!"
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Áudio (PTT)</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "url": "https://exemplo.com/audio.mp3",
-  "ptt": true
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Localização</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "latitude": -23.5505,
-  "longitude": -46.6333,
-  "name": "São Paulo",
-  "address": "Av. Paulista, 1000"
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Reação</h3>
-              <CodeBlock
-                language="json"
-                code={`{
-  "to": "5511999999999",
-  "message_id": "3EB0A1B2C3D4E5F6",
-  "emoji": "👍"
-}`}
-              />
-            </div>
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-semibold">Campo</th>
+                  <th className="text-left py-3 px-4 font-semibold">Tipo</th>
+                  <th className="text-left py-3 px-4 font-semibold">Descrição</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4"><code>success</code></td>
+                  <td className="py-3 px-4 text-muted-foreground">boolean</td>
+                  <td className="py-3 px-4 text-muted-foreground">Indica se a operação foi bem-sucedida</td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4"><code>data.message_id</code></td>
+                  <td className="py-3 px-4 text-muted-foreground">string</td>
+                  <td className="py-3 px-4 text-muted-foreground">ID único da mensagem enviada</td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4"><code>data.status</code></td>
+                  <td className="py-3 px-4 text-muted-foreground">string</td>
+                  <td className="py-3 px-4 text-muted-foreground">Status da mensagem (sent, delivered, read, error)</td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4"><code>data.timestamp</code></td>
+                  <td className="py-3 px-4 text-muted-foreground">ISO8601</td>
+                  <td className="py-3 px-4 text-muted-foreground">Data e hora do envio</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
@@ -233,4 +162,3 @@ export default function MessagesReferencePage() {
     </div>
   );
 }
-

@@ -1,14 +1,19 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { Users, Plus, List, UserPlus, UserMinus, Settings } from "lucide-react";
+import { CodeBlock } from "@/components/docs/terminal";
+import { Users } from "lucide-react";
+import Link from "next/link";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
   { id: "endpoints", title: "Endpoints", level: 2 },
-  { id: "criar-grupo", title: "Criar grupo", level: 2 },
-  { id: "participantes", title: "Gerenciar participantes", level: 2 },
+];
+
+const endpoints = [
+  { method: "POST" as const, path: "/group/:instance/create", description: "Criar grupo", href: "/docs/api/groups/create" },
+  { method: "GET" as const, path: "/group/:instance/list", description: "Listar grupos", href: "/docs/api/groups/list" },
+  { method: "POST" as const, path: "/group/:instance/:jid/participants/add", description: "Adicionar participantes", href: "/docs/api/groups/add-participants" },
 ];
 
 export default function GroupsReferencePage() {
@@ -23,7 +28,7 @@ export default function GroupsReferencePage() {
 
         <h1 className="text-4xl font-bold tracking-tight mb-4">Grupos</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Crie e gerencie grupos do WhatsApp via API
+          Gerencie grupos do WhatsApp através da API
         </p>
 
         {/* Visão Geral */}
@@ -37,16 +42,13 @@ export default function GroupsReferencePage() {
 
           <div className="space-y-4 text-muted-foreground">
             <p>
-              A API de grupos permite criar, gerenciar e interagir com grupos 
-              do WhatsApp. Você pode:
+              A API de grupos permite gerenciar grupos do WhatsApp:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Criar novos grupos</li>
-              <li>Listar grupos que a instância participa</li>
-              <li>Obter informações detalhadas de um grupo</li>
-              <li>Adicionar e remover participantes</li>
-              <li>Promover e rebaixar administradores</li>
-              <li>Atualizar configurações do grupo</li>
+              <li><strong>Criar grupos:</strong> Crie novos grupos com participantes</li>
+              <li><strong>Listar grupos:</strong> Obtenha lista de todos os grupos</li>
+              <li><strong>Gerenciar participantes:</strong> Adicione ou remova membros</li>
+              <li><strong>Obter informações:</strong> Detalhes do grupo, participantes e configurações</li>
             </ul>
           </div>
         </section>
@@ -55,131 +57,37 @@ export default function GroupsReferencePage() {
         <section id="endpoints" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <List className="h-5 w-5 text-primary" />
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <h2 className="text-2xl font-bold">Endpoints</h2>
           </div>
 
           <div className="space-y-3">
-            <ApiEndpoint method="POST" path="/group/:instance/create" title="Criar grupo" />
-            <ApiEndpoint method="GET" path="/group/:instance/list" title="Listar grupos" />
-            <ApiEndpoint method="GET" path="/group/:instance/:groupId/info" title="Info do grupo" />
-            <ApiEndpoint method="POST" path="/group/:instance/:groupId/add" title="Adicionar participantes" />
-            <ApiEndpoint method="POST" path="/group/:instance/:groupId/remove" title="Remover participantes" />
-            <ApiEndpoint method="POST" path="/group/:instance/:groupId/promote" title="Promover a admin" />
-            <ApiEndpoint method="POST" path="/group/:instance/:groupId/demote" title="Rebaixar admin" />
-            <ApiEndpoint method="PUT" path="/group/:instance/:groupId/name" title="Alterar nome" />
-            <ApiEndpoint method="PUT" path="/group/:instance/:groupId/description" title="Alterar descrição" />
-            <ApiEndpoint method="POST" path="/group/:instance/:groupId/leave" title="Sair do grupo" />
-          </div>
-        </section>
-
-        {/* Criar grupo */}
-        <section id="criar-grupo" className="mb-16 scroll-mt-20">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Plus className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold">Criar grupo</h2>
-          </div>
-
-          <ApiEndpoint method="POST" path="/group/:instance/create" />
-
-          <CodeBlock
-            title="Requisição"
-            language="json"
-            className="mt-4 mb-4"
-            code={`{
-  "name": "Meu Grupo",
-  "participants": [
-    "5511999999999",
-    "5511888888888",
-    "5511777777777"
-  ]
-}`}
-          />
-
-          <CodeBlock
-            title="Resposta"
-            language="json"
-            code={`{
-  "success": true,
-  "data": {
-    "group": {
-      "jid": "120363123456789012@g.us",
-      "name": "Meu Grupo",
-      "owner": "5511999999999@s.whatsapp.net",
-      "created_at": "2024-01-15T10:30:00.000Z",
-      "participants": [
-        {
-          "jid": "5511999999999@s.whatsapp.net",
-          "is_admin": true,
-          "is_super_admin": true
-        },
-        {
-          "jid": "5511888888888@s.whatsapp.net",
-          "is_admin": false,
-          "is_super_admin": false
-        }
-      ]
-    }
-  }
-}`}
-          />
-        </section>
-
-        {/* Participantes */}
-        <section id="participantes" className="mb-16 scroll-mt-20">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <UserPlus className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold">Gerenciar participantes</h2>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Adicionar participantes</h3>
-              <ApiEndpoint method="POST" path="/group/:instance/:groupId/add" />
-              <CodeBlock
-                language="json"
-                className="mt-3"
-                code={`{
-  "participants": [
-    "5511999999999",
-    "5511888888888"
-  ]
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Remover participantes</h3>
-              <ApiEndpoint method="POST" path="/group/:instance/:groupId/remove" />
-              <CodeBlock
-                language="json"
-                className="mt-3"
-                code={`{
-  "participants": [
-    "5511999999999"
-  ]
-}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Promover a administrador</h3>
-              <ApiEndpoint method="POST" path="/group/:instance/:groupId/promote" />
-              <CodeBlock
-                language="json"
-                className="mt-3"
-                code={`{
-  "participants": [
-    "5511999999999"
-  ]
-}`}
-              />
-            </div>
+            {endpoints.map((endpoint) => (
+              <Link
+                key={endpoint.path}
+                href={endpoint.href}
+                className="block group"
+              >
+                <div className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all">
+                  <span
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold border ${
+                      endpoint.method === "GET"
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                    }`}
+                  >
+                    {endpoint.method}
+                  </span>
+                  <code className="text-sm text-gray-300 font-mono flex-1">
+                    {endpoint.path}
+                  </code>
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    {endpoint.description}
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       </div>
@@ -188,4 +96,3 @@ export default function GroupsReferencePage() {
     </div>
   );
 }
-

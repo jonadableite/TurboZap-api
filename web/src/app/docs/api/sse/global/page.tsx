@@ -1,69 +1,82 @@
 "use client";
 
-import { OnThisPage } from "@/components/docs/on-this-page";
-import { Terminal, TypingAnimation, AnimatedSpan, CodeBlock } from "@/components/docs/terminal";
+import { ApiDocLayout } from "@/components/docs/api-doc-layout";
+import { CodeBlock } from "@/components/docs/terminal";
 
-const tocItems = [
-  { id: "descricao", title: "Descrição", level: 2 },
-  { id: "requisicao", title: "Requisição", level: 2 },
-  { id: "exemplos", title: "Exemplos", level: 2 },
-];
-
-export default function SseGlobalDocsPage() {
+export default function SSEGlobalPage() {
   return (
-    <div className="flex">
-      <div className="flex-1 min-w-0 px-8 py-10 max-w-4xl">
-        <div className="flex items-center gap-2 text-sm text-primary mb-6">
-          <span>API Reference</span>
-          <span>/</span>
-          <span>SSE</span>
-          <span>/</span>
-          <span>Global Stream</span>
-        </div>
-
-        <div className="flex items-center gap-4 mb-4">
-          <h1 className="text-4xl font-bold tracking-tight">Stream Global</h1>
-          <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm font-bold border border-green-500/50">
-            GET
-          </span>
-        </div>
-        <p className="text-xl text-muted-foreground mb-8">
-          Recebe eventos de TODAS as instâncias do servidor em uma única conexão.
-        </p>
-
-        <section id="descricao" className="mb-12">
-          <h2 className="text-2xl font-bold mb-4">Descrição</h2>
-          <p className="text-muted-foreground">
-            Este endpoint é útil para painéis administrativos que precisam monitorar múltiplas instâncias simultaneamente sem abrir múltiplas conexões.
-          </p>
-          <div className="p-4 border border-red-500/20 bg-red-500/10 rounded-lg text-sm text-red-200 mt-4">
-            ⚠️ <strong>Atenção:</strong> Este endpoint requer autenticação com a <strong>API Key Global</strong> (definida no `.env`). Keys de instância não funcionarão.
-          </div>
-        </section>
-
-        <section id="requisicao" className="mb-12">
-          <h2 className="text-2xl font-bold mb-4">Requisição</h2>
-          <div className="p-4 rounded-lg bg-muted font-mono text-sm mb-4">
-            GET /sse/
-          </div>
-        </section>
-
-        <section id="exemplos" className="mb-12">
-          <h2 className="text-2xl font-bold mb-4">Exemplos</h2>
-          <Terminal title="Conectar ao SSE Global">
-            <TypingAnimation className="text-gray-400">
-              {"$ curl -N \\"}
-            </TypingAnimation>
-            <AnimatedSpan className="text-blue-400 pl-4">
-              {"--url http://localhost:8080/sse/ \\"}
-            </AnimatedSpan>
-            <AnimatedSpan className="text-blue-400 pl-4">
-              {"--header 'X-API-Key: SUA_API_KEY_GLOBAL'"}
-            </AnimatedSpan>
-          </Terminal>
-        </section>
+    <div className="px-8 py-10 max-w-7xl">
+      <div className="flex items-center gap-2 text-sm text-primary mb-6">
+        <span>API</span>
+        <span className="text-muted-foreground">/</span>
+        <span>SSE (Eventos)</span>
+        <span className="text-muted-foreground">/</span>
+        <span>Stream global</span>
       </div>
-      <OnThisPage items={tocItems} />
+
+      <ApiDocLayout
+        method="GET"
+        endpoint="/sse/"
+        title="Stream SSE global"
+        description="Estabelece uma conexão Server-Sent Events (SSE) para receber eventos em tempo real de todas as instâncias."
+        responses={[
+          {
+            status: 200,
+            description: "Conexão SSE estabelecida (stream contínuo)",
+            example: {
+              event: "message.received",
+              instance: "minha-instancia",
+              instance_id: "550e8400-e29b-41d4-a716-446655440000",
+              data: {
+                message_id: "3EB0A1B2C3D4E5F6",
+                from: "5511999999999@s.whatsapp.net",
+                text: "Olá!",
+              },
+            },
+          },
+        ]}
+        exampleResponse={{
+          event: "message.received",
+          instance: "minha-instancia",
+          instance_id: "550e8400-e29b-41d4-a716-446655440000",
+          data: {
+            message_id: "3EB0A1B2C3D4E5F6",
+            from: "5511999999999@s.whatsapp.net",
+            text: "Olá!",
+          },
+        }}
+      />
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Exemplo de uso</h2>
+        <CodeBlock
+          title="JavaScript"
+          language="javascript"
+          code={`// Conectar ao stream SSE global
+const eventSource = new EventSource('http://localhost:8080/sse/', {
+  headers: {
+    'X-API-Key': 'sua-api-key-global'
+  }
+});
+
+// Escutar todos os eventos de todas as instâncias
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Evento de', data.instance, ':', data);
+};
+
+// Filtrar eventos por instância
+eventSource.addEventListener('message.received', (event) => {
+  const message = JSON.parse(event.data);
+  if (message.instance === 'minha-instancia') {
+    console.log('Nova mensagem na minha instância:', message);
+  }
+});
+
+// Fechar conexão quando necessário
+eventSource.close();`}
+        />
+      </div>
     </div>
   );
 }
