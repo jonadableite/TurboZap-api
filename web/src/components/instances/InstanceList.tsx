@@ -15,6 +15,8 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/ui';
+import FancyButton from '@/components/ui/FancyButton';
+import FancySearch from '@/components/ui/FancySearch';
 import { InstanceCard } from './InstanceCard';
 import { useInstances } from '@/hooks/useInstances';
 import { useApiConfig } from '@/hooks/useApiConfig';
@@ -150,16 +152,21 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
 
       {/* Search and actions */}
       <div className="flex flex-col gap-4 rounded-2xl border border-[var(--rocket-gray-600)] bg-[var(--rocket-gray-800)]/80 p-4 md:flex-row md:items-center md:justify-between shadow-inner shadow-black/20">
-        <div className="w-full md:max-w-sm">
-          <Input placeholder="Buscar instância..." value={search} onChange={(e) => setSearch(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
+        <div className="w-full md:max-w-sm flex justify-center md:justify-start">
+          <FancySearch
+            placeholder="Buscar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           <Button variant="ghost" size="sm" onClick={() => refetch()} leftIcon={<RefreshCw className="w-4 h-4" />}>
             Atualizar
           </Button>
-          <Button onClick={onCreateClick} leftIcon={<Plus className="w-4 h-4" />}>
-            Nova instância
-          </Button>
+          <FancyButton onClick={onCreateClick}>
+            <Plus className="icon w-5 h-5 mr-2" />
+            Nova Instância
+          </FancyButton>
         </div>
       </div>
 
@@ -170,9 +177,10 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           title="Nenhuma instância"
           description="Você ainda não criou nenhuma instância. Crie sua primeira instância para começar a usar a API."
           action={
-            <Button onClick={onCreateClick} leftIcon={<Plus className="w-4 h-4" />}>
+            <FancyButton onClick={onCreateClick}>
+              <Plus className="icon w-5 h-5 mr-2" />
               Criar primeira instância
-            </Button>
+            </FancyButton>
           }
         />
       )}

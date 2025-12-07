@@ -1,0 +1,125 @@
+"use client";
+
+import { OnThisPage } from "@/components/docs/on-this-page";
+import { Terminal, TypingAnimation, AnimatedSpan, CodeBlock } from "@/components/docs/terminal";
+import { ApiPlayground } from "@/components/docs/api-playground";
+
+const tocItems = [
+  { id: "descricao", title: "Descrição", level: 2 },
+  { id: "try-it", title: "Try it out", level: 2 },
+  { id: "requisicao", title: "Requisição", level: 2 },
+  { id: "body", title: "Corpo da Requisição", level: 2 },
+  { id: "resposta", title: "Resposta", level: 2 },
+];
+
+export default function SetPrivacyDocsPage() {
+  return (
+    <div className="flex">
+      <div className="flex-1 min-w-0 px-8 py-10 max-w-4xl">
+        <div className="flex items-center gap-2 text-sm text-primary mb-6">
+          <span>API Reference</span>
+          <span>/</span>
+          <span>Profile</span>
+          <span>/</span>
+          <span>Privacy Set</span>
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <h1 className="text-4xl font-bold tracking-tight">Alterar Privacidade</h1>
+        </div>
+        <p className="text-xl text-muted-foreground mb-8">
+          Altera uma configuração específica de privacidade da instância.
+        </p>
+
+        <section id="descricao" className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Descrição</h2>
+          <p className="text-muted-foreground">
+            Este endpoint permite modificar configurações como quem pode ver seu "visto por último", foto de perfil, adicionar em grupos, etc.
+          </p>
+        </section>
+
+        <section id="try-it" className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Try it out</h2>
+          <ApiPlayground
+            method="POST"
+            endpoint="/api/profile/:instance/privacy"
+            description="Atualiza uma configuração de privacidade"
+            pathParams={[
+              { name: "instance", type: "string", required: true, description: "Nome da instância" }
+            ]}
+            bodyParams={[
+              { name: "setting", type: "string", required: true, description: "Configuração (last_seen, profile, status, etc)", default: "last_seen" },
+              { name: "value", type: "string", required: true, description: "Valor (all, contacts, none, etc)", default: "contacts" }
+            ]}
+          />
+        </section>
+
+        <section id="requisicao" className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Requisição</h2>
+          <div className="p-4 rounded-lg bg-muted font-mono text-sm mb-4">
+            POST /profile/:instance/privacy
+          </div>
+        </section>
+
+        <section id="body" className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Corpo da Requisição (JSON)</h2>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Campo</th>
+                  <th className="px-4 py-3 font-medium">Tipo</th>
+                  <th className="px-4 py-3 font-medium">Obrigatório</th>
+                  <th className="px-4 py-3 font-medium">Descrição</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                <tr className="bg-card">
+                  <td className="px-4 py-3 font-mono">setting</td>
+                  <td className="px-4 py-3">string</td>
+                  <td className="px-4 py-3 text-red-400">Sim</td>
+                  <td className="px-4 py-3">Configuração a alterar (ex: last_seen)</td>
+                </tr>
+                <tr className="bg-card/50">
+                  <td className="px-4 py-3 font-mono">value</td>
+                  <td className="px-4 py-3">string</td>
+                  <td className="px-4 py-3 text-red-400">Sim</td>
+                  <td className="px-4 py-3">Novo valor (ex: contacts)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg text-sm text-yellow-200">
+            <strong>Nota:</strong> Consulte a página principal de <a href="/docs/api/profile" className="underline">Perfil</a> para ver todos os valores permitidos para cada configuração.
+          </div>
+        </section>
+
+        <section id="resposta" className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Resposta</h2>
+          <CodeBlock
+            title="Exemplo de Resposta (200 OK)"
+            language="json"
+            code={`{
+  "success": true,
+  "data": {
+    "setting": "last_seen",
+    "value": "contacts",
+    "message": "Privacy setting updated successfully",
+    "settings": {
+      "group_add": "all",
+      "last_seen": "contacts",
+      "status": "contacts",
+      "profile": "all",
+      "read_receipts": "all",
+      "online": "all",
+      "call_add": "all"
+    }
+  }
+}`}
+          />
+        </section>
+      </div>
+      <OnThisPage items={tocItems} />
+    </div>
+  );
+}

@@ -22,6 +22,13 @@ import {
   Smile,
   List,
   LayoutGrid,
+  Shield,
+  Phone,
+  PhoneOff,
+  Radio,
+  User,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface NavItem {
@@ -209,6 +216,66 @@ const navigation: NavSection[] = [
         title: "Definir presença",
         href: "/docs/api/presence/set",
         badge: "POST",
+      },
+    ],
+  },
+  {
+    title: "Perfil & Privacidade",
+    items: [
+      {
+        title: "Referência",
+        href: "/docs/api/profile",
+        icon: <Shield className="h-4 w-4" />,
+      },
+      {
+        title: "Obter privacidade",
+        href: "/docs/api/profile/privacy",
+        badge: "GET",
+      },
+      {
+        title: "Alterar privacidade",
+        href: "/docs/api/profile/privacy-set",
+        badge: "POST",
+      },
+      {
+        title: "Alterar recado/about",
+        href: "/docs/api/profile/status",
+        badge: "POST",
+      },
+    ],
+  },
+  {
+    title: "Chamadas",
+    items: [
+      {
+        title: "Referência",
+        href: "/docs/api/calls",
+        icon: <Phone className="h-4 w-4" />,
+      },
+      {
+        title: "Rejeitar chamada",
+        href: "/docs/api/calls/reject",
+        badge: "POST",
+      },
+    ],
+  },
+  {
+    title: "SSE (Eventos)",
+    items: [
+      {
+        title: "Referência",
+        href: "/docs/api/sse",
+        icon: <Radio className="h-4 w-4" />,
+      },
+      {
+        title: "Stream de instância",
+        href: "/docs/api/sse/stream",
+        badge: "GET",
+      },
+      {
+        title: "Stream global",
+        href: "/docs/api/sse/global",
+        badge: "GET",
       },
     ],
   },

@@ -212,16 +212,187 @@ export default function DocsPage() {
           </div>
 
           <p className="text-muted-foreground mb-6">
-            Veja como é simples criar sua primeira instância e enviar uma mensagem:
+            Siga este guia passo a passo para configurar e executar a TurboZap API em minutos:
           </p>
 
-          {/* Step 1: Create Instance */}
+          {/* Step 1: Requisitos */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                 1
               </span>
-              Criar uma instância
+              Requisitos do sistema
+            </h3>
+            <div className="bg-muted/50 rounded-lg p-4 mb-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Certifique-se de ter instalado:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                <li><strong>Docker</strong> 20.10+ e <strong>Docker Compose</strong> 2.0+ (recomendado)</li>
+                <li>Ou <strong>Go</strong> 1.22+ para desenvolvimento local</li>
+                <li><strong>PostgreSQL</strong> 16+ (se rodar localmente)</li>
+                <li><strong>Redis</strong> 7+ (se rodar localmente)</li>
+                <li><strong>RabbitMQ</strong> 3.13+ (se rodar localmente)</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Step 2: Clonar repositório */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                2
+              </span>
+              Clonar o repositório
+            </h3>
+            <Terminal title="Clonar repositório" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ git clone https://github.com/jonadableite/turbozap-api.git"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-gray-400 mt-2">
+                {"$ cd turbozap-api"}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Repositório clonado com sucesso!
+              </AnimatedSpan>
+            </Terminal>
+          </div>
+
+          {/* Step 3: Configurar ambiente */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                3
+              </span>
+              Configurar variáveis de ambiente
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Crie um arquivo <code className="px-1.5 py-0.5 rounded bg-muted text-xs">.env</code> na raiz do projeto:
+            </p>
+            <CodeBlock
+              title=".env"
+              language="bash"
+              code={`# API Configuration
+SERVER_PORT=8080
+SERVER_HOST=0.0.0.0
+API_KEY=sua-api-key-global-segura-aqui
+
+# Database
+DATABASE_URL=postgres://postgres:postgres@postgres:5432/turbozap?sslmode=disable
+
+# Redis
+REDIS_URL=redis://redis:6379
+
+# RabbitMQ
+RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+
+# MinIO (opcional)
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=turbozap-media
+MINIO_USE_SSL=false
+
+# Logging
+LOG_LEVEL=info
+ENVIRONMENT=production`}
+            />
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-3">
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                <strong>⚠️ Importante:</strong> Altere o <code className="px-1 py-0.5 rounded bg-yellow-500/20 text-xs">API_KEY</code> para uma chave segura antes de usar em produção!
+              </p>
+            </div>
+          </div>
+
+          {/* Step 4: Rodar com Docker Compose */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                4
+              </span>
+              Executar com Docker Compose (Recomendado)
+            </h3>
+            <Terminal title="Iniciar serviços" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ docker-compose up -d"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Todos os serviços iniciados!
+              </AnimatedSpan>
+            </Terminal>
+            <p className="text-sm text-muted-foreground mb-3">
+              Isso iniciará todos os serviços necessários:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4 mb-4">
+              <li>TurboZap API na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">8080</code></li>
+              <li>PostgreSQL na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">5432</code></li>
+              <li>Redis na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">6379</code></li>
+              <li>RabbitMQ Management na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">15672</code></li>
+              <li>MinIO Console na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">9001</code></li>
+              <li>Grafana na porta <code className="px-1 py-0.5 rounded bg-muted text-xs">3000</code></li>
+            </ul>
+            <Terminal title="Verificar logs" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ docker-compose logs -f turbozap"}
+              </TypingAnimation>
+            </Terminal>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mt-3">
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                <strong>💡 Dica:</strong> Acesse <code className="px-1 py-0.5 rounded bg-blue-500/20 text-xs">http://localhost:8080/health</code> para verificar se a API está rodando.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 5: Desenvolvimento Local (Alternativa) */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                5
+              </span>
+              Desenvolvimento Local (Alternativa)
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Se preferir rodar localmente sem Docker:
+            </p>
+            <Terminal title="Instalar dependências" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ go mod download"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ Dependências instaladas!
+              </AnimatedSpan>
+            </Terminal>
+            <Terminal title="Configurar variáveis" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ export DATABASE_URL=\"postgres://postgres:postgres@localhost:5432/turbozap?sslmode=disable\""}
+              </TypingAnimation>
+              <AnimatedSpan className="text-gray-400 mt-2">
+                {"$ export REDIS_URL=\"redis://localhost:6379\""}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-gray-400 mt-2">
+                {"$ export RABBITMQ_URL=\"amqp://guest:guest@localhost:5672/\""}
+              </AnimatedSpan>
+              <AnimatedSpan className="text-gray-400 mt-2">
+                {"$ export API_KEY=\"sua-api-key-global\""}
+              </AnimatedSpan>
+            </Terminal>
+            <Terminal title="Executar API" className="mb-4">
+              <TypingAnimation className="text-gray-400">
+                {"$ go run ./cmd/api"}
+              </TypingAnimation>
+              <AnimatedSpan className="text-green-500 mt-4">
+                ✔ API rodando em http://localhost:8080
+              </AnimatedSpan>
+            </Terminal>
+          </div>
+
+          {/* Step 6: Criar primeira instância */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                6
+              </span>
+              Criar sua primeira instância
             </h3>
             <Terminal title="Criar instância" className="mb-4">
               <TypingAnimation className="text-gray-400">
@@ -261,11 +432,11 @@ export default function DocsPage() {
             />
           </div>
 
-          {/* Step 2: Connect */}
+          {/* Step 7: Conectar via QR Code */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                2
+                7
               </span>
               Conectar via QR Code
             </h3>
@@ -283,17 +454,20 @@ export default function DocsPage() {
                 ✔ Escaneie o QR Code no WhatsApp!
               </AnimatedSpan>
             </Terminal>
+            <p className="text-sm text-muted-foreground mb-3">
+              A resposta conterá um QR Code em base64. Você pode visualizá-lo ou usar o endpoint <code className="px-1.5 py-0.5 rounded bg-muted text-xs">GET /instance/:name/qrcode</code> para obter a imagem diretamente.
+            </p>
           </div>
 
-          {/* Step 3: Send Message */}
+          {/* Step 8: Enviar primeira mensagem */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                3
+                8
               </span>
-              Enviar mensagem
+              Enviar sua primeira mensagem
             </h3>
-            <Terminal title="Enviar texto" className="mb-4">
+            <Terminal title="Enviar mensagem de texto" className="mb-4">
               <TypingAnimation className="text-gray-400">
                 {"$ curl --request POST \\"}
               </TypingAnimation>
@@ -313,7 +487,7 @@ export default function DocsPage() {
                 {'"to": "5511999999999",'}
               </AnimatedSpan>
               <AnimatedSpan className="text-green-400 pl-8">
-                {'"text": "Olá! Essa é minha primeira mensagem via TurboZap!"'}
+                {'"text": "Olá! Essa é minha primeira mensagem via TurboZap! 🚀"'}
               </AnimatedSpan>
               <AnimatedSpan className="text-blue-400 pl-4">
                 {"}'"}
@@ -334,6 +508,32 @@ export default function DocsPage() {
   }
 }`}
             />
+          </div>
+
+          {/* Próximos passos */}
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-3">🎉 Pronto! E agora?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Você já tem a API rodando! Explore os próximos passos:
+            </p>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <span>Configure <Link href="/docs/webhooks" className="text-primary hover:underline">webhooks</Link> para receber eventos em tempo real</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <span>Explore a <Link href="/docs/api" className="text-primary hover:underline">documentação completa da API</Link></span>
+              </li>
+              <li className="flex items-start gap-2">
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <span>Envie <Link href="/docs/api/messages" className="text-primary hover:underline">mídias, botões e listas</Link></span>
+              </li>
+              <li className="flex items-start gap-2">
+                <ArrowRight className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                <span>Acesse o <Link href="/instances" className="text-primary hover:underline">Dashboard</Link> para gerenciar suas instâncias</span>
+              </li>
+            </ul>
           </div>
         </section>
 

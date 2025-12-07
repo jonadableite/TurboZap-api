@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn, getStatusLabel, formatPhone, formatDate } from '@/lib/utils';
 import { Card, Badge, Button, Modal, ModalFooter } from '@/components/ui';
+import FancyButton from '@/components/ui/FancyButton';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import {
   useRestartInstance,
@@ -130,12 +131,12 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-[var(--rocket-gray-50)]">
-                  {instance.profileName || instance.name}
+                  {instance.name}
                 </h3>
                 <button
                   onClick={handleCopyName}
                   className="p-1 rounded hover:bg-[var(--rocket-gray-700)] transition-colors"
-                  title="Copiar nome"
+                  title="Copiar nome da instância"
                 >
                   {copied ? (
                     <Check className="w-3 h-3 text-[var(--rocket-green)]" />
@@ -144,8 +145,15 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                   )}
                 </button>
               </div>
+
+              {instance.profileName && instance.profileName !== instance.name && (
+                <p className="text-sm font-medium text-[var(--rocket-gray-300)]">
+                  {instance.profileName}
+                </p>
+              )}
+
               {instance.phone && (
-                <p className="text-sm text-[var(--rocket-gray-400)]">
+                <p className="text-xs text-[var(--rocket-gray-400)] mt-0.5">
                   {formatPhone(instance.phone)}
                 </p>
               )}
@@ -221,14 +229,10 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
           </span>
 
           {!isConnected && (
-            <Button
-              size="sm"
-              onClick={handleConnect}
-              isLoading={connectMutation.isPending}
-              leftIcon={<QrCode className="w-4 h-4" />}
-            >
-              Conectar
-            </Button>
+            <FancyButton onClick={handleConnect}>
+              <QrCode className="icon w-4 h-4 mr-2" />
+              {connectMutation.isPending ? 'Conectando...' : 'Conectar'}
+            </FancyButton>
           )}
 
           {isConnected && (
