@@ -3,12 +3,11 @@
 import { LottieIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Users, Webhook } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import messageAnimation from "../../../public/balao-de-fala.json";
 import settingsAnimation from "../../../public/definicoes.json";
 import dashboardAnimation from "../../../public/grafico-de-barras.json";
 import htmlAnimation from "../../../public/html.json";
@@ -31,24 +30,6 @@ const navItems: NavItem[] = [
     label: "Instâncias",
     icon: <LottieIcon animationData={instanceAnimation} className="w-5 h-5" />,
     href: "/instances",
-  },
-  {
-    label: "Mensagens",
-    icon: <LottieIcon animationData={messageAnimation} className="w-5 h-5" />,
-    href: "/messages",
-    badge: "Em breve",
-  },
-  {
-    label: "Webhooks",
-    icon: <Webhook className="w-5 h-5" />,
-    href: "/webhooks",
-    badge: "Em breve",
-  },
-  {
-    label: "Contatos",
-    icon: <Users className="w-5 h-5" />,
-    href: "/contacts",
-    badge: "Em breve",
   },
 ];
 

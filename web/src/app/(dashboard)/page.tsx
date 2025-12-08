@@ -13,9 +13,8 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useInstances } from "@/hooks/useInstances";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Plus, Webhook, Zap } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
 import clockAnimation from "../../../public/desconectar.json";
@@ -29,7 +28,6 @@ export default function DashboardPage() {
   const { data: instances = [], isLoading } = useInstances();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { hasApiKey } = useApiConfig();
-  const router = useRouter();
   const canCreateInstance = hasApiKey;
 
   const connectedCount = instances.filter(
@@ -292,90 +290,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </motion.div>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h3 className="text-base font-semibold text-[var(--rocket-gray-50)] mb-4">
-            Ações rápidas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Create Instance */}
-            <motion.button
-              onClick={() =>
-                canCreateInstance
-                  ? setShowCreateModal(true)
-                  : router.push("/settings")
-              }
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className={cn(
-                "p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] transition-colors text-left group",
-                canCreateInstance
-                  ? "hover:border-[#29292e]"
-                  : "opacity-60 border-dashed cursor-pointer"
-              )}
-            >
-              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-purple)]/10 flex items-center justify-center mb-3 group-hover:bg-[var(--rocket-purple)]/20 transition-colors">
-                <LottieIcon
-                  animationData={smartphoneAnimation}
-                  className="w-5 h-5"
-                />
-              </div>
-              <h4 className="font-medium text-sm text-[var(--rocket-gray-50)] mb-1">
-                Nova Instância
-              </h4>
-              <p className="text-xs text-[var(--rocket-gray-400)]">
-                Crie uma nova conexão WhatsApp
-              </p>
-              {!canCreateInstance && (
-                <p className="text-xs text-[var(--rocket-warning)] mt-2">
-                  Configure sua API Key para habilitar
-                </p>
-              )}
-            </motion.button>
-
-            {/* Send Message */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] text-left opacity-60 cursor-not-allowed"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-green)]/10 flex items-center justify-center mb-3">
-                <LottieIcon
-                  animationData={messageAnimation}
-                  className="w-5 h-5"
-                />
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-medium text-sm text-[var(--rocket-gray-50)]">
-                  Enviar Mensagem
-                </h4>
-                <Badge>Em breve</Badge>
-              </div>
-              <p className="text-xs text-[var(--rocket-gray-400)]">
-                Envie mensagens em massa
-              </p>
-            </motion.div>
-
-            {/* Configure Webhook */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="p-5 rounded-xl bg-[#1a1a24] border border-[#29292e] text-left opacity-60 cursor-not-allowed"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[var(--rocket-warning)]/10 flex items-center justify-center mb-3">
-                <Webhook className="w-5 h-5 text-[var(--rocket-warning)]" />
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-medium text-sm text-[var(--rocket-gray-50)]">
-                  Configurar Webhook
-                </h4>
-                <Badge>Em breve</Badge>
-              </div>
-              <p className="text-xs text-[var(--rocket-gray-400)]">
-                Receba eventos em tempo real
-              </p>
-            </motion.div>
-          </div>
         </div>
 
         {/* Recent Instances */}
