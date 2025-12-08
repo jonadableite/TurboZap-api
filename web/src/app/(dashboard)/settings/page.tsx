@@ -17,13 +17,22 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Inpu
 import { healthApi } from '@/lib/api';
 import { useApiConfig } from '@/hooks/useApiConfig';
 
+// export default function SettingsPage() {
+//   const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
+//   const [apiUrlInput, setApiUrlInput] = useState(apiUrl || 'http://localhost:8080');
+//   const [showApiKey, setShowApiKey] = useState(false);
+//   const [saved, setSaved] = useState(false);
+//   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 export default function SettingsPage() {
+  const { apiKey, apiUrl, updateConfig } = useApiConfig();
+
   const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
   const [apiUrlInput, setApiUrlInput] = useState(apiUrl || 'http://localhost:8080');
   const [showApiKey, setShowApiKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const { apiKey, apiUrl, updateConfig } = useApiConfig();
+
+  //const { apiKey, apiUrl, updateConfig } = useApiConfig();
 
   useEffect(() => {
     checkApiHealth();
