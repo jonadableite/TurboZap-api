@@ -1,0 +1,59 @@
+# ============================================
+# Frontend Dockerfile (Next.js)
+# ============================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY web/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source code
+COPY web/ ./
+
+# Build Next.js application
+RUN npm run build
+
+# ============================================
+# Runtime Stage
+# ============================================
+FROM node:20-alpine
+
+# Install runtime dependencies
+RUN apk --no-cache add \
+    curl
+
+# Create app user
+RUN adduser -D -g '' appuser
+
+WORKDIR /app
+
+# Copy standalone build from builder
+# Next.js standalone output structure: .next/standalone contains server.js and node_modules
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Set environment variable
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Run the application
+CMD ["node", "server.js"]
+
