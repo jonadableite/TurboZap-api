@@ -18,20 +18,16 @@ import { healthApi } from '@/lib/api';
 import { useApiConfig } from '@/hooks/useApiConfig';
 
 export default function SettingsPage() {
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiUrlInput, setApiUrlInput] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
+  const [apiUrlInput, setApiUrlInput] = useState(apiUrl || 'http://localhost:8080');
   const [showApiKey, setShowApiKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const { apiKey, apiUrl, updateConfig } = useApiConfig();
 
-  // Load settings on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    setApiKeyInput(apiKey || '');
-    setApiUrlInput(apiUrl || 'http://localhost:8080');
     checkApiHealth();
-  }, [apiKey, apiUrl]);
+  }, []);
 
   const checkApiHealth = async () => {
     setApiStatus('checking');
@@ -46,8 +42,9 @@ export default function SettingsPage() {
   const handleSave = () => {
     updateConfig(apiKeyInput.trim() || undefined, apiUrlInput.trim() || undefined);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const timeout = setTimeout(() => setSaved(false), 2000);
     checkApiHealth();
+    return () => clearTimeout(timeout);
   };
 
   return (

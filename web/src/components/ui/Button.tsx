@@ -4,7 +4,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
-import { motion, HTMLMotionProps } from "framer-motion"
+import { motion } from "framer-motion"
 import { Loader2 } from "lucide-react"
 
 const buttonVariants = cva(
@@ -71,11 +71,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <motion.button
         className={cn(buttonVariants({ variant: finalVariant, size: finalSize, className }))}
-        ref={ref as any}
+        ref={ref}
         whileHover={{ scale: props.disabled || isLoading ? 1 : 1.02 }}
         whileTap={{ scale: props.disabled || isLoading ? 1 : 0.98 }}
         disabled={props.disabled || isLoading}
-        {...(props as any)}
+        {...props}
       >
         {isLoading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

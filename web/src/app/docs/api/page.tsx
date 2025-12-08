@@ -1,7 +1,7 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
+import { CodeBlock } from "@/components/docs/terminal";
 import { ShineBorder } from "@/components/ui";
 import { Code2, Server, Zap, Shield, Globe } from "lucide-react";
 import Link from "next/link";

@@ -1,7 +1,6 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock } from "@/components/docs/terminal";
 import { Shield } from "lucide-react";
 import Link from "next/link";
 
@@ -46,7 +45,7 @@ export default function ProfileReferencePage() {
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li><strong>Privacidade:</strong> Configure quem pode ver suas informações</li>
-              <li><strong>Status/About:</strong> Altere o texto de "recado" do perfil</li>
+              <li><strong>Status/About:</strong> Altere o texto de &quot;recado&quot; do perfil</li>
               <li><strong>Foto de perfil:</strong> Gerencie a foto de perfil (em desenvolvimento)</li>
             </ul>
             <div className="bg-muted/50 rounded-lg p-4 mt-4">

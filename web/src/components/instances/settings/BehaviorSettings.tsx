@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@/components/ui";
-import { Save, RefreshCw, Settings, CheckCircle2 } from "lucide-react";
+import { Save, RefreshCw, Settings } from "lucide-react";
 import { useToast } from "@/components/ui";
 
 interface BehaviorSettingsProps {
   instanceName: string;
 }
 
-export function BehaviorSettings({ instanceName }: BehaviorSettingsProps) {
+export function BehaviorSettings({ instanceName: _instanceName }: BehaviorSettingsProps) {
+  void _instanceName;
   const [isSaving, setIsSaving] = useState(false);
   const [autoReconnect, setAutoReconnect] = useState(true);
   const [reconnectInterval, setReconnectInterval] = useState(5);
@@ -23,7 +24,7 @@ export function BehaviorSettings({ instanceName }: BehaviorSettingsProps) {
       // TODO: Implementar salvamento
       await new Promise((resolve) => setTimeout(resolve, 1000));
       showToast("Configurações de comportamento salvas com sucesso!", "success");
-    } catch (error) {
+    } catch {
       showToast("Erro ao salvar configurações", "error");
     } finally {
       setIsSaving(false);

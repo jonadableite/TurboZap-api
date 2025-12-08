@@ -16,27 +16,26 @@ export function useApiConfig() {
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const loadConfig = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    const storedKey = localStorage.getItem(STORAGE_KEY);
-    const storedUrl =
-      localStorage.getItem(STORAGE_URL_KEY) ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:8080';
-
-    setApiKey(storedKey);
-    setApiUrl(storedUrl);
-    setIsReady(true);
-  }, []);
-
   useEffect(() => {
-    loadConfig();
-    window.addEventListener(CONFIG_EVENT, loadConfig);
-    return () => {
-      window.removeEventListener(CONFIG_EVENT, loadConfig);
+    if (typeof window === 'undefined') return undefined;
+
+    const load = () => {
+      const storedKey = localStorage.getItem(STORAGE_KEY);
+      const storedUrl =
+        localStorage.getItem(STORAGE_URL_KEY) ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:8080';
+      setApiKey(storedKey);
+      setApiUrl(storedUrl);
+      setIsReady(true);
     };
-  }, [loadConfig]);
+
+    load();
+    window.addEventListener(CONFIG_EVENT, load);
+    return () => {
+      window.removeEventListener(CONFIG_EVENT, load);
+    };
+  }, []);
 
   const updateConfig = useCallback(
     (key?: string, url?: string) => {

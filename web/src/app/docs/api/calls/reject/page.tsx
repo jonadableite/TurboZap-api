@@ -1,7 +1,7 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { Terminal, TypingAnimation, AnimatedSpan, CodeBlock } from "@/components/docs/terminal";
+import { CodeBlock } from "@/components/docs/terminal";
 import { ApiPlayground } from "@/components/docs/api-playground";
 
 const tocItems = [

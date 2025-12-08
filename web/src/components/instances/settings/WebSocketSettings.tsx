@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Input, Button } from "@/components/ui";
 import { CodeBlock } from "@/components/docs/terminal";
-import { Radio, Copy, Check, CheckCircle2 } from "lucide-react";
+import { Radio, Copy, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useApiConfig } from "@/hooks/useApiConfig";
 
@@ -11,7 +11,8 @@ interface WebSocketSettingsProps {
   instanceName: string;
 }
 
-export function WebSocketSettings({ instanceName }: WebSocketSettingsProps) {
+export function WebSocketSettings({ instanceName: _instanceName }: WebSocketSettingsProps) {
+  void _instanceName;
   const { apiUrl } = useApiConfig();
   const [copied, setCopied] = useState(false);
   const wsUrl = `${apiUrl?.replace(/^http/, "ws") || "ws://localhost:8080"}/sse/${instanceName}`;

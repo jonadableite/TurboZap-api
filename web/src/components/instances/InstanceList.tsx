@@ -6,7 +6,6 @@ import { Plus, RefreshCw, Search, Key } from 'lucide-react';
 import { useState } from 'react';
 import {
   Button,
-  Input,
   EmptyState,
   Spinner,
   Card,
@@ -23,7 +22,6 @@ import FancyPattern from '@/components/ui/FancyPattern';
 import { InstanceCard } from './InstanceCard';
 import { useInstances } from '@/hooks/useInstances';
 import { useApiConfig } from '@/hooks/useApiConfig';
-import type { Instance } from '@/types';
 
 interface InstanceListProps {
   onCreateClick: () => void;

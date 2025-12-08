@@ -1,10 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@/components/ui";
 import { Save, Webhook, Plus, Trash2, CheckCircle2 } from "lucide-react";
-import { type WebhookConfig } from "@/lib/webhook-api";
 import { useWebhook, useSetWebhook, useWebhookEvents } from "@/hooks/useWebhook";
 import { useToast } from "@/components/ui";
 
@@ -74,7 +74,7 @@ export function WebhookSettings({ instanceName }: WebhookSettingsProps) {
       });
 
       showToast("Configurações de webhook salvas com sucesso!", "success");
-    } catch (error) {
+    } catch {
       showToast("Erro ao salvar configurações de webhook", "error");
     }
   };

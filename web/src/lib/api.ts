@@ -60,43 +60,61 @@ api.interceptors.response.use(
     const isOptionalEndpoint = error.config?.url?.includes('/webhook/events');
     
     if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
-      // eslint-disable-next-line no-console
       console.error("API Error:", message);
     }
     return Promise.reject(error);
   }
 );
 
-const normalizeInstance = (raw: any): Instance => ({
-  id: raw.id,
-  name: raw.name,
-  phone: raw.phone || raw.phone_number || raw.msisdn || undefined,
-  status: raw.status || raw.connection_status || "unknown",
-  profileName:
-    raw.profileName || raw.profile_name || raw.display_name || raw.name,
-  profilePicture:
-    raw.profilePicture ||
-    raw.profile_picture ||
-    raw.profile_pic ||
-    raw.avatar ||
-    undefined,
-  createdAt:
-    raw.createdAt || raw.created_at || raw.created || new Date().toISOString(),
-  updatedAt:
-    raw.updatedAt ||
-    raw.updated_at ||
-    raw.updated ||
-    raw.createdAt ||
-    raw.created_at ||
-    new Date().toISOString(),
-});
+const getString = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
 
-const normalizeInstanceArray = (payload?: any): Instance[] => {
+const normalizeInstance = (raw: unknown): Instance => {
+  const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    id: getString(data.id) || "",
+    name: getString(data.name) || "",
+    phone:
+      getString(data.phone) ||
+      getString(data.phone_number) ||
+      getString(data.msisdn) ||
+      undefined,
+    status: getString(data.status) || getString(data.connection_status) || "unknown",
+    profileName:
+      getString(data.profileName) ||
+      getString(data.profile_name) ||
+      getString(data.display_name) ||
+      getString(data.name) ||
+      undefined,
+    profilePicture:
+      getString(data.profilePicture) ||
+      getString(data.profile_picture) ||
+      getString(data.profile_pic) ||
+      getString(data.avatar) ||
+      undefined,
+    createdAt:
+      getString(data.createdAt) ||
+      getString(data.created_at) ||
+      getString(data.created) ||
+      new Date().toISOString(),
+    updatedAt:
+      getString(data.updatedAt) ||
+      getString(data.updated_at) ||
+      getString(data.updated) ||
+      getString(data.createdAt) ||
+      getString(data.created_at) ||
+      new Date().toISOString(),
+  };
+};
+
+const normalizeInstanceArray = (payload?: unknown): Instance[] => {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload.map(normalizeInstance);
-  if (Array.isArray(payload.instances))
-    return payload.instances.map(normalizeInstance);
-  if (Array.isArray(payload.data)) return payload.data.map(normalizeInstance);
+  const payloadObj = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
+  const instances = payloadObj.instances;
+  const data = payloadObj.data;
+  if (Array.isArray(instances)) return instances.map(normalizeInstance);
+  if (Array.isArray(data)) return data.map(normalizeInstance);
   return [];
 };
 
@@ -122,10 +140,11 @@ export const instanceApi = {
 
   // Get instance by name
   get: async (name: string): Promise<Instance> => {
-    const response = await api.get<ApiResponse<any>>(`/instance/${name}`);
-    const payload = response.data as any;
+    const response = await api.get<ApiResponse<unknown>>(`/instance/${name}`);
+    const payload = response.data;
+    const payloadRecord = (payload as ApiResponse<unknown>)?.data ?? payload;
     const instanceData =
-      payload?.data?.instance || payload?.data || payload?.instance || payload;
+      (payloadRecord as { instance?: unknown })?.instance ?? payloadRecord;
     if (!instanceData) {
       throw new Error("Instance not found");
     }

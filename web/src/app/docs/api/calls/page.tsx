@@ -1,8 +1,7 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { Terminal, TypingAnimation, AnimatedSpan, CodeBlock } from "@/components/docs/terminal";
-import { Phone, PhoneOff } from "lucide-react";
+import { PhoneOff } from "lucide-react";
 
 const tocItems = [
   { id: "intro", title: "Introdução", level: 2 },

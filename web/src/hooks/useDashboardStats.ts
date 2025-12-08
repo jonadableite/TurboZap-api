@@ -16,8 +16,9 @@ export function useDashboardStats() {
           data: MessageStats;
         }>("/api/stats/messages");
         return response.data.data;
-      } catch (error: any) {
-        if (error.response?.status === 404) {
+      } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } }).response?.status;
+        if (status === 404) {
           return { today: 0, total: 0 };
         }
         throw error;

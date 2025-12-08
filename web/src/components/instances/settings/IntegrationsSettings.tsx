@@ -9,7 +9,8 @@ interface IntegrationsSettingsProps {
   instanceName: string;
 }
 
-export function IntegrationsSettings({ instanceName }: IntegrationsSettingsProps) {
+export function IntegrationsSettings({ instanceName: _instanceName }: IntegrationsSettingsProps) {
+  void _instanceName;
   const integrations = [
     {
       name: "Zapier",

@@ -14,15 +14,12 @@ import {
   BookOpen,
   Code2,
   Key,
-  Lock,
   MessageCircle,
   Rocket,
   Send,
-  Users,
   Webhook,
   Zap,
   QrCode,
-  RefreshCw,
   Shield,
 } from "lucide-react";
 

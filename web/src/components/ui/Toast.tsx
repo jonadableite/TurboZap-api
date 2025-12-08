@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import { Portal } from "./Portal";
@@ -32,9 +32,11 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const idRef = useRef(0);
 
   const showToast = (message: string, type: ToastType = "info", duration = 3000) => {
-    const id = Math.random().toString(36).substring(7);
+    idRef.current += 1;
+    const id = `toast-${idRef.current}`;
     setToasts((prev) => [...prev, { id, message, type, duration }]);
 
     if (duration > 0) {

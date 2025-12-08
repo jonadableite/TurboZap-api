@@ -5,30 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
-  Code2,
   Key,
   MessageSquare,
   Play,
   Rocket,
-  Send,
-  Settings,
   Users,
   Webhook,
   Zap,
-  Image,
-  FileAudio,
-  MapPin,
   Contact,
-  Smile,
-  List,
-  LayoutGrid,
   Shield,
   Phone,
-  PhoneOff,
   Radio,
-  User,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 
 interface NavItem {

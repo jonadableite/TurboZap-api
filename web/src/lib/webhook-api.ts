@@ -17,19 +17,19 @@ export interface WebhookResponse {
 export const webhookApi = {
   // Get webhook configuration
   get: async (instanceName: string): Promise<WebhookConfig> => {
-    const response = await api.get<any>(
+    const response = await api.get<WebhookResponse | { configured?: boolean; webhook?: WebhookConfig }>(
       `/api/webhook/${instanceName}`
     );
-    // Handle response format - can be { configured: false } or { configured: true, webhook: {...} }
-    const data = response.data.data || response.data;
-    if (data?.configured === false) {
+    const data = (response.data as { data?: unknown }).data || response.data;
+    const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+    if (payload.configured === false) {
       return {
         url: "",
         events: [],
         enabled: false,
       };
     }
-    const webhook = data?.webhook || data;
+    const webhook = (payload.webhook as WebhookConfig | undefined) || (payload as WebhookConfig);
     return {
       url: webhook?.url || "",
       events: webhook?.events || [],
@@ -45,7 +45,7 @@ export const webhookApi = {
     instanceName: string,
     config: Partial<WebhookConfig>
   ): Promise<WebhookConfig> => {
-    const response = await api.post<any>(
+    const response = await api.post<{ data?: WebhookConfig }>(
       `/api/webhook/${instanceName}/set`,
       {
         url: config.url,
@@ -57,7 +57,7 @@ export const webhookApi = {
       }
     );
     const data = response.data.data || response.data;
-    const webhook = data?.webhook || data;
+    const webhook = (data as { webhook?: WebhookConfig }).webhook || (data as WebhookConfig);
     return {
       url: webhook?.url || "",
       events: webhook?.events || [],
@@ -90,7 +90,7 @@ export const webhookApi = {
         "/api/webhook/events"
       );
       return response.data.data || [];
-    } catch (error: any) {
+    } catch {
       // Silently handle errors for this endpoint - it's optional
       // If endpoint doesn't exist (404) or any other error, return default events list
       // We don't want to show errors to the user for this optional endpoint

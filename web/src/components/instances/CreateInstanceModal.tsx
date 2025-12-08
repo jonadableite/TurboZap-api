@@ -51,8 +51,13 @@ export function CreateInstanceModal({
       await createMutation.mutateAsync({ name: name.trim() });
       setCreatedInstanceName(name.trim());
       setStep('qrcode');
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Erro ao criar instância');
+    } catch (err: unknown) {
+      const message =
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        (err as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message;
+      setError(message || 'Erro ao criar instância');
     }
   };
 

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { RefreshCw, Smartphone, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { RefreshCw, Smartphone, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button, Spinner } from '@/components/ui';
 import { useInstanceQRCode, useInstanceStatus } from '@/hooks/useInstances';
+import Image from 'next/image';
 
 interface QRCodeDisplayProps {
   instanceName: string;
@@ -29,11 +30,9 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
     refetchRef.current();
   }, []);
 
-  // Countdown timer
   useEffect(() => {
     if (!qrCode) return;
 
-    setTimeLeft(60);
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -116,7 +115,7 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
   }
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" key={qrCode}>
       {/* QR Code Container */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -132,11 +131,10 @@ export function QRCodeDisplay({ instanceName, onConnected }: QRCodeDisplayProps)
         {/* QR Code */}
         <div className="relative z-10 p-2">
           {qrCode.startsWith('data:image') ? (
-            // If it's a base64 image, use img tag
-            <img 
-              src={qrCode} 
-              alt="QR Code" 
-              width={220} 
+            <Image
+              src={qrCode}
+              alt="QR Code"
+              width={220}
               height={220}
               className="rounded"
             />

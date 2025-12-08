@@ -8,7 +8,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import settingsAnimation from "../../../public/definicoes.json";
 import dashboardAnimation from "../../../public/grafico-de-barras.json";
 import htmlAnimation from "../../../public/html.json";
 import instanceAnimation from "../../../public/responsivo.json";
@@ -39,11 +38,6 @@ const bottomNavItems: NavItem[] = [
     icon: <LottieIcon animationData={htmlAnimation} className="w-5 h-5" />,
     href: "/docs",
   },
-  {
-    label: "Configurações",
-    icon: <LottieIcon animationData={settingsAnimation} className="w-5 h-5" />,
-    href: "/settings",
-  },
 ];
 
 export function Sidebar() {
@@ -53,7 +47,7 @@ export function Sidebar() {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: isCollapsed ? 76 : 280 }}
+      animate={{ width: isCollapsed ? 72 : 248 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
         "sticky top-0 h-screen z-30",

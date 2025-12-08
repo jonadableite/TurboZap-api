@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Play, Copy, Check, Loader2, ChevronRight, ChevronDown, Terminal } from "lucide-react";
+import { Play, Copy, Loader2, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Badge, Button, Input, Modal } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
 
 interface Param {
@@ -33,7 +33,31 @@ const methodColors = {
   PATCH: "bg-orange-500/10 text-orange-500 border-orange-500/20",
 };
 
-const LanguageSelector = ({ selected, onSelect }: { selected: string, onSelect: (lang: string) => void }) => {
+type PlaygroundResponse =
+  | {
+      status: number;
+      statusText: string;
+      data: unknown;
+      headers: Record<string, string>;
+      time: string;
+      error?: string;
+    }
+  | {
+      error: string;
+      data?: unknown;
+      status?: number;
+      statusText?: string;
+      headers?: Record<string, string>;
+      time?: string;
+    };
+
+const LanguageSelector = ({
+  selected,
+  onSelect,
+}: {
+  selected: string;
+  onSelect: (lang: string) => void;
+}) => {
   const languages = ["cURL", "JavaScript", "Python", "Go"];
   return (
     <div className="flex gap-2 mb-2 overflow-x-auto pb-2">
@@ -66,7 +90,7 @@ export function ApiPlayground({
   const { apiKey: storedApiKey, apiUrl: storedApiUrl } = useApiConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<PlaygroundResponse | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState("");
   const [activeTab, setActiveTab] = useState("response"); // response, code
@@ -80,13 +104,13 @@ export function ApiPlayground({
   }, [storedApiKey, apiKey]);
 
   // Initialize params with defaults
-  useState(() => {
+  useEffect(() => {
     const initialParams: Record<string, string> = {};
-    [...pathParams, ...bodyParams, ...queryParams].forEach(p => {
+    [...pathParams, ...bodyParams, ...queryParams].forEach((p) => {
       if (p.default) initialParams[p.name] = p.default;
     });
     setParams(initialParams);
-  });
+  }, [pathParams, bodyParams, queryParams]);
 
   const handleParamChange = (name: string, value: string) => {
     setParams(prev => ({ ...prev, [name]: value }));
@@ -119,13 +143,13 @@ export function ApiPlayground({
 
   const generateCode = () => {
     const url = getFullUrl();
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(apiKey ? { "X-API-Key": apiKey } : {})
+      ...(apiKey ? { "X-API-Key": apiKey } : {}),
     };
 
-    const body: Record<string, any> = {};
-    bodyParams.forEach(p => {
+    const body: Record<string, string> = {};
+    bodyParams.forEach((p) => {
       if (params[p.name]) body[p.name] = params[p.name];
     });
 
@@ -199,12 +223,12 @@ func main() {
 
     try {
       const url = getFullUrl();
-      const headers = {
-        ...(apiKey ? { "X-API-Key": apiKey } : {})
+      const headers: Record<string, string> = {
+        ...(apiKey ? { "X-API-Key": apiKey } : {}),
       };
 
-      const body: Record<string, any> = {};
-      bodyParams.forEach(p => {
+      const body: Record<string, string> = {};
+      bodyParams.forEach((p) => {
         if (params[p.name]) body[p.name] = params[p.name];
       });
 
@@ -213,20 +237,25 @@ func main() {
         url,
         headers,
         data: Object.keys(body).length > 0 ? body : undefined,
-        validateStatus: () => true // Don't throw on error status
+        validateStatus: () => true, // Don't throw on error status
       });
 
       setResponse({
         status: res.status,
         statusText: res.statusText,
         data: res.data,
-        headers: res.headers,
+        headers: res.headers as Record<string, string>,
         time: "120ms" // Mock time for now or calculate real duration
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isAxiosError = axios.isAxiosError(error);
+      const message = isAxiosError
+        ? error.message
+        : "Unexpected error executing request";
+      const data = isAxiosError ? error.response?.data : undefined;
       setResponse({
-        error: error.message,
-        data: error.response?.data
+        error: message,
+        data,
       });
     } finally {
       setIsLoading(false);

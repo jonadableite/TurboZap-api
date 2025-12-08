@@ -4,8 +4,8 @@ import { Button, Input, Modal, ModalFooter } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Bell, Check, Copy, Eye, EyeOff, Key, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Copy, Eye, EyeOff, Key } from "lucide-react";
+import { useState } from "react";
 
 interface HeaderProps {
   title: string;
@@ -17,11 +17,8 @@ export function Header({ title, description }: HeaderProps) {
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { apiKey, hasApiKey, updateConfig } = useApiConfig();
-
-  useEffect(() => {
-    setApiKeyInput(apiKey || "");
-  }, [apiKey]);
+  const { apiKey, hasApiKey, updateConfig, isReady } = useApiConfig();
+  const displayHasApiKey = isReady && hasApiKey;
 
   const handleSaveApiKey = () => {
     updateConfig(apiKeyInput.trim() || undefined);
@@ -65,34 +62,15 @@ export function Header({ title, description }: HeaderProps) {
                 }}
                 className={cn(
                   "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
-                  hasApiKey
+                  displayHasApiKey
                     ? "bg-[var(--rocket-green)]/20 text-[var(--rocket-green)] hover:bg-[var(--rocket-green)]/30"
                     : "bg-[var(--rocket-warning)]/20 text-[var(--rocket-warning)] hover:bg-[var(--rocket-warning)]/30"
                 )}
               >
                 <Key className="w-4 h-4" />
                 <span className="text-sm font-medium">
-                  {hasApiKey ? "API Key configurada" : "Configurar API Key"}
+                  {displayHasApiKey ? "API Key configurada" : "Configurar API Key"}
                 </span>
-              </motion.button>
-
-              {/* Notifications */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-lg text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)] hover:bg-[var(--rocket-gray-700)] transition-colors"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--rocket-purple)]" />
-              </motion.button>
-
-              {/* Settings */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)] hover:bg-[var(--rocket-gray-700)] transition-colors"
-              >
-                <Settings className="w-5 h-5" />
               </motion.button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { Contact, Search, Image, UserCheck, Ban } from "lucide-react";
+import { Contact, Search, Image as ImageIcon, UserCheck } from "lucide-react";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
@@ -130,7 +130,7 @@ export default function ContactsReferencePage() {
         <section id="foto-perfil" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Image className="h-5 w-5 text-primary" />
+              <ImageIcon className="h-5 w-5 text-primary" />
             </div>
             <h2 className="text-2xl font-bold">Foto de perfil</h2>
           </div>

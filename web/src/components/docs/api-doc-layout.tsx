@@ -1,6 +1,5 @@
 "use client";
 
-import { ReactNode } from "react";
 import { ApiPlayground } from "./api-playground";
 import { CodeBlock } from "./terminal";
 import { cn } from "@/lib/utils";
@@ -30,10 +29,10 @@ interface ApiDocLayoutProps {
   responses?: {
     status: number;
     description: string;
-    example?: any;
+    example?: unknown;
     fields?: ResponseField[];
   }[];
-  exampleResponse?: any;
+  exampleResponse?: unknown;
 }
 
 export function ApiDocLayout({

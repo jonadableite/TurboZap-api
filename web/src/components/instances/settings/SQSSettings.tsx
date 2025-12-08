@@ -9,7 +9,8 @@ interface SQSSettingsProps {
   instanceName: string;
 }
 
-export function SQSSettings({ instanceName }: SQSSettingsProps) {
+export function SQSSettings({ instanceName: _instanceName }: SQSSettingsProps) {
+  void _instanceName;
   const [isSaving, setIsSaving] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [region, setRegion] = useState("us-east-1");

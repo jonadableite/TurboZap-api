@@ -9,7 +9,8 @@ interface ProxySettingsProps {
   instanceName: string;
 }
 
-export function ProxySettings({ instanceName }: ProxySettingsProps) {
+export function ProxySettings({ instanceName: _instanceName }: ProxySettingsProps) {
+  void _instanceName;
   const [isSaving, setIsSaving] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [host, setHost] = useState("");

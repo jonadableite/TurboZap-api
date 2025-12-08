@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@/components/ui";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input } from "@/components/ui";
 import { Save, Zap } from "lucide-react";
 
 interface RabbitMQSettingsProps {

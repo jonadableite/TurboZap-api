@@ -1,7 +1,6 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { CodeBlock } from "@/components/docs/terminal";
 import { Users } from "lucide-react";
 import Link from "next/link";
 

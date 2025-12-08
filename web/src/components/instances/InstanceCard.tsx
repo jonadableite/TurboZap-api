@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Smartphone,
   QrCode,
@@ -10,13 +10,13 @@ import {
   LogOut,
   Trash2,
   Wifi,
-  WifiOff,
   Copy,
   Check,
   Settings,
 } from 'lucide-react';
-import { cn, getStatusLabel, formatPhone, formatDate } from '@/lib/utils';
-import { Card, Badge, Button, Modal, ModalFooter } from '@/components/ui';
+import Image from 'next/image';
+import { cn, formatPhone, formatDate } from '@/lib/utils';
+import { Card, Badge, Button, Modal, ModalFooter, LottieIcon } from '@/components/ui';
 import FancyButton from '@/components/ui/FancyButton';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import {
@@ -27,6 +27,10 @@ import {
 } from '@/hooks/useInstances';
 import type { Instance } from '@/types';
 import { useRouter } from 'next/navigation';
+import settingsAnimation from '../../../public/definicoes.json';
+import restartAnimation from '../../../public/girar.json';
+import disconnectAnimation from '../../../public/desconectar.json';
+import deleteAnimation from '../../../public/excluir.json';
 
 interface InstanceCardProps {
   instance: Instance;
@@ -97,9 +101,56 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
     }
   };
 
+  const menuItems = [
+    {
+      key: 'settings',
+      label: 'Configurações',
+      icon: settingsAnimation,
+      tone: 'default' as const,
+      hint: 'Preferências e webhooks',
+      action: () => {
+        setShowMenu(false);
+        router.push(`/instances/${instance.name}/settings`);
+      },
+    },
+    {
+      key: 'restart',
+      label: 'Reiniciar',
+      icon: restartAnimation,
+      tone: 'primary' as const,
+      hint: 'Reinicia a sessão',
+      disabled: isLoading,
+      action: handleRestart,
+    },
+    ...(isConnected
+      ? [
+          {
+            key: 'disconnect',
+            label: 'Desconectar',
+            icon: disconnectAnimation,
+            tone: 'primary' as const,
+            hint: 'Finaliza a sessão atual',
+            disabled: isLoading,
+            action: handleLogout,
+          },
+        ]
+      : []),
+    {
+      key: 'delete',
+      label: 'Excluir',
+      icon: deleteAnimation,
+      tone: 'danger' as const,
+      hint: 'Remove a instância',
+      action: () => {
+        setShowMenu(false);
+        setShowDeleteModal(true);
+      },
+    },
+  ];
+
   return (
     <>
-      <Card className="relative overflow-hidden group">
+      <Card className="relative overflow-visible group bg-[var(--rocket-gray-900)]/60 border border-white/12 backdrop-blur-xl backdrop-saturate-150 shadow-[0_25px_80px_rgba(0,0,0,0.38)] ring-1 ring-[var(--rocket-purple)]/14">
         {/* Status indicator line */}
         <div
           className={cn(
@@ -120,10 +171,12 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
               )}
             >
               {instance.profilePicture ? (
-                <img
+                <Image
                   src={instance.profilePicture}
                   alt={instance.profileName || instance.name}
                   className="w-full h-full rounded-xl object-cover"
+                  width={48}
+                  height={48}
                 />
               ) : (
                 <Smartphone className="w-6 h-6 text-[var(--rocket-purple)]" />
@@ -169,66 +222,78 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
               variant="ghost"
               size="sm"
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2"
+              className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 shadow-[0_6px_18px_rgba(0,0,0,0.25)] transition-all"
             >
               <MoreVertical className="w-4 h-4" />
             </Button>
 
             {/* Dropdown menu */}
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowMenu(false)}
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 top-full mt-1 z-20 w-48 py-1 bg-[var(--rocket-gray-700)] rounded-lg border border-[var(--rocket-gray-600)] shadow-xl"
-                >
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      router.push(`/instances/${instance.name}/settings`);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
+            <AnimatePresence>
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-2 z-30 w-56 overflow-hidden rounded-2xl border border-white/14 bg-[var(--rocket-gray-900)]/85 backdrop-blur-xl backdrop-saturate-150 shadow-[0_24px_60px_rgba(0,0,0,0.5)] ring-1 ring-[var(--rocket-purple)]/18"
                   >
-                    <Settings className="w-4 h-4" />
-                    Configurações
-                  </button>
-                  <div className="h-px bg-[var(--rocket-gray-600)] my-1" />
-                  <button
-                    onClick={handleRestart}
-                    disabled={isLoading}
-                    className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Reiniciar
-                  </button>
-                  {isConnected && (
-                    <button
-                      onClick={handleLogout}
-                      disabled={isLoading}
-                      className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-warning)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Desconectar
-                    </button>
-                  )}
-                  <div className="h-px bg-[var(--rocket-gray-600)] my-1" />
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      setShowDeleteModal(true);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-[var(--rocket-danger)] hover:bg-[var(--rocket-gray-600)] flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Excluir
-                  </button>
-                </motion.div>
-              </>
-            )}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--rocket-purple)]/18 via-transparent to-[var(--rocket-blue,#38bdf8)]/14 pointer-events-none" />
+                    <div className="relative p-2 space-y-1">
+                      {menuItems.map((item, index) => (
+                        <div key={item.key} className="space-y-1">
+                          {index === 2 && isConnected && (
+                            <div className="h-px my-1 bg-white/10" />
+                          )}
+                          <button
+                            onClick={item.action}
+                            disabled={item.disabled}
+                            className={cn(
+                              'w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all',
+                              'hover:bg-white/12 active:scale-[0.99]',
+                              item.tone === 'danger'
+                                ? 'text-[var(--rocket-danger)]'
+                                : item.tone === 'warning'
+                                  ? 'text-[var(--rocket-warning)]'
+                                  : 'text-[var(--rocket-purple-light)]',
+                              item.disabled ? 'opacity-80 cursor-not-allowed' : ''
+                            )}
+                          >
+                            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-purple)]/16 border border-[var(--rocket-purple)]/28 shadow-[0_12px_36px_rgba(130,87,229,0.28)]">
+                              <LottieIcon
+                                animationData={item.icon}
+                                className="w-7 h-7"
+                                loop
+                              />
+                            </span>
+                            <div className="flex-1 text-left">
+                              <div className="font-semibold">{item.label}</div>
+                              <div className="text-[11px] text-[var(--rocket-gray-400)]">
+                                {item.hint}
+                              </div>
+                            </div>
+                            {item.key === 'restart' && (
+                              <RefreshCw className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
+                            )}
+                            {item.key === 'settings' && (
+                              <Settings className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
+                            )}
+                            {item.key === 'disconnect' && (
+                              <LogOut className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
+                            )}
+                            {item.tone === 'danger' && <Trash2 className="w-4 h-4 opacity-70" />}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -309,4 +374,3 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
 }
 
 export default InstanceCard;
-
