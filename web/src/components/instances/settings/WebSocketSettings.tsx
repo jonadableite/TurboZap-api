@@ -15,7 +15,7 @@ export function WebSocketSettings({ instanceName: _instanceName }: WebSocketSett
   void _instanceName;
   const { apiUrl } = useApiConfig();
   const [copied, setCopied] = useState(false);
-  const wsUrl = `${apiUrl?.replace(/^http/, "ws") || "ws://localhost:8080"}/sse/${instanceName}`;
+  const wsUrl = `${apiUrl?.replace(/^http/, "ws") || "ws://localhost:8080"}/sse/${_instanceName}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(wsUrl);

@@ -250,13 +250,14 @@ export function ApiDocLayout({
                       </table>
                     </div>
                   )}
-                  {response.example && (
-                    <CodeBlock
-                      title={`${response.status} - application/json`}
-                      language="json"
-                      code={JSON.stringify(response.example, null, 2)}
-                    />
-                  )}
+                 {response.example !== undefined && response.example !== null && (
+  <CodeBlock
+    title={`${response.status} - application/json`}
+    language="json"
+    code={JSON.stringify(response.example, null, 2)}
+  />
+)}
+
                 </div>
               ))}
             </div>
@@ -279,18 +280,19 @@ export function ApiDocLayout({
       {/* Right Column - Code Examples */}
       <div className="lg:col-span-1 space-y-6">
         <div className="sticky top-20">
-          {exampleResponse && (
-            <div>
-              <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">
-                Example Response
-              </h3>
-              <CodeBlock
-                title="200"
-                language="json"
-                code={JSON.stringify(exampleResponse, null, 2)}
-              />
-            </div>
-          )}
+         {exampleResponse != null && (
+  <div>
+    <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">
+      Example Response
+    </h3>
+    <CodeBlock
+      title="200"
+      language="json"
+      code={JSON.stringify(exampleResponse, null, 2)}
+    />
+  </div>
+)}
+
         </div>
       </div>
     </div>

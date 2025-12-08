@@ -310,7 +310,8 @@ func main() {
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                     Authorization
-                    <Badge variant="outline" className="text-[10px] py-0 h-4">Header</Badge>
+                    <Badge  className="text-[10px] py-0 h-4">Header</Badge>
+                    {/* variant="secondary" */}
                   </h4>
                   <Input
                     placeholder="Enter your X-API-Key"
@@ -411,13 +412,15 @@ func main() {
                         <div className="flex items-center justify-between pb-2 border-b border-white/10">
                           <div className="flex items-center gap-3">
                             <Badge
-                              variant="outline"
+                              //variant="outline"
                               className={cn(
                                 "font-bold",
-                                response.status >= 200 && response.status < 300 ? "text-green-400 border-green-500/50" : "text-red-400 border-red-500/50"
+                                typeof response.status === "number" && response.status >= 200 && response.status < 300
+                                  ? "text-green-400 border-green-500/50"
+                                  : "text-red-400 border-red-500/50"
                               )}
                             >
-                              {response.status} {response.statusText}
+                              {typeof response.status === "number" ? response.status : "-"} {response.statusText || ""}
                             </Badge>
                             <span className="text-gray-500">{response.time}</span>
                           </div>

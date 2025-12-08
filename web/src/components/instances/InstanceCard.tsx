@@ -244,7 +244,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-[var(--rocket-purple)]/18 via-transparent to-[var(--rocket-blue,#38bdf8)]/14 pointer-events-none" />
                     <div className="relative p-2 space-y-1">
-                      {menuItems.map((item, index) => (
+                      {menuItems.map((item:any, index:any) => (
                         <div key={item.key} className="space-y-1">
                           {index === 2 && isConnected && (
                             <div className="h-px my-1 bg-white/10" />

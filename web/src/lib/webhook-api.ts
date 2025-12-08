@@ -29,7 +29,7 @@ export const webhookApi = {
         enabled: false,
       };
     }
-    const webhook = (payload.webhook as WebhookConfig | undefined) || (payload as WebhookConfig);
+    const webhook = (payload.webhook as WebhookConfig | undefined) || (payload as unknown as WebhookConfig);
     return {
       url: webhook?.url || "",
       events: webhook?.events || [],

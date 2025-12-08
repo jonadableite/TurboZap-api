@@ -52,7 +52,7 @@ export function CreateInstanceModal({
       setCreatedInstanceName(name.trim());
       setStep('qrcode');
     } catch (err: unknown) {
-      const message =
+      const message:any | undefined =
         err &&
         typeof err === 'object' &&
         'response' in err &&

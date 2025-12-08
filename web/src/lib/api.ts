@@ -95,9 +95,8 @@ const normalizeInstance = (raw: unknown): Instance => {
     phone:
       getString(data.phone) ||
       getString(data.phone_number) ||
-      getString(data.msisdn) ||
-      undefined,
-    status: getString(data.status) || getString(data.connection_status) || "unknown",
+      getString(data.msisdn) || undefined,
+    status: (getString(data.status) || getString(data.connection_status) || "unknown") as Instance["status"],
     profileName:
       getString(data.profileName) ||
       getString(data.profile_name) ||
