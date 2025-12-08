@@ -57,12 +57,12 @@ export function Sidebar() {
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
         "sticky top-0 h-screen z-30",
-        "bg-[var(--rocket-gray-800)] border-r border-[var(--rocket-gray-600)]",
+        "bg-[#1a1a24] border-r border-[#29292e]",
         "flex flex-col"
       )}
     >
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--rocket-gray-600)]">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-[#29292e]">
         <Link href="/" className="flex items-center gap-3">
           <motion.div
             whileHover={{ rotate: 15 }}
@@ -159,7 +159,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom navigation */}
-      <div className="p-3 border-t border-[var(--rocket-gray-600)] space-y-1">
+      <div className="p-3 border-t border-[#29292e] space-y-1">
         {bottomNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -198,7 +198,7 @@ export function Sidebar() {
         className={cn(
           "absolute -right-3 top-20 z-10",
           "w-6 h-6 rounded-full",
-          "bg-[var(--rocket-gray-700)] border border-[var(--rocket-gray-600)]",
+          "bg-[#29292e] border border-[#29292e]",
           "flex items-center justify-center",
           "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)]",
           "transition-colors"

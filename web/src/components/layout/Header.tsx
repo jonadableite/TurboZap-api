@@ -38,7 +38,7 @@ export function Header({ title, description }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 bg-[var(--rocket-gray-800)]/60 backdrop-blur-xl border-b border-[var(--rocket-gray-600)] sticky top-0 z-20">
+      <header className="h-16 bg-[#1a1a24] border-b border-[#29292e] sticky top-0 z-20">
         <div className="h-full px-4 sm:px-8 lg:px-14">
           <div className="h-full flex items-center justify-between w-full max-w-6xl mx-auto">
             {/* Left side - Title */}

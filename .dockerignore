@@ -1,0 +1,82 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+AGENT_PLAYBOOK.md
+AGENTS.md
+PROJECT_COMMANDS.md
+PROJECT_RULES.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+api.exe
+turbozap.exe
+
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Test files
+*_test.go
+*_test.ts
+*_test.tsx
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Coverage
+coverage/
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Next.js
+web/.next/
+web/out/
+web/.vercel
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Scripts (keep only what's needed)
+scripts/
+
+# Prometheus
+prometheus.yml
+
+# Misc
+tash pop
+

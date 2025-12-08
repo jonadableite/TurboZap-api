@@ -38,7 +38,7 @@ export default function InstanceSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--rocket-gray-900)]">
+      <div className="flex items-center justify-center min-h-screen bg-[#13131b]">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -64,7 +64,7 @@ export default function InstanceSettingsPage() {
 
   if (!instance) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--rocket-gray-900)]">
+      <div className="flex items-center justify-center min-h-screen bg-[#13131b]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ export default function InstanceSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--rocket-gray-900)]">
+    <div className="min-h-screen bg-[#13131b]">
       <Header
         title={`Configurações - ${instance.name}`}
         description="Gerencie as configurações da instância"

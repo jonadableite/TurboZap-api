@@ -10,11 +10,11 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[var(--rocket-gray-900)]">
+      <div className="min-h-screen bg-[#13131b]">
         <div className="flex min-h-screen w-full">
           <Sidebar />
 
-          <div className="flex-1 min-h-screen overflow-y-auto bg-[var(--rocket-gray-900)]/95">
+          <div className="flex-1 min-h-screen overflow-y-auto bg-[#13131b]">
             {children}
           </div>
         </div>
