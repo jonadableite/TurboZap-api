@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, Search, Key } from 'lucide-react';
+import { Plus, Search, Key } from 'lucide-react';
 import { useState } from 'react';
 import {
   Button,
@@ -16,6 +16,7 @@ import {
   LottieIcon,
 } from '@/components/ui';
 import smartphoneAnimation from '../../../public/responsivo.json';
+import diagramaAnimation from '../../../public/diagrama.json';
 import FancyButton from '@/components/ui/FancyButton';
 import FancySearch from '@/components/ui/FancySearch';
 import FancyPattern from '@/components/ui/FancyPattern';
@@ -170,7 +171,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <Button variant="ghost" size="sm" onClick={() => refetch()} leftIcon={<RefreshCw className="w-4 h-4" />}>
+          <Button variant="ghost" size="sm" onClick={() => refetch()} leftIcon={<LottieIcon animationData={diagramaAnimation} className="w-4 h-4" />}>
             Atualizar
           </Button>
           <FancyButton onClick={onCreateClick}>

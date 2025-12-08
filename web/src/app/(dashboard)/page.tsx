@@ -18,7 +18,6 @@ import Link from "next/link";
 import { useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
 import clockAnimation from "../../../public/desconectar.json";
-import arrowAnimation from "../../../public/diagrama.json";
 import trendingAnimation from "../../../public/grafico-de-linha.json";
 import smartphoneAnimation from "../../../public/responsivo.json";
 import activityAnimation from "../../../public/wi-fi-global.json";
@@ -81,7 +80,7 @@ export default function DashboardPage() {
                   variant="outline"
                   rightIcon={
                     <LottieIcon
-                      animationData={arrowAnimation}
+                      animationData={smartphoneAnimation}
                       className="w-4 h-4"
                     />
                   }
@@ -305,7 +304,7 @@ export default function DashboardPage() {
                   size="sm"
                   rightIcon={
                     <LottieIcon
-                      animationData={arrowAnimation}
+                      animationData={smartphoneAnimation}
                       className="w-4 h-4"
                     />
                   }

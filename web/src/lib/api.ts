@@ -17,7 +17,8 @@ const API_URL_STORAGE = "turbozap_api_url";
 // Create axios instance
 const api = axios.create({
   baseURL: DEFAULT_API_URL,
-  timeout: 30000,
+  timeout: 15000,
+  timeoutErrorMessage: "Request timed out",
   headers: {
     "Content-Type": "application/json",
   },
@@ -48,17 +49,34 @@ api.interceptors.request.use((config) => {
 });
 
 // Response interceptor for error handling
+const isTimeoutError = (error: AxiosError) =>
+  error.code === "ECONNABORTED" ||
+  error.message?.toLowerCase().includes("timeout") ||
+  error.code === "ETIMEDOUT";
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ error?: { message: string } }>) => {
+    if (isTimeoutError(error)) {
+      return Promise.reject(
+        new AxiosError(
+          "API indisponível ou lenta: tempo limite excedido",
+          error.code,
+          error.config,
+          error.request,
+          error.response
+        )
+      );
+    }
+
     const message =
       error.response?.data?.error?.message ||
       error.message ||
       "Erro desconhecido";
-    
+
     // Don't log errors for optional endpoints like webhook events
-    const isOptionalEndpoint = error.config?.url?.includes('/webhook/events');
-    
+    const isOptionalEndpoint = error.config?.url?.includes("/webhook/events");
+
     if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
       console.error("API Error:", message);
     }
@@ -133,9 +151,21 @@ export const instanceApi = {
 
   // List all instances
   list: async (): Promise<Instance[]> => {
-    const response = await api.get<InstanceListResponse>("/instance/list");
-    const dataPayload = response.data.data;
-    return normalizeInstanceArray(dataPayload ?? response.data);
+    try {
+      const response = await api.get<InstanceListResponse>("/instance/list");
+      const dataPayload = response.data.data;
+      return normalizeInstanceArray(dataPayload ?? response.data);
+    } catch (error) {
+      // Gracefully handle timeouts to avoid noisy console errors on dashboard load
+      const isTimeout =
+        axios.isAxiosError(error) &&
+        (error.code === "ECONNABORTED" ||
+          error.message.toLowerCase().includes("timeout"));
+      if (isTimeout) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Get instance by name
