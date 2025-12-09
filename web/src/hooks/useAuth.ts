@@ -3,6 +3,7 @@
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type UserRole = "USER" | "DEVELOPER" | "ADMIN";
 
@@ -31,6 +32,7 @@ export interface UseAuthReturn {
 export function useAuth(): UseAuthReturn {
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const user: AuthUser | null = session?.user
     ? {
@@ -57,10 +59,19 @@ export function useAuth(): UseAuthReturn {
   );
 
   const logout = useCallback(async () => {
+    // Clear API key and URL from localStorage on logout
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("turbozap_api_key");
+      localStorage.removeItem("turbozap_api_url");
+    }
+    
+    // Clear all React Query cache to prevent showing data from previous user
+    queryClient.clear();
+    
     await signOut();
     router.push("/sign-in");
     router.refresh();
-  }, [router]);
+  }, [router, queryClient]);
 
   return {
     user,

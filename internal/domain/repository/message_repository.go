@@ -43,8 +43,14 @@ type MessageRepository interface {
 	// CountToday counts messages sent/received today
 	CountToday(ctx context.Context, instanceID *uuid.UUID) (int64, error)
 
+	// CountTodayByInstances counts messages sent/received today for multiple instances
+	CountTodayByInstances(ctx context.Context, instanceIDs []uuid.UUID) (int64, error)
+
 	// CountTotal counts total messages
 	CountTotal(ctx context.Context, instanceID *uuid.UUID) (int64, error)
+
+	// CountTotalByInstances counts total messages for multiple instances
+	CountTotalByInstances(ctx context.Context, instanceIDs []uuid.UUID) (int64, error)
 
 	// CountByDateRange counts messages within a date range
 	CountByDateRange(ctx context.Context, instanceID *uuid.UUID, start, end time.Time) (int64, error)

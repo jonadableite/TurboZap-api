@@ -68,6 +68,14 @@ func AuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceReposito
 		c.Locals("instance", instance)
 		c.Locals("instanceID", instance.ID)
 		c.Locals("instanceName", instance.Name)
+		
+		// Also set userID from instance if it exists (for authorization and filtering)
+		// This ensures List() can filter by userID even when using instance API key
+		if instance.UserID != "" {
+			c.Locals("instanceUserID", instance.UserID)
+			// Set userID in context so List() can filter correctly
+			c.Locals("userID", instance.UserID)
+		}
 
 		return c.Next()
 	}

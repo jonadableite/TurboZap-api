@@ -56,7 +56,7 @@ func NewRouter(
 	presenceHandler := handler.NewPresenceHandler(instanceRepo, waManager, logger)
 	webhookHandler := handler.NewWebhookHandler(instanceRepo, webhookRepo, logger)
 	profileHandler := handler.NewProfileHandler(instanceRepo, waManager, logger)
-	statsHandler := handler.NewStatsHandler(messageRepo, logger)
+	statsHandler := handler.NewStatsHandler(messageRepo, instanceRepo, logger)
 
 	// Create SSE hub and handler
 	sseHub := handler.NewSSEHub(logger)
@@ -189,22 +189,22 @@ func NewRouter(
 	legacyMessage.Post("/story", messageHandler.SendStory)
 
 	// Legacy profile routes (without /api prefix)
-	legacyProfile := app.Group("/profile/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyProfile := app.Group("/profile/:instance", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacyProfile.Get("/privacy", profileHandler.GetPrivacySettings)
 	legacyProfile.Post("/privacy", profileHandler.SetPrivacySetting)
 	legacyProfile.Post("/status", profileHandler.SetProfileStatus)
 
 	// Legacy call routes (without /api prefix)
-	legacyCall := app.Group("/call/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyCall := app.Group("/call/:instance", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacyCall.Post("/reject", profileHandler.RejectCall)
 
 	// Legacy SSE routes (without /api prefix)
-	legacySSE := app.Group("/sse", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacySSE := app.Group("/sse", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacySSE.Get("/:instance", sseHandler.Stream)
 	legacySSE.Get("/", sseHandler.StreamAll)
 
 	// Legacy stats routes (without /api prefix)
-	legacyStats := app.Group("/stats", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyStats := app.Group("/stats", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacyStats.Get("/messages", statsHandler.GetMessageStats)
 
 	return app

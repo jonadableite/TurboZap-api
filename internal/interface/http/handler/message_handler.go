@@ -54,11 +54,8 @@ func (h *MessageHandler) getInstanceAndValidate(c *fiber.Ctx) (*entity.Instance,
 		return nil, response.NotFound(c, "Instance not found")
 	}
 
-	if c.Locals("isGlobalAdmin") != true {
-		userID, _ := c.Locals("userID").(string)
-		if userID != "" && instance.UserID != "" && instance.UserID != userID {
-			return nil, response.Forbidden(c, "You don't have access to this instance")
-		}
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return nil, err
 	}
 
 	// Check if connected
