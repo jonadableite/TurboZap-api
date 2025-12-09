@@ -79,12 +79,12 @@ RUN cat <<'EOF' > /app/start.sh
 set -euo pipefail
 
 # Respect env overrides coming from the platform
-BACKEND_PORT="${SERVER_PORT:-${BACKEND_PORT:-8080}}"
+BACKEND_PORT="${BACKEND_PORT:-${SERVER_PORT:-8080}}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
 export SERVER_HOST="${SERVER_HOST:-0.0.0.0}"
 export SERVER_PORT="${SERVER_PORT:-$BACKEND_PORT}"
-export PORT="${PORT:-$FRONTEND_PORT}"
+export PORT="${FRONTEND_PORT}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export NODE_ENV="${NODE_ENV:-production}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
