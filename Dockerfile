@@ -49,9 +49,15 @@ RUN apk --no-cache add \
     ca-certificates \
     tzdata \
     nodejs \
-    npm \
     curl \
     bash
+
+# Runtime defaults (can be overridden at deploy time)
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    FRONTEND_PORT=3000 \
+    BACKEND_PORT=8080
 
 # Create app user
 RUN adduser -D -g '' appuser
@@ -68,51 +74,57 @@ COPY --from=frontend-builder /app/web/.next/static /app/web/.next/static
 COPY --from=frontend-builder /app/web/public /app/web/public
 
 # Create startup script
-RUN printf '#!/bin/bash\n\
-    set -e\n\
-    \n\
-    echo "Starting TurboZap API..."\n\
-    \n\
-    # Start backend in background\n\
-    /app/turbozap &\n\
-    BACKEND_PID=$!\n\
-    echo "Backend started with PID: $BACKEND_PID"\n\
-    \n\
-    # Wait a bit for backend to initialize\n\
-    sleep 2\n\
-    \n\
-    # Start frontend in background\n\
-    cd /app/web\n\
-    PORT=3000 node server.js &\n\
-    FRONTEND_PID=$!\n\
-    echo "Frontend started with PID: $FRONTEND_PID"\n\
-    \n\
-    # Function to handle shutdown\n\
-    cleanup() {\n\
-    echo "Received shutdown signal, stopping services..."\n\
-    kill $BACKEND_PID 2>/dev/null || true\n\
-    kill $FRONTEND_PID 2>/dev/null || true\n\
-    wait $BACKEND_PID 2>/dev/null || true\n\
-    wait $FRONTEND_PID 2>/dev/null || true\n\
-    echo "Services stopped"\n\
-    exit 0\n\
-    }\n\
-    \n\
-    # Trap signals for graceful shutdown\n\
-    trap cleanup SIGTERM SIGINT\n\
-    \n\
-    # Wait for both processes and monitor them\n\
-    while true; do\n\
-    if ! kill -0 $BACKEND_PID 2>/dev/null; then\n\
-    echo "Backend process died, exiting..."\n\
-    cleanup\n\
-    fi\n\
-    if ! kill -0 $FRONTEND_PID 2>/dev/null; then\n\
-    echo "Frontend process died, exiting..."\n\
-    cleanup\n\
-    fi\n\
-    sleep 5\n\
-    done\n' > /app/start.sh
+RUN cat <<'EOF' > /app/start.sh
+#!/bin/bash
+set -euo pipefail
+
+# Respect env overrides coming from the platform
+BACKEND_PORT="${SERVER_PORT:-${BACKEND_PORT:-8080}}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+
+export SERVER_HOST="${SERVER_HOST:-0.0.0.0}"
+export SERVER_PORT="${SERVER_PORT:-$BACKEND_PORT}"
+export PORT="${PORT:-$FRONTEND_PORT}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export NODE_ENV="${NODE_ENV:-production}"
+export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+
+echo "Starting TurboZap API (port: ${SERVER_PORT})..."
+/app/turbozap &
+BACKEND_PID=$!
+
+# Small delay for backend bootstrap
+sleep 2
+
+echo "Starting TurboZap Web (port: ${PORT})..."
+cd /app/web
+node server.js &
+FRONTEND_PID=$!
+
+cleanup() {
+  echo "Received shutdown signal, stopping services..."
+  kill $BACKEND_PID 2>/dev/null || true
+  kill $FRONTEND_PID 2>/dev/null || true
+  wait $BACKEND_PID 2>/dev/null || true
+  wait $FRONTEND_PID 2>/dev/null || true
+  echo "Services stopped"
+  exit 0
+}
+
+trap cleanup SIGTERM SIGINT
+
+while true; do
+  if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    echo "Backend process died, exiting..."
+    cleanup
+  fi
+  if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+    echo "Frontend process died, exiting..."
+    cleanup
+  fi
+  sleep 5
+done
+EOF
 
 RUN chmod +x /app/start.sh
 

@@ -1,4 +1,5 @@
 ---
+---
 description: "Especialista em DDD - Domain-Driven Design"
 globs: ["**/domain/**", "**/entity/**", "**/repository/**"]
 ---
