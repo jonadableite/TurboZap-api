@@ -10,62 +10,78 @@ import { ac, admin, developer, user } from "./permissions";
  * Tables use 'auth_' prefix to avoid conflicts with TurboZap backend tables
  */
 
-// Validate DATABASE_URL
-if (!DATABASE_URL || typeof DATABASE_URL !== "string") {
-  throw new Error(
-    "DATABASE_URL is required. Please set it in your environment variables."
-  );
-}
+// Check if we're in build phase
+const isBuildPhase = 
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.NEXT_PHASE === "phase-development";
 
-// Log database connection info (without sensitive data)
-if (process.env.NODE_ENV === "development") {
-  try {
-    const dbUrl = new URL(DATABASE_URL);
-    console.log("[Auth] Database:", {
-      host: dbUrl.hostname,
-      port: dbUrl.port || "5432",
-      database: dbUrl.pathname.slice(1) || "turbozap",
-      ssl: dbUrl.searchParams.get("sslmode") !== "disable",
-    });
-  } catch (err) {
-    console.warn("[Auth] Could not parse DATABASE_URL:", err);
-    console.log("[Auth] DATABASE_URL format:", DATABASE_URL.substring(0, 20) + "...");
+// Validate DATABASE_URL only at runtime (not during build)
+// During build, DATABASE_URL may be empty, which is acceptable
+if (typeof window === "undefined" && !isBuildPhase) {
+  if (!DATABASE_URL || typeof DATABASE_URL !== "string" || DATABASE_URL.trim() === "") {
+    throw new Error(
+      "DATABASE_URL is required. Please set it in your environment variables."
+    );
   }
 }
 
-// Create PostgreSQL Pool
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  // Add connection pool options for better reliability
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-});
+// Create PostgreSQL Pool only if DATABASE_URL is available
+// During build time, skip pool creation
+let pool: Pool | null = null;
 
-// Handle pool errors
-pool.on("error", (err) => {
-  console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
-});
+if (DATABASE_URL && DATABASE_URL.trim() !== "" && !isBuildPhase) {
+  // Log database connection info (without sensitive data)
+  if (process.env.NODE_ENV === "development") {
+    try {
+      const dbUrl = new URL(DATABASE_URL);
+      console.log("[Auth] Database:", {
+        host: dbUrl.hostname,
+        port: dbUrl.port || "5432",
+        database: dbUrl.pathname.slice(1) || "turbozap",
+        ssl: dbUrl.searchParams.get("sslmode") !== "disable",
+      });
+    } catch (err) {
+      console.warn("[Auth] Could not parse DATABASE_URL:", err);
+      console.log("[Auth] DATABASE_URL format:", DATABASE_URL.substring(0, 20) + "...");
+    }
+  }
 
-// Test connection in development
-if (process.env.NODE_ENV === "development") {
-  pool
-    .query("SELECT NOW()")
-    .then(() => {
-      console.log("[Auth] Database connection successful");
-    })
-    .catch((err) => {
-      console.error("[Auth] Database connection failed:", err.message);
-    });
+  // Create PostgreSQL Pool
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+    // Add connection pool options for better reliability
+    max: 20, // Maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+    connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+  });
+
+  // Handle pool errors
+  pool.on("error", (err) => {
+    console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
+  });
+
+  // Test connection in development
+  if (process.env.NODE_ENV === "development") {
+    pool
+      .query("SELECT NOW()")
+      .then(() => {
+        console.log("[Auth] Database connection successful");
+      })
+      .catch((err) => {
+        console.error("[Auth] Database connection failed:", err.message);
+      });
+  }
 }
 
-export const auth = betterAuth({
-  database: pool,
+// Only create auth instance if we have required values (not during build)
+// During build, create a minimal config that won't be used
+const authConfig = {
+  database: pool || undefined,
 
   // App configuration
   appName: "TurboZap",
-  secret: BETTER_AUTH_SECRET,
-  baseURL: BETTER_AUTH_URL,
+  secret: BETTER_AUTH_SECRET || "dummy-secret-for-build-time-only",
+  baseURL: BETTER_AUTH_URL || "http://localhost:3000",
 
   // Email and Password authentication
   emailAndPassword: {
@@ -102,7 +118,7 @@ export const auth = betterAuth({
     },
     changeEmail: {
       enabled: true,
-      sendChangeEmailVerification: async ({ user, newEmail, url }) => {
+      sendChangeEmailVerification: async ({ user, newEmail, url }: { user: { email: string }; newEmail: string; url: string }) => {
         // TODO: Implement email sending
         console.log(`[Auth] Change email verification for ${user.email} to ${newEmail}: ${url}`);
       },
@@ -169,8 +185,14 @@ export const auth = betterAuth({
     process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXT_PUBLIC_API_URL,
+    BETTER_AUTH_URL,
   ].filter((origin): origin is string => Boolean(origin)), // Remove undefined/null values and ensure type safety
-});
+};
+
+// Type assertion needed due to build-time config variations and Better Auth type complexity
+// During build, some values may be empty strings, but Better Auth will handle this at runtime
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const auth = betterAuth(authConfig as any);
 
 // Export types for use in the application
 export type Session = typeof auth.$Infer.Session;

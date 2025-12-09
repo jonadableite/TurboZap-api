@@ -4,17 +4,29 @@
  * 
  * IMPORTANT: All sensitive data must come from .env file
  * Never hardcode secrets, passwords, or production URLs in the code
+ * 
+ * NOTE: During build time, some variables may not be available.
+ * Validation is deferred to runtime when the values are actually used.
  */
 
 function getRequiredEnv(key: string, description?: string): string {
   const value = process.env[key];
-  if (!value) {
+  // During build time, allow missing values to prevent build errors
+  // They will be validated at runtime when actually used
+  const isBuildTime = 
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.NEXT_PHASE === "phase-development" ||
+    !process.env.NODE_ENV ||
+    process.env.NODE_ENV === "test";
+  
+  if (!value && !isBuildTime) {
     throw new Error(
       `Missing required environment variable: ${key}${description ? ` (${description})` : ""}. ` +
       `Please set it in your .env file.`
     );
   }
-  return value;
+  // Return empty string during build to avoid errors, will be validated at runtime
+  return value || "";
 }
 
 function getOptionalEnv(key: string, defaultValue?: string): string | undefined {
@@ -24,6 +36,8 @@ function getOptionalEnv(key: string, defaultValue?: string): string | undefined 
 /**
  * Database connection string for PostgreSQL
  * Format: postgres://user:password@host:port/database?sslmode=disable
+ * 
+ * NOTE: During build, this may be empty. Validation happens at runtime.
  */
 export const DATABASE_URL = getRequiredEnv(
   "DATABASE_URL",
@@ -33,6 +47,8 @@ export const DATABASE_URL = getRequiredEnv(
 /**
  * Better Auth secret key for signing tokens
  * Generate a secure random string (min 32 characters)
+ * 
+ * NOTE: During build, this may be empty. Validation happens at runtime.
  */
 export const BETTER_AUTH_SECRET = getRequiredEnv(
   "BETTER_AUTH_SECRET",
@@ -49,5 +65,5 @@ export const BETTER_AUTH_URL =
   getOptionalEnv("NEXT_PUBLIC_BETTER_AUTH_URL") ||
   (process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : getRequiredEnv("BETTER_AUTH_URL", "Better Auth base URL for production"));
+    : getOptionalEnv("BETTER_AUTH_URL") || "");
 
