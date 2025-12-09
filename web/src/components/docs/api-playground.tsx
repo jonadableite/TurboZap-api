@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Play, Copy, Loader2, Terminal } from "lucide-react";
-import { cn } from "@/lib/utils";
-import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
 import { Badge, Button, Input } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
+import { cn } from "@/lib/utils";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
+import { Copy, Loader2, Play, Terminal } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Param {
   name: string;
@@ -113,25 +113,27 @@ export function ApiPlayground({
   }, [pathParams, bodyParams, queryParams]);
 
   const handleParamChange = (name: string, value: string) => {
-    setParams(prev => ({ ...prev, [name]: value }));
+    setParams((prev) => ({ ...prev, [name]: value }));
   };
 
   const getBaseUrl = () => {
-    return storedApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    return (
+      storedApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+    );
   };
 
   const getFullUrl = () => {
     let url = endpoint;
     // Replace path params
-    pathParams.forEach(p => {
+    pathParams.forEach((p) => {
       const value = params[p.name] || `:${p.name}`;
       url = url.replace(`:${p.name}`, value);
     });
 
     // Add query params
     const queryParts = queryParams
-      .filter(p => params[p.name])
-      .map(p => `${p.name}=${encodeURIComponent(params[p.name])}`);
+      .filter((p) => params[p.name])
+      .map((p) => `${p.name}=${encodeURIComponent(params[p.name])}`);
 
     if (queryParts.length > 0) {
       url += `?${queryParts.join("&")}`;
@@ -168,7 +170,11 @@ export function ApiPlayground({
         return `const options = {
   method: '${method}',
   headers: ${JSON.stringify(headers, null, 2)},
-  ${Object.keys(body).length > 0 ? `body: JSON.stringify(${JSON.stringify(body, null, 2)})` : ''}
+  ${
+    Object.keys(body).length > 0
+      ? `body: JSON.stringify(${JSON.stringify(body, null, 2)})`
+      : ""
+  }
 };
 
 fetch('${url}', options)
@@ -181,9 +187,15 @@ fetch('${url}', options)
 
 url = "${url}"
 headers = ${JSON.stringify(headers, null, 2)}
-${Object.keys(body).length > 0 ? `payload = ${JSON.stringify(body, null, 2)}` : ''}
+${
+  Object.keys(body).length > 0
+    ? `payload = ${JSON.stringify(body, null, 2)}`
+    : ""
+}
 
-response = requests.request("${method}", url, headers=headers${Object.keys(body).length > 0 ? ', json=payload' : ''})
+response = requests.request("${method}", url, headers=headers${
+          Object.keys(body).length > 0 ? ", json=payload" : ""
+        })
 
 print(response.text)`;
 
@@ -194,14 +206,20 @@ import (
 	"fmt"
 	"net/http"
 	"io/ioutil"
-    ${Object.keys(body).length > 0 ? "\"strings\"" : ""}
+    ${Object.keys(body).length > 0 ? '"strings"' : ""}
 )
 
 func main() {
 	url := "${url}"
-	req, _ := http.NewRequest("${method}", url, ${Object.keys(body).length > 0 ? `strings.NewReader(\`${JSON.stringify(body)}\`)` : 'nil'})
+	req, _ := http.NewRequest("${method}", url, ${
+          Object.keys(body).length > 0
+            ? `strings.NewReader(\`${JSON.stringify(body)}\`)`
+            : "nil"
+        })
 
-	${Object.entries(headers).map(([k, v]) => `req.Header.Add("${k}", "${v}")`).join('\n\t')}
+	${Object.entries(headers)
+    .map(([k, v]) => `req.Header.Add("${k}", "${v}")`)
+    .join("\n\t")}
 
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
@@ -245,7 +263,7 @@ func main() {
         statusText: res.statusText,
         data: res.data,
         headers: res.headers as Record<string, string>,
-        time: "120ms" // Mock time for now or calculate real duration
+        time: "120ms", // Mock time for now or calculate real duration
       });
     } catch (error: unknown) {
       const isAxiosError = axios.isAxiosError(error);
@@ -267,10 +285,17 @@ func main() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
         <div className="flex items-center gap-3 font-mono">
-          <Badge className={cn("text-xs font-bold px-2 py-0.5 border", methodColors[method])}>
+          <Badge
+            className={cn(
+              "text-xs font-bold px-2 py-0.5 border",
+              methodColors[method]
+            )}
+          >
             {method}
           </Badge>
-          <span className="text-sm font-medium text-foreground/80">{endpoint}</span>
+          <span className="text-sm font-medium text-foreground/80">
+            {endpoint}
+          </span>
         </div>
         <Button
           variant="default" // Changed from outline to default for primary action
@@ -305,12 +330,13 @@ func main() {
             <div className="p-6 grid lg:grid-cols-2 gap-8 bg-card">
               {/* Left Column: Config */}
               <div className="space-y-6">
-
                 {/* Auth */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                     Authorization
-                    <Badge variant="outline" className="text-[10px] py-0 h-4">Header</Badge>
+                    <Badge variant="default" className="text-[10px] py-0 h-4">
+                      Header
+                    </Badge>
                   </h4>
                   <Input
                     placeholder="Enter your X-API-Key"
@@ -323,18 +349,30 @@ func main() {
                 {/* Path Params */}
                 {pathParams.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Path Parameters</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Path Parameters
+                    </h4>
                     <div className="space-y-3">
-                      {pathParams.map(param => (
+                      {pathParams.map((param) => (
                         <div key={param.name} className="grid gap-1">
                           <div className="flex justify-between">
-                            <label className="text-sm font-medium font-mono text-foreground/80">{param.name}</label>
-                            {param.required && <span className="text-[10px] text-red-400 font-mono">required</span>}
+                            <label className="text-sm font-medium font-mono text-foreground/80">
+                              {param.name}
+                            </label>
+                            {param.required && (
+                              <span className="text-[10px] text-red-400 font-mono">
+                                required
+                              </span>
+                            )}
                           </div>
                           <Input
-                            placeholder={param.description || `Value for ${param.name}`}
+                            placeholder={
+                              param.description || `Value for ${param.name}`
+                            }
                             value={params[param.name] || ""}
-                            onChange={(e) => handleParamChange(param.name, e.target.value)}
+                            onChange={(e) =>
+                              handleParamChange(param.name, e.target.value)
+                            }
                             className="bg-background font-mono text-sm"
                           />
                         </div>
@@ -346,18 +384,30 @@ func main() {
                 {/* Body Params */}
                 {bodyParams.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Body Parameters</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Body Parameters
+                    </h4>
                     <div className="space-y-3">
-                      {bodyParams.map(param => (
+                      {bodyParams.map((param) => (
                         <div key={param.name} className="grid gap-1">
                           <div className="flex justify-between">
-                            <label className="text-sm font-medium font-mono text-foreground/80">{param.name}</label>
-                            {param.required && <span className="text-[10px] text-red-400 font-mono">required</span>}
+                            <label className="text-sm font-medium font-mono text-foreground/80">
+                              {param.name}
+                            </label>
+                            {param.required && (
+                              <span className="text-[10px] text-red-400 font-mono">
+                                required
+                              </span>
+                            )}
                           </div>
                           <Input
-                            placeholder={param.description || `Value for ${param.name}`}
+                            placeholder={
+                              param.description || `Value for ${param.name}`
+                            }
                             value={params[param.name] || ""}
-                            onChange={(e) => handleParamChange(param.name, e.target.value)}
+                            onChange={(e) =>
+                              handleParamChange(param.name, e.target.value)
+                            }
                             className="bg-background font-mono text-sm"
                           />
                         </div>
@@ -371,7 +421,11 @@ func main() {
                   disabled={isLoading}
                   className="w-full gap-2 mt-4"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
                   Send Request
                 </Button>
               </div>
@@ -407,26 +461,59 @@ func main() {
                 <div className="flex-1 p-4 overflow-auto font-mono text-xs">
                   {activeTab === "response" ? (
                     response ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                          <div className="flex items-center gap-3">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "font-bold",
-                                response.status >= 200 && response.status < 300 ? "text-green-400 border-green-500/50" : "text-red-400 border-red-500/50"
+                      (() => {
+                        const isError = "error" in response;
+                        const isSuccess = !isError && "status" in response;
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                              <div className="flex items-center gap-3">
+                                {isError ? (
+                                  <Badge
+                                    variant="default"
+                                    className="font-bold text-red-400 border-red-500/50"
+                                  >
+                                    Error
+                                  </Badge>
+                                ) : isSuccess ? (
+                                  <Badge
+                                    variant="default"
+                                    className={cn(
+                                      "font-bold",
+                                      response.status >= 200 &&
+                                        response.status < 300
+                                        ? "text-green-400 border-green-500/50"
+                                        : "text-red-400 border-red-500/50"
+                                    )}
+                                  >
+                                    {response.status} {response.statusText}
+                                  </Badge>
+                                ) : null}
+                                {isSuccess && response.time && (
+                                  <span className="text-gray-500">
+                                    {response.time}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-gray-500">
+                                {new Date().toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <pre className="text-green-400 whitespace-pre-wrap">
+                              {JSON.stringify(
+                                isError
+                                  ? response.data || { error: response.error }
+                                  : isSuccess
+                                  ? response.data
+                                  : null,
+                                null,
+                                2
                               )}
-                            >
-                              {response.status} {response.statusText}
-                            </Badge>
-                            <span className="text-gray-500">{response.time}</span>
+                            </pre>
                           </div>
-                          <span className="text-gray-500">{new Date().toLocaleTimeString()}</span>
-                        </div>
-                        <pre className="text-green-400 whitespace-pre-wrap">
-                          {JSON.stringify(response.data, null, 2)}
-                        </pre>
-                      </div>
+                        );
+                      })()
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-2 opacity-50">
                         <Terminal className="w-8 h-8" />
@@ -435,13 +522,18 @@ func main() {
                     )
                   ) : (
                     <div className="h-full flex flex-col">
-                      <LanguageSelector selected={selectedLang} onSelect={setSelectedLang} />
+                      <LanguageSelector
+                        selected={selectedLang}
+                        onSelect={setSelectedLang}
+                      />
                       <div className="relative flex-1 group">
                         <pre className="text-blue-300 h-full overflow-auto pt-2">
                           {generateCode()}
                         </pre>
                         <button
-                          onClick={() => navigator.clipboard.writeText(generateCode())}
+                          onClick={() =>
+                            navigator.clipboard.writeText(generateCode())
+                          }
                           className="absolute top-2 right-2 p-2 rounded bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20"
                           title="Copy code"
                         >

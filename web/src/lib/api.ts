@@ -4,6 +4,7 @@ import type {
   CreateInstanceResponse,
   Instance,
   InstanceListResponse,
+  InstanceStatus,
   InstanceStatusResponse,
   QRCodeResponse,
 } from "@/types";
@@ -87,6 +88,15 @@ const getString = (value: unknown): string | undefined =>
 
 const normalizeInstance = (raw: unknown): Instance => {
   const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const statusRaw = getString(data.status) || getString(data.connection_status);
+  const status: InstanceStatus =
+    statusRaw === "connected" ||
+    statusRaw === "connecting" ||
+    statusRaw === "qr_code" ||
+    statusRaw === "disconnected"
+      ? statusRaw
+      : "disconnected";
+
   return {
     id: getString(data.id) || "",
     name: getString(data.name) || "",
@@ -95,7 +105,7 @@ const normalizeInstance = (raw: unknown): Instance => {
       getString(data.phone_number) ||
       getString(data.msisdn) ||
       undefined,
-    status: getString(data.status) || getString(data.connection_status) || "unknown",
+    status,
     profileName:
       getString(data.profileName) ||
       getString(data.profile_name) ||
@@ -141,7 +151,7 @@ export const instanceApi = {
     data: CreateInstanceRequest
   ): Promise<CreateInstanceResponse> => {
     // Ensure latest API key/URL are applied even if interceptor hasn't run yet
-    const overrideHeaders: AxiosRequestHeaders = {};
+    const overrideHeaders: Record<string, string> = {};
     const storedKey = getFromStorage(API_KEY_STORAGE);
     if (storedKey) {
       overrideHeaders["X-API-Key"] = storedKey;

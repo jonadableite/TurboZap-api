@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import db from "@/lib/db";
 
@@ -14,9 +14,11 @@ async function getKey(id: string) {
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {
     return NextResponse.json(
@@ -25,7 +27,7 @@ export async function PUT(
     );
   }
 
-  const current = await getKey(params.id);
+  const current = await getKey(id);
   if (!current) {
     return NextResponse.json(
       { success: false, error: { message: "API key not found" } },
@@ -49,7 +51,7 @@ export async function PUT(
      SET name = $1,
          expires_at = $2
      WHERE id = $3`,
-    [name, expiresAt, params.id]
+    [name, expiresAt, id]
   );
 
   return NextResponse.json({
@@ -59,9 +61,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {
     return NextResponse.json(
@@ -70,7 +74,7 @@ export async function DELETE(
     );
   }
 
-  const current = await getKey(params.id);
+  const current = await getKey(id);
   if (!current) {
     return NextResponse.json(
       { success: false, error: { message: "API key not found" } },
@@ -85,11 +89,11 @@ export async function DELETE(
     );
   }
 
-  await db.query(`DELETE FROM api_keys WHERE id = $1`, [params.id]);
+  await db.query(`DELETE FROM api_keys WHERE id = $1`, [id]);
 
   return NextResponse.json({
     success: true,
-    data: { id: params.id },
+    data: { id },
   });
 }
 

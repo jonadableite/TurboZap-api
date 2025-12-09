@@ -1,36 +1,43 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Smartphone,
-  QrCode,
-  MoreVertical,
-  RefreshCw,
+  Badge,
+  Button,
+  Card,
+  LottieIcon,
+  Modal,
+  ModalFooter,
+} from "@/components/ui";
+import FancyButton from "@/components/ui/FancyButton";
+import {
+  useConnectInstance,
+  useDeleteInstance,
+  useLogoutInstance,
+  useRestartInstance,
+} from "@/hooks/useInstances";
+import { cn, formatDate, formatPhone } from "@/lib/utils";
+import type { Instance } from "@/types";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Check,
+  Copy,
   LogOut,
+  MoreVertical,
+  QrCode,
+  RefreshCw,
+  Settings,
+  Smartphone,
   Trash2,
   Wifi,
-  Copy,
-  Check,
-  Settings,
-} from 'lucide-react';
-import Image from 'next/image';
-import { cn, formatPhone, formatDate } from '@/lib/utils';
-import { Card, Badge, Button, Modal, ModalFooter, LottieIcon } from '@/components/ui';
-import FancyButton from '@/components/ui/FancyButton';
-import { QRCodeDisplay } from './QRCodeDisplay';
-import {
-  useRestartInstance,
-  useLogoutInstance,
-  useDeleteInstance,
-  useConnectInstance,
-} from '@/hooks/useInstances';
-import type { Instance } from '@/types';
-import { useRouter } from 'next/navigation';
-import settingsAnimation from '../../../public/definicoes.json';
-import restartAnimation from '../../../public/girar.json';
-import disconnectAnimation from '../../../public/desconectar.json';
-import deleteAnimation from '../../../public/excluir.json';
+} from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import settingsAnimation from "../../../public/definicoes.json";
+import disconnectAnimation from "../../../public/desconectar.json";
+import deleteAnimation from "../../../public/excluir.json";
+import restartAnimation from "../../../public/girar.json";
+import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface InstanceCardProps {
   instance: Instance;
@@ -49,7 +56,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
   const logoutMutation = useLogoutInstance();
   const deleteMutation = useDeleteInstance();
 
-  const isConnected = instance.status === 'connected';
+  const isConnected = instance.status === "connected";
   const isLoading =
     connectMutation.isPending ||
     restartMutation.isPending ||
@@ -61,7 +68,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
     try {
       await connectMutation.mutateAsync(instance.name);
     } catch (error) {
-      console.error('Failed to connect instance', error);
+      console.error("Failed to connect instance", error);
     }
   };
 
@@ -88,13 +95,21 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
 
   const getStatusBadge = () => {
     switch (instance.status) {
-      case 'connected':
-        return <Badge variant="success" pulse>Conectado</Badge>;
-      case 'disconnected':
+      case "connected":
+        return (
+          <Badge variant="success" pulse>
+            Conectado
+          </Badge>
+        );
+      case "disconnected":
         return <Badge variant="danger">Desconectado</Badge>;
-      case 'connecting':
-        return <Badge variant="warning" pulse>Conectando</Badge>;
-      case 'qr_code':
+      case "connecting":
+        return (
+          <Badge variant="warning" pulse>
+            Conectando
+          </Badge>
+        );
+      case "qr_code":
         return <Badge variant="info">Aguardando QR</Badge>;
       default:
         return <Badge>Desconhecido</Badge>;
@@ -103,44 +118,44 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
 
   const menuItems = [
     {
-      key: 'settings',
-      label: 'Configurações',
+      key: "settings",
+      label: "Configurações",
       icon: settingsAnimation,
-      tone: 'default' as const,
-      hint: 'Preferências e webhooks',
+      tone: "default" as const,
+      hint: "Preferências e webhooks",
       action: () => {
         setShowMenu(false);
         router.push(`/instances/${instance.name}/settings`);
       },
     },
     {
-      key: 'restart',
-      label: 'Reiniciar',
+      key: "restart",
+      label: "Reiniciar",
       icon: restartAnimation,
-      tone: 'primary' as const,
-      hint: 'Reinicia a sessão',
+      tone: "primary" as const,
+      hint: "Reinicia a sessão",
       disabled: isLoading,
       action: handleRestart,
     },
     ...(isConnected
       ? [
           {
-            key: 'disconnect',
-            label: 'Desconectar',
+            key: "disconnect",
+            label: "Desconectar",
             icon: disconnectAnimation,
-            tone: 'primary' as const,
-            hint: 'Finaliza a sessão atual',
+            tone: "primary" as const,
+            hint: "Finaliza a sessão atual",
             disabled: isLoading,
             action: handleLogout,
           },
         ]
       : []),
     {
-      key: 'delete',
-      label: 'Excluir',
+      key: "delete",
+      label: "Excluir",
       icon: deleteAnimation,
-      tone: 'danger' as const,
-      hint: 'Remove a instância',
+      tone: "danger" as const,
+      hint: "Remove a instância",
       action: () => {
         setShowMenu(false);
         setShowDeleteModal(true);
@@ -154,8 +169,10 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
         {/* Status indicator line */}
         <div
           className={cn(
-            'absolute top-0 left-0 right-0 h-1 transition-all duration-300',
-            isConnected ? 'bg-[var(--rocket-green)]' : 'bg-[var(--rocket-gray-600)]'
+            "absolute top-0 left-0 right-0 h-1 transition-all duration-300",
+            isConnected
+              ? "bg-[var(--rocket-green)]"
+              : "bg-[var(--rocket-gray-600)]"
           )}
         />
 
@@ -165,9 +182,9 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
             {/* Avatar */}
             <div
               className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center',
-                'bg-gradient-to-br from-[var(--rocket-purple)]/20 to-[var(--rocket-purple)]/5',
-                'border border-[var(--rocket-purple)]/30'
+                "w-12 h-12 rounded-xl flex items-center justify-center",
+                "bg-gradient-to-br from-[var(--rocket-purple)]/20 to-[var(--rocket-purple)]/5",
+                "border border-[var(--rocket-purple)]/30"
               )}
             >
               {instance.profilePicture ? (
@@ -202,11 +219,12 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                 </button>
               </div>
 
-              {instance.profileName && instance.profileName !== instance.name && (
-                <p className="text-sm font-medium text-[var(--rocket-gray-300)]">
-                  {instance.profileName}
-                </p>
-              )}
+              {instance.profileName &&
+                instance.profileName !== instance.name && (
+                  <p className="text-sm font-medium text-[var(--rocket-gray-300)]">
+                    {instance.profileName}
+                  </p>
+                )}
 
               {instance.phone && (
                 <p className="text-xs text-[var(--rocket-gray-400)] mt-0.5">
@@ -239,7 +257,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                     initial={{ opacity: 0, y: -8, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                     className="absolute right-0 top-full mt-2 z-30 w-56 overflow-hidden rounded-2xl border border-white/14 bg-[var(--rocket-gray-900)]/85 backdrop-blur-xl backdrop-saturate-150 shadow-[0_24px_60px_rgba(0,0,0,0.5)] ring-1 ring-[var(--rocket-purple)]/18"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-[var(--rocket-purple)]/18 via-transparent to-[var(--rocket-blue,#38bdf8)]/14 pointer-events-none" />
@@ -253,14 +271,16 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                             onClick={item.action}
                             disabled={item.disabled}
                             className={cn(
-                              'w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all',
-                              'hover:bg-white/12 active:scale-[0.99]',
-                              item.tone === 'danger'
-                                ? 'text-[var(--rocket-danger)]'
-                                : item.tone === 'warning'
-                                  ? 'text-[var(--rocket-warning)]'
-                                  : 'text-[var(--rocket-purple-light)]',
-                              item.disabled ? 'opacity-80 cursor-not-allowed' : ''
+                              "w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all",
+                              "hover:bg-white/12 active:scale-[0.99]",
+                              item.tone === "danger"
+                                ? "text-[var(--rocket-danger)]"
+                                : item.tone === "primary"
+                                ? "text-[var(--rocket-purple-light)]"
+                                : "text-[var(--rocket-purple-light)]",
+                              item.disabled
+                                ? "opacity-80 cursor-not-allowed"
+                                : ""
                             )}
                           >
                             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-purple)]/16 border border-[var(--rocket-purple)]/28 shadow-[0_12px_36px_rgba(130,87,229,0.28)]">
@@ -276,16 +296,18 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                                 {item.hint}
                               </div>
                             </div>
-                            {item.key === 'restart' && (
+                            {item.key === "restart" && (
                               <RefreshCw className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
                             )}
-                            {item.key === 'settings' && (
+                            {item.key === "settings" && (
                               <Settings className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
                             )}
-                            {item.key === 'disconnect' && (
+                            {item.key === "disconnect" && (
                               <LogOut className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
                             )}
-                            {item.tone === 'danger' && <Trash2 className="w-4 h-4 opacity-70" />}
+                            {item.tone === "danger" && (
+                              <Trash2 className="w-4 h-4 opacity-70" />
+                            )}
                           </button>
                         </div>
                       ))}
@@ -298,9 +320,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
         </div>
 
         {/* Status badge */}
-        <div className="mt-4 flex items-center gap-2">
-          {getStatusBadge()}
-        </div>
+        <div className="mt-4 flex items-center gap-2">{getStatusBadge()}</div>
 
         {/* Footer */}
         <div className="mt-4 pt-4 border-t border-[var(--rocket-gray-600)] flex items-center justify-between">
@@ -311,7 +331,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
           {!isConnected && (
             <FancyButton onClick={handleConnect}>
               <QrCode className="icon w-4 h-4 mr-2" />
-              {connectMutation.isPending ? 'Conectando...' : 'Conectar'}
+              {connectMutation.isPending ? "Conectando..." : "Conectar"}
             </FancyButton>
           )}
 
@@ -349,8 +369,11 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
         size="sm"
       >
         <p className="text-[var(--rocket-gray-300)]">
-          Tem certeza que deseja excluir a instância{' '}
-          <span className="font-semibold text-[var(--rocket-gray-50)]">{instance.name}</span>?
+          Tem certeza que deseja excluir a instância{" "}
+          <span className="font-semibold text-[var(--rocket-gray-50)]">
+            {instance.name}
+          </span>
+          ?
         </p>
         <p className="text-sm text-[var(--rocket-gray-400)] mt-2">
           Esta ação não pode ser desfeita.

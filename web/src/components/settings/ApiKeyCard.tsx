@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Copy, Eye, EyeOff, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { ApiKey } from "@/hooks/useApiKeys";
 import { cn } from "@/lib/utils";
+import { Copy, Eye, EyeOff, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
   apiKey: ApiKey;
@@ -21,8 +21,8 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
   const status = apiKey.revoked_at
     ? { label: "Revogada", tone: "danger" }
     : apiKey.expires_at && new Date(apiKey.expires_at) < new Date()
-      ? { label: "Expirada", tone: "warning" }
-      : { label: "Ativa", tone: "success" };
+    ? { label: "Expirada", tone: "warning" }
+    : { label: "Ativa", tone: "success" };
 
   return (
     <div className="rounded-xl border border-white/10 bg-[var(--rocket-gray-900)]/70 backdrop-blur-sm p-4 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
@@ -36,10 +36,18 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
         </div>
 
         <Badge
-          variant={status.tone === "danger" ? "destructive" : "secondary"}
+          variant={
+            status.tone === "danger"
+              ? "danger"
+              : status.tone === "warning"
+              ? "warning"
+              : "success"
+          }
           className={cn(
-            status.tone === "warning" && "bg-[var(--rocket-warning)]/20 text-[var(--rocket-warning)]",
-            status.tone === "success" && "bg-[var(--rocket-green)]/20 text-[var(--rocket-green)]"
+            status.tone === "warning" &&
+              "bg-[var(--rocket-warning)]/20 text-[var(--rocket-warning)]",
+            status.tone === "success" &&
+              "bg-[var(--rocket-green)]/20 text-[var(--rocket-green)]"
           )}
         >
           {status.label}
@@ -56,7 +64,11 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
           onClick={() => setShowKey(!showKey)}
           className="p-2"
         >
-          {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {showKey ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
         </Button>
         <Button
           variant="ghost"
@@ -73,7 +85,9 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
           <span>Expira em {new Date(apiKey.expires_at).toLocaleString()}</span>
         )}
         {apiKey.last_used_at && (
-          <span>Último uso {new Date(apiKey.last_used_at).toLocaleString()}</span>
+          <span>
+            Último uso {new Date(apiKey.last_used_at).toLocaleString()}
+          </span>
         )}
       </div>
 
@@ -91,4 +105,3 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
     </div>
   );
 }
-

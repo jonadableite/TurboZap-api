@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { ApiPlayground } from "./api-playground";
 import { CodeBlock } from "./terminal";
-import { cn } from "@/lib/utils";
 
 interface Param {
   name: string;
@@ -82,7 +82,9 @@ export function ApiDocLayout({
         </div>
 
         {/* Parameters */}
-        {(pathParams.length > 0 || queryParams.length > 0 || bodyParams.length > 0) && (
+        {(pathParams.length > 0 ||
+          queryParams.length > 0 ||
+          bodyParams.length > 0) && (
           <div className="space-y-6">
             {pathParams.length > 0 && (
               <div>
@@ -236,7 +238,9 @@ export function ApiDocLayout({
                               className="border-b border-border"
                             >
                               <td className="py-2 px-3">
-                                <code className="text-primary">{field.name}</code>
+                                <code className="text-primary">
+                                  {field.name}
+                                </code>
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">
                                 {field.type}
@@ -250,13 +254,14 @@ export function ApiDocLayout({
                       </table>
                     </div>
                   )}
-                  {response.example && (
-                    <CodeBlock
-                      title={`${response.status} - application/json`}
-                      language="json"
-                      code={JSON.stringify(response.example, null, 2)}
-                    />
-                  )}
+                  {response.example !== undefined &&
+                    response.example !== null && (
+                      <CodeBlock
+                        title={`${response.status} - application/json`}
+                        language="json"
+                        code={JSON.stringify(response.example, null, 2)}
+                      />
+                    )}
                 </div>
               ))}
             </div>
@@ -279,7 +284,7 @@ export function ApiDocLayout({
       {/* Right Column - Code Examples */}
       <div className="lg:col-span-1 space-y-6">
         <div className="sticky top-20">
-          {exampleResponse && (
+          {exampleResponse !== undefined && exampleResponse !== null && (
             <div>
               <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">
                 Example Response
@@ -296,4 +301,3 @@ export function ApiDocLayout({
     </div>
   );
 }
-
