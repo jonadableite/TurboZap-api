@@ -53,6 +53,16 @@ api.interceptors.request.use((config) => {
     const headers = (config.headers || {}) as AxiosRequestHeaders;
     headers["X-API-Key"] = apiKey;
     config.headers = headers;
+  } else {
+    // Log warning in development if API key is missing for non-public endpoints
+    // Some endpoints might be public (like health check), so we don't block the request
+    if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
+      console.warn(
+        "[API] No API key found in localStorage. " +
+        "Some endpoints may require authentication. " +
+        "Configure your API key in Settings or Header."
+      );
+    }
   }
 
   return config;
@@ -87,7 +97,16 @@ api.interceptors.response.use(
         error.response?.data?.error?.message ||
         error.message ||
         "Erro desconhecido";
-      console.error("[API] Request error:", message);
+      
+      // Provide helpful message for missing API key
+      if (message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) {
+        console.error(
+          "[API] Request error: API key is required. " +
+          "Please configure your API key in Settings or Header."
+        );
+      } else {
+        console.error("[API] Request error:", message);
+      }
     }
     
     return Promise.reject(error);
