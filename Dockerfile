@@ -4,13 +4,19 @@
 FROM golang:1.24-alpine AS backend-builder
 
 RUN apk add --no-cache git gcc musl-dev
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o wavezap ./cmd/api
+
+# Build backend API
+RUN CGO_ENABLED=0 GOOS=linux go build -o turbozap ./cmd/api
+
+# Build create_db helper
+RUN CGO_ENABLED=0 GOOS=linux go build -o create_db ./scripts/create_db.go
 
 # ============================================
 # Stage 2: Build Frontend (Next.js)
@@ -18,6 +24,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o wavezap ./cmd/api
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/web
+
 COPY web/package*.json ./
 RUN npm ci
 
@@ -36,98 +43,78 @@ RUN apk --no-cache add \
     npm \
     curl \
     bash \
-    postgresql-client   # necessário para criar banco
+    postgresql-client
 
 RUN adduser -D -g '' appuser
+
 WORKDIR /app
 
-# Copy backend binary
-COPY --from=backend-builder /app/wavezap /app/wavezap
+# Copy backend binaries
+COPY --from=backend-builder /app/turbozap /app/turbozap
+COPY --from=backend-builder /app/create_db /app/create_db
 
 # Copy frontend standalone build
 COPY --from=frontend-builder /app/web/.next/standalone /app/web/
 COPY --from=frontend-builder /app/web/.next/static /app/web/.next/static
 COPY --from=frontend-builder /app/web/public /app/web/public
 
-# Create startup script
+# ============================================
+# Startup Script (Banco + Backend + Frontend)
+# ============================================
 RUN printf '#!/bin/bash\n\
 set -e\n\
-echo "Starting WaveZap..."\n\
 \n\
-# ================================\n\
-# 1) CHECK / CREATE DATABASE\n\
-# ================================\n\
-echo "Checking PostgreSQL connection..."\n\
-until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do\n\
-  echo "Waiting for PostgreSQL..."\n\
-  sleep 2\n\
-done\n\
+echo \"🚀 Starting TurboZap...\"\n\
 \n\
-echo "Checking if database exists: $DB_NAME"\n\
-DB_EXISTS=$(psql -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -tAc "SELECT 1 FROM pg_database WHERE datname='\''$DB_NAME'\''")\n\
-if [ "$DB_EXISTS" != "1" ]; then\n\
-  echo "Database $DB_NAME does not exist. Creating..."\n\
-  psql -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -c "CREATE DATABASE $DB_NAME"\n\
-else\n\
-  echo "Database $DB_NAME already exists. Skipping creation."\n\
+# =======================\n\
+# Create database\n\
+# =======================\n\
+if [ -z \"$DATABASE_URL\" ]; then\n\
+  echo \"❌ ERROR: DATABASE_URL not set\"\n\
+  exit 1\n\
 fi\n\
 \n\
-# ================================\n\
-# 2) START BACKEND\n\
-# ================================\n\
-echo "Starting WaveZap API..."\n\
-/app/wavezap &\n\
+echo \"🏦 Checking database...\"\n\
+/app/create_db || true\n\
+\n\
+# =======================\n\
+# Start Backend\n\
+# =======================\n\
+echo \"🚀 Starting Backend API...\"\n\
+/app/turbozap &\n\
 BACKEND_PID=$!\n\
-echo "Backend started with PID: $BACKEND_PID"\n\
 \n\
 sleep 2\n\
 \n\
-# ================================\n\
-# 3) START FRONTEND\n\
-# ================================\n\
+# =======================\n\
+# Start Frontend\n\
+# =======================\n\
+echo \"🌐 Starting Frontend...\"\n\
 cd /app/web\n\
 PORT=3000 node server.js &\n\
 FRONTEND_PID=$!\n\
-echo "Frontend started with PID: $FRONTEND_PID"\n\
 \n\
-# ================================\n\
-# 4) CLEANUP HANDLER\n\
-# ================================\n\
 cleanup() {\n\
-  echo "Shutdown signal received. Stopping services..."\n\
+  echo \"🛑 Shutting down...\"\n\
   kill $BACKEND_PID 2>/dev/null || true\n\
   kill $FRONTEND_PID 2>/dev/null || true\n\
-  wait $BACKEND_PID 2>/dev/null || true\n\
-  wait $FRONTEND_PID 2>/dev/null || true\n\
-  echo "WaveZap stopped."\n\
   exit 0\n\
 }\n\
-\n\
 trap cleanup SIGTERM SIGINT\n\
 \n\
-# ================================\n\
-# 5) PROCESS MONITOR\n\
-# ================================\n\
 while true; do\n\
-  if ! kill -0 $BACKEND_PID 2>/dev/null; then\n\
-    echo "Backend died. Exiting..."\n\
-    cleanup\n\
-  fi\n\
-  if ! kill -0 $FRONTEND_PID 2>/dev/null; then\n\
-    echo "Frontend died. Exiting..."\n\
-    cleanup\n\
-  fi\n\
   sleep 5\n\
-done\n\
-' > /app/start.sh
+done\n' > /app/start.sh
 
 RUN chmod +x /app/start.sh
 RUN chown -R appuser:appuser /app
+
 USER appuser
 
 EXPOSE 8080 3000
 
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/health && curl -f http://localhost:3000 || exit 1
+  CMD curl -f http://localhost:8080/health && curl -f http://localhost:3000 || exit 1
 
 CMD ["/app/start.sh"]
