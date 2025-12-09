@@ -63,7 +63,15 @@ export default function SignInPage() {
         callbackURL: "/", // garante redirecionamento no backend
       });
 
+      // Log para debug (remover em produção se necessário)
+      if (process.env.NODE_ENV === "development") {
+        console.log("[SignIn] Response:", { data, error });
+      }
+
       if (error) {
+        // Log do erro completo para debug
+        console.error("[SignIn] Error:", error);
+
         if (error.message?.toLowerCase().includes("too many")) {
           setErrors({
             general: "Muitas tentativas. Aguarde um minuto e tente novamente.",
@@ -73,7 +81,9 @@ export default function SignInPage() {
         // Handle specific error messages
         if (
           error.message?.includes("Invalid") ||
-          error.message?.includes("credentials")
+          error.message?.includes("credentials") ||
+          error.message?.includes("incorrect") ||
+          error.message?.includes("not found")
         ) {
           setErrors({ general: "E-mail ou senha incorretos" });
         } else if (error.message?.includes("banned")) {
@@ -81,7 +91,9 @@ export default function SignInPage() {
             general: "Sua conta foi suspensa. Entre em contato com o suporte.",
           });
         } else {
-          setErrors({ general: error.message || "Erro ao fazer login" });
+          // Mostra a mensagem real do erro para ajudar no debug
+          const errorMsg = error.message || error.code || "Erro ao fazer login";
+          setErrors({ general: errorMsg });
         }
         return;
       }
@@ -94,12 +106,19 @@ export default function SignInPage() {
       }
 
       // Se chegar aqui, nem data nem error foram retornados — trate como falha genérica
+      console.warn("[SignIn] No data or error returned");
       setErrors({
         general:
           "Não foi possível efetuar login agora. Tente novamente em instantes.",
       });
     } catch (err) {
-      setErrors({ general: "Erro inesperado. Tente novamente." });
+      // Log do erro completo para debug
+      console.error("[SignIn] Exception:", err);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Erro inesperado. Tente novamente.";
+      setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
     }
