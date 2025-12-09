@@ -9,8 +9,7 @@ import type {
   ApiResponse,
 } from "@/types";
 
-const DEFAULT_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const DEFAULT_API_URL =  process.env.NEXT_PUBLIC_API_URL  ||  "http://localhost:8080";
 const API_KEY_STORAGE = "turbozap_api_key";
 const API_URL_STORAGE = "turbozap_api_url";
 

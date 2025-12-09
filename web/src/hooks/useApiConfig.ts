@@ -23,7 +23,7 @@ export function useApiConfig() {
       const storedKey = localStorage.getItem(STORAGE_KEY);
       const storedUrl =
         localStorage.getItem(STORAGE_URL_KEY) ||
-        process.env.NEXT_PUBLIC_API_URL ||
+         process.env.NEXT_PUBLIC_API_URL ||
         'http://localhost:8080';
       setApiKey(storedKey);
       setApiUrl(storedUrl);
