@@ -7,10 +7,10 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/infrastructure/whatsapp"
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
+	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
-	"github.com/sirupsen/logrus"
 )
 
 // ContactHandler handles contact-related requests
@@ -42,6 +42,13 @@ func (h *ContactHandler) getInstanceAndClient(c *fiber.Ctx) (*entity.Instance, *
 	}
 	if instance == nil {
 		return nil, nil, response.NotFound(c, "Instance not found")
+	}
+
+	if c.Locals("isGlobalAdmin") != true {
+		userID, _ := c.Locals("userID").(string)
+		if userID != "" && instance.UserID != "" && instance.UserID != userID {
+			return nil, nil, response.Forbidden(c, "You don't have access to this instance")
+		}
 	}
 
 	client, exists := h.waManager.GetClient(instance.ID)
@@ -183,7 +190,7 @@ func (h *ContactHandler) GetContactInfo(c *fiber.Ctx) error {
 
 	// Get contact info from device store
 	contact, err := client.WAClient.Store.Contacts.GetContact(c.Context(), jid)
-	
+
 	info := entity.ContactInfo{
 		JID:         jidStr,
 		PhoneNumber: jid.User,

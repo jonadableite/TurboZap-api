@@ -53,6 +53,9 @@ func (h *InstanceHandler) Create(c *fiber.Ctx) error {
 
 	// Create new instance
 	instance := entity.NewInstance(req.Name)
+	if userID, _ := c.Locals("userID").(string); userID != "" {
+		instance.UserID = userID
+	}
 
 	// Save to database
 	if err := h.instanceRepo.Create(c.Context(), instance); err != nil {
@@ -71,7 +74,19 @@ func (h *InstanceHandler) Create(c *fiber.Ctx) error {
 
 // List lists all instances
 func (h *InstanceHandler) List(c *fiber.Ctx) error {
-	instances, err := h.instanceRepo.GetAll(c.Context())
+	userID, _ := c.Locals("userID").(string)
+	isGlobal := c.Locals("isGlobalAdmin") == true
+
+	var (
+		instances []*entity.Instance
+		err       error
+	)
+
+	if userID != "" && !isGlobal {
+		instances, err = h.instanceRepo.GetByUserID(c.Context(), userID)
+	} else {
+		instances, err = h.instanceRepo.GetAll(c.Context())
+	}
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to list instances")
 		return response.InternalServerError(c, "Failed to list instances")
@@ -93,6 +108,27 @@ func (h *InstanceHandler) List(c *fiber.Ctx) error {
 	return response.Success(c, dto.ToListInstancesResponse(instances))
 }
 
+func (h *InstanceHandler) authorizeInstanceAccess(c *fiber.Ctx, instance *entity.Instance) error {
+	if instance == nil {
+		return response.NotFound(c, "Instance not found")
+	}
+
+	if c.Locals("isGlobalAdmin") == true {
+		return nil
+	}
+
+	userID, _ := c.Locals("userID").(string)
+	if userID == "" || instance.UserID == "" {
+		return nil
+	}
+
+	if instance.UserID != userID {
+		return response.Forbidden(c, "You don't have access to this instance")
+	}
+
+	return nil
+}
+
 // Get gets a specific instance
 func (h *InstanceHandler) Get(c *fiber.Ctx) error {
 	name := c.Params("name")
@@ -107,6 +143,10 @@ func (h *InstanceHandler) Get(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	return response.Success(c, dto.ToInstanceResponse(instance))
@@ -126,6 +166,10 @@ func (h *InstanceHandler) GetStatus(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Update status from WhatsApp manager
@@ -152,6 +196,10 @@ func (h *InstanceHandler) GetQRCode(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Check if client exists, create if not
@@ -223,6 +271,10 @@ func (h *InstanceHandler) Connect(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Create client if not exists
 	if _, exists := h.waManager.GetClient(instance.ID); !exists {
 		if _, err := h.waManager.CreateClient(instance); err != nil {
@@ -260,6 +312,10 @@ func (h *InstanceHandler) Restart(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Disconnect
 	if err := h.waManager.Disconnect(instance.ID); err != nil {
 		h.logger.WithError(err).Warn("Failed to disconnect")
@@ -294,6 +350,10 @@ func (h *InstanceHandler) Logout(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Logout
 	if err := h.waManager.Logout(instance.ID); err != nil {
 		h.logger.WithError(err).Warn("Failed to logout")
@@ -326,6 +386,10 @@ func (h *InstanceHandler) Delete(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Delete WhatsApp client
@@ -370,6 +434,10 @@ func (h *InstanceHandler) UpdateName(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Check if new name already exists (if different from current)

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Input, Modal, ModalFooter } from "@/components/ui";
+import { UserMenu } from "@/components/auth";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -51,7 +52,7 @@ export function Header({ title, description }: HeaderProps) {
             </div>
 
             {/* Right side - Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {/* API Key indicator */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -68,10 +69,13 @@ export function Header({ title, description }: HeaderProps) {
                 )}
               >
                 <Key className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {displayHasApiKey ? "API Key configurada" : "Configurar API Key"}
+                <span className="text-sm font-medium hidden sm:inline">
+                  {displayHasApiKey ? "API Key" : "Configurar API Key"}
                 </span>
               </motion.button>
+
+              {/* User Menu */}
+              <UserMenu />
             </div>
           </div>
         </div>

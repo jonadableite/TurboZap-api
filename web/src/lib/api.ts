@@ -1,13 +1,13 @@
-import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
 import type {
-  Instance,
+  ApiResponse,
   CreateInstanceRequest,
   CreateInstanceResponse,
+  Instance,
   InstanceListResponse,
   InstanceStatusResponse,
   QRCodeResponse,
-  ApiResponse,
 } from "@/types";
+import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
 
 const DEFAULT_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -77,9 +77,7 @@ api.interceptors.response.use(
     // Don't log errors for optional endpoints like webhook events
     const isOptionalEndpoint = error.config?.url?.includes("/webhook/events");
 
-    if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
-      console.error("API Error:", message);
-    }
+    if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) 
     return Promise.reject(error);
   }
 );
@@ -142,9 +140,21 @@ export const instanceApi = {
   create: async (
     data: CreateInstanceRequest
   ): Promise<CreateInstanceResponse> => {
+    // Ensure latest API key/URL are applied even if interceptor hasn't run yet
+    const overrideHeaders: AxiosRequestHeaders = {};
+    const storedKey = getFromStorage(API_KEY_STORAGE);
+    if (storedKey) {
+      overrideHeaders["X-API-Key"] = storedKey;
+    }
+    const storedUrl = getFromStorage(API_URL_STORAGE);
+
     const response = await api.post<CreateInstanceResponse>(
       "/instance/create",
-      data
+      data,
+      {
+        baseURL: storedUrl || DEFAULT_API_URL,
+        headers: Object.keys(overrideHeaders).length ? overrideHeaders : undefined,
+      }
     );
     return response.data;
   },

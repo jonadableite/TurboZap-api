@@ -54,6 +54,13 @@ func (h *MessageHandler) getInstanceAndValidate(c *fiber.Ctx) (*entity.Instance,
 		return nil, response.NotFound(c, "Instance not found")
 	}
 
+	if c.Locals("isGlobalAdmin") != true {
+		userID, _ := c.Locals("userID").(string)
+		if userID != "" && instance.UserID != "" && instance.UserID != userID {
+			return nil, response.Forbidden(c, "You don't have access to this instance")
+		}
+	}
+
 	// Check if connected
 	if !h.waManager.IsConnected(instance.ID) {
 		return nil, response.BadRequest(c, "Instance is not connected to WhatsApp")
@@ -562,7 +569,7 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 		if buttonType == "" {
 			buttonType = "reply" // Default
 		}
-		
+
 		buttons[i] = whatsapp.ButtonData{
 			ID:    buttonID,
 			Text:  buttonText,
@@ -574,7 +581,7 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 
 	// Handle header if provided
 	var header *whatsapp.HeaderData
-	
+
 	// Support UAZAPI format: image at root level or title
 	if req.Image != nil && req.Image.URL != "" {
 		// Image at root level - convert to header
@@ -626,10 +633,10 @@ func (h *MessageHandler) SendButton(c *fiber.Ctx) error {
 	msgID, err := h.waManager.SendButtons(c.Context(), instance.ID, jid, text, footer, buttons, header)
 	if err != nil {
 		h.logger.WithError(err).WithFields(logrus.Fields{
-			"instance":    instance.Name,
-			"to":          jid,
+			"instance":     instance.Name,
+			"to":           jid,
 			"buttonsCount": len(buttons),
-			"text":        req.Text,
+			"text":         req.Text,
 		}).Error("Failed to send button message")
 		// Retornar mensagem de erro mais detalhada
 		return response.InternalServerError(c, fmt.Sprintf("Failed to send button message: %v", err))

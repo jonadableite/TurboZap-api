@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Plus, Search, Key } from 'lucide-react';
-import { useState } from 'react';
 import {
   Button,
-  EmptyState,
-  Spinner,
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
+  EmptyState,
   LottieIcon,
-} from '@/components/ui';
-import smartphoneAnimation from '../../../public/responsivo.json';
-import diagramaAnimation from '../../../public/diagrama.json';
-import FancyButton from '@/components/ui/FancyButton';
-import FancySearch from '@/components/ui/FancySearch';
-import FancyPattern from '@/components/ui/FancyPattern';
-import { InstanceCard } from './InstanceCard';
-import { useInstances } from '@/hooks/useInstances';
-import { useApiConfig } from '@/hooks/useApiConfig';
+  Spinner,
+} from "@/components/ui";
+import FancyButton from "@/components/ui/FancyButton";
+import FancyPattern from "@/components/ui/FancyPattern";
+import FancySearch from "@/components/ui/FancySearch";
+import { useApiConfig } from "@/hooks/useApiConfig";
+import { useInstances } from "@/hooks/useInstances";
+import { motion } from "framer-motion";
+import { Key, Plus, RefreshCw, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import diagramaAnimation from "../../../public/diagrama.json";
+import smartphoneAnimation from "../../../public/responsivo.json";
+import { InstanceCard } from "./InstanceCard";
 
 interface InstanceListProps {
   onCreateClick: () => void;
@@ -44,21 +44,26 @@ const item = {
 };
 
 export function InstanceList({ onCreateClick }: InstanceListProps) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const { hasApiKey, isReady } = useApiConfig();
   const { data: instances = [], isLoading, isError, refetch } = useInstances();
   const router = useRouter();
 
   // Filter instances based on search
-  const filteredInstances = instances.filter((instance) =>
-    instance.name.toLowerCase().includes(search.toLowerCase()) ||
-    instance.phone?.includes(search) ||
-    instance.profileName?.toLowerCase().includes(search.toLowerCase())
+  const filteredInstances = instances.filter(
+    (instance) =>
+      instance.name.toLowerCase().includes(search.toLowerCase()) ||
+      instance.phone?.includes(search) ||
+      instance.profileName?.toLowerCase().includes(search.toLowerCase())
   );
 
   // Stats
-  const connectedCount = instances.filter((i) => i.status === 'connected').length;
-  const disconnectedCount = instances.filter((i) => i.status === 'disconnected').length;
+  const connectedCount = instances.filter(
+    (i) => i.status === "connected"
+  ).length;
+  const disconnectedCount = instances.filter(
+    (i) => i.status === "disconnected"
+  ).length;
 
   if (!isReady || isLoading) {
     return (
@@ -66,7 +71,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
         <div className="flex flex-col items-center gap-4">
           <Spinner size="lg" />
           <p className="text-[var(--rocket-gray-400)]">
-            {isReady ? 'Carregando instâncias...' : 'Preparando painel...'}
+            {isReady ? "Carregando instâncias..." : "Preparando painel..."}
           </p>
         </div>
       </div>
@@ -82,19 +87,26 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
             Configure sua API Key
           </CardTitle>
           <CardDescription>
-            Para listar e criar instâncias é necessário informar a API Key do TurboZap.
+            Para listar e criar instâncias é necessário informar a API Key do
+            TurboZap.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-[var(--rocket-gray-300)]">
-            Clique no botão abaixo para abrir a tela de configurações e informe a mesma chave
-            definida no backend (`API_KEY`).
+            Clique no botão abaixo para abrir a tela de configurações e informe
+            a mesma chave definida no backend (`API_KEY`).
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button leftIcon={<Key className="w-4 h-4" />} onClick={() => router.push('/settings')}>
+            <Button
+              leftIcon={<Key className="w-4 h-4" />}
+              onClick={() => router.push("/settings")}
+            >
               Abrir configurações
             </Button>
-            <Button variant="ghost" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <Button
+              variant="ghost"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
               Ver instruções no topo
             </Button>
           </div>
@@ -106,11 +118,19 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
   if (isError) {
     return (
       <EmptyState
-        icon={<LottieIcon animationData={smartphoneAnimation} className="w-12 h-12" />}
+        icon={
+          <LottieIcon
+            animationData={smartphoneAnimation}
+            className="w-12 h-12"
+          />
+        }
         title="Erro ao carregar instâncias"
         description="Não foi possível carregar as instâncias. Verifique sua conexão."
         action={
-          <Button onClick={() => refetch()} leftIcon={<RefreshCw className="w-4 h-4" />}>
+          <Button
+            onClick={() => refetch()}
+            leftIcon={<RefreshCw className="w-4 h-4" />}
+          >
             Tentar novamente
           </Button>
         }
@@ -131,7 +151,9 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
             <FancyPattern color="#8257e5" />
             <div className="relative z-10">
               <p className="text-sm text-[var(--rocket-gray-400)]">Total</p>
-              <p className="text-2xl font-bold text-[var(--rocket-gray-50)]">{instances.length}</p>
+              <p className="text-2xl font-bold text-[var(--rocket-gray-50)]">
+                {instances.length}
+              </p>
             </div>
           </motion.div>
           <motion.div
@@ -143,7 +165,9 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
             <FancyPattern color="#04d361" />
             <div className="relative z-10">
               <p className="text-sm text-[var(--rocket-green)]">Conectadas</p>
-              <p className="text-2xl font-bold text-[var(--rocket-green)]">{connectedCount}</p>
+              <p className="text-2xl font-bold text-[var(--rocket-green)]">
+                {connectedCount}
+              </p>
             </div>
           </motion.div>
           <motion.div
@@ -154,8 +178,12 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           >
             <FancyPattern color="#f75a68" />
             <div className="relative z-10">
-              <p className="text-sm text-[var(--rocket-danger)]">Desconectadas</p>
-              <p className="text-2xl font-bold text-[var(--rocket-danger)]">{disconnectedCount}</p>
+              <p className="text-sm text-[var(--rocket-danger)]">
+                Desconectadas
+              </p>
+              <p className="text-2xl font-bold text-[var(--rocket-danger)]">
+                {disconnectedCount}
+              </p>
             </div>
           </motion.div>
         </div>
@@ -171,7 +199,17 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <Button variant="ghost" size="sm" onClick={() => refetch()} leftIcon={<LottieIcon animationData={diagramaAnimation} className="w-4 h-4" />}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => refetch()}
+            leftIcon={
+              <LottieIcon
+                animationData={diagramaAnimation}
+                className="w-4 h-4"
+              />
+            }
+          >
             Atualizar
           </Button>
           <FancyButton onClick={onCreateClick}>
@@ -184,7 +222,12 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
       {/* Empty state */}
       {instances.length === 0 && (
         <EmptyState
-          icon={<LottieIcon animationData={smartphoneAnimation} className="w-16 h-16" />}
+          icon={
+            <LottieIcon
+              animationData={smartphoneAnimation}
+              className="w-16 h-16"
+            />
+          }
           title="Nenhuma instância"
           description="Você ainda não criou nenhuma instância. Crie sua primeira instância para começar a usar a API."
           action={
@@ -203,7 +246,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           title="Nenhum resultado"
           description={`Nenhuma instância encontrada para "${search}"`}
           action={
-            <Button variant="ghost" onClick={() => setSearch('')}>
+            <Button variant="ghost" onClick={() => setSearch("")}>
               Limpar busca
             </Button>
           }
@@ -220,10 +263,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
         >
           {filteredInstances.map((instance) => (
             <motion.div key={instance.id} variants={item}>
-              <InstanceCard
-                instance={instance}
-                onRefresh={() => refetch()}
-              />
+              <InstanceCard instance={instance} onRefresh={() => refetch()} />
             </motion.div>
           ))}
         </motion.div>
@@ -233,4 +273,3 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
 }
 
 export default InstanceList;
-

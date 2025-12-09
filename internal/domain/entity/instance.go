@@ -22,6 +22,7 @@ type Instance struct {
 	ID          uuid.UUID      `json:"id"`
 	Name        string         `json:"name"`
 	APIKey      string         `json:"api_key"`
+	UserID      string         `json:"user_id,omitempty"`
 	Status      InstanceStatus `json:"status"`
 	PhoneNumber string         `json:"phone_number,omitempty"`
 	ProfileName string         `json:"profile_name,omitempty"`

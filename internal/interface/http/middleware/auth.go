@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jonadableite/turbozap-api/internal/domain/repository"
@@ -9,8 +10,11 @@ import (
 	"github.com/jonadableite/turbozap-api/pkg/config"
 )
 
-// AuthMiddleware creates an authentication middleware
-func AuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceRepository) fiber.Handler {
+// AuthMiddleware authenticates requests using:
+// 1) Global API key (admin, full access)
+// 2) User API key (table api_keys) -> sets userID in context
+// 3) Instance-specific API key (legacy) -> sets instance in context
+func AuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceRepository, apiKeyRepo repository.ApiKeyRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get API key from header
 		apiKey := c.Get("X-API-Key")
@@ -30,6 +34,24 @@ func AuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceReposito
 		if cfg.Server.APIKey != "" && apiKey == cfg.Server.APIKey {
 			c.Locals("isGlobalAdmin", true)
 			return c.Next()
+		}
+
+		// Check if it's a user-owned API key (table api_keys)
+		if apiKeyRepo != nil {
+			apiKeyEntity, err := apiKeyRepo.GetByKey(c.Context(), apiKey)
+			if err != nil {
+				return response.InternalServerError(c, "Failed to validate API key")
+			}
+
+			now := time.Now()
+			if apiKeyEntity != nil && apiKeyEntity.IsValid(now) {
+				c.Locals("userID", apiKeyEntity.UserID)
+				c.Locals("userApiKeyID", apiKeyEntity.ID)
+
+				// Best-effort update of last_used_at
+				_ = apiKeyRepo.UpdateLastUsed(c.Context(), apiKeyEntity.ID, now)
+				return c.Next()
+			}
 		}
 
 		// Check if it's an instance-specific API key
@@ -53,7 +75,7 @@ func AuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceReposito
 
 // OptionalAuthMiddleware creates an optional authentication middleware
 // It doesn't require authentication but will set context if provided
-func OptionalAuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceRepository) fiber.Handler {
+func OptionalAuthMiddleware(cfg *config.Config, instanceRepo repository.InstanceRepository, apiKeyRepo repository.ApiKeyRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get API key from header
 		apiKey := c.Get("X-API-Key")
@@ -72,6 +94,16 @@ func OptionalAuthMiddleware(cfg *config.Config, instanceRepo repository.Instance
 		if cfg.Server.APIKey != "" && apiKey == cfg.Server.APIKey {
 			c.Locals("isGlobalAdmin", true)
 			return c.Next()
+		}
+
+		// Check user-owned API key
+		if apiKeyRepo != nil {
+			apiKeyEntity, err := apiKeyRepo.GetByKey(c.Context(), apiKey)
+			if err == nil && apiKeyEntity != nil && apiKeyEntity.IsValid(time.Now()) {
+				c.Locals("userID", apiKeyEntity.UserID)
+				c.Locals("userApiKeyID", apiKeyEntity.ID)
+				return c.Next()
+			}
 		}
 
 		// Check if it's an instance-specific API key

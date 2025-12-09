@@ -24,6 +24,9 @@ type InstanceRepository interface {
 	// GetAll retrieves all instances
 	GetAll(ctx context.Context) ([]*entity.Instance, error)
 
+	// GetByUserID retrieves instances owned by a user
+	GetByUserID(ctx context.Context, userID string) ([]*entity.Instance, error)
+
 	// Update updates an instance
 	Update(ctx context.Context, instance *entity.Instance) error
 
@@ -36,4 +39,3 @@ type InstanceRepository interface {
 	// Exists checks if an instance with the given name exists
 	Exists(ctx context.Context, name string) (bool, error)
 }
-

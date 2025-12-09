@@ -45,23 +45,32 @@ func NewRouter(
 
 	// Initialize message repository for stats
 	messageRepo := infraRepo.NewMessagePostgresRepository(pool)
+	apiKeyRepo := infraRepo.NewApiKeyPostgresRepository(pool)
 
 	// Create handlers
 	instanceHandler := handler.NewInstanceHandler(instanceRepo, waManager, logger)
 	messageHandler := handler.NewMessageHandler(instanceRepo, messageRepo, waManager, logger)
+	apiKeyHandler := handler.NewApiKeyHandler(apiKeyRepo, logger)
 	groupHandler := handler.NewGroupHandler(instanceRepo, waManager, logger)
 	contactHandler := handler.NewContactHandler(instanceRepo, waManager, logger)
 	presenceHandler := handler.NewPresenceHandler(instanceRepo, waManager, logger)
 	webhookHandler := handler.NewWebhookHandler(instanceRepo, webhookRepo, logger)
 	profileHandler := handler.NewProfileHandler(instanceRepo, waManager, logger)
 	statsHandler := handler.NewStatsHandler(messageRepo, logger)
-	
+
 	// Create SSE hub and handler
 	sseHub := handler.NewSSEHub(logger)
 	sseHandler := handler.NewSSEHandler(instanceRepo, logger, sseHub)
 
 	// API routes (authenticated)
-	api := app.Group("/api", middleware.AuthMiddleware(cfg, instanceRepo))
+	api := app.Group("/api", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
+
+	// API Keys (user-owned)
+	apiKeys := api.Group("/user/apikeys")
+	apiKeys.Get("/", apiKeyHandler.List)
+	apiKeys.Post("/", apiKeyHandler.Create)
+	apiKeys.Put("/:id", apiKeyHandler.Update)
+	apiKeys.Delete("/:id", apiKeyHandler.Delete)
 
 	// Instance routes
 	instance := api.Group("/instance")
@@ -125,7 +134,7 @@ func NewRouter(
 	profile.Get("/privacy", profileHandler.GetPrivacySettings)
 	profile.Post("/privacy", profileHandler.SetPrivacySetting)
 	profile.Post("/status", profileHandler.SetProfileStatus)
-	
+
 	// Call routes
 	call := api.Group("/call/:instance")
 	call.Post("/reject", profileHandler.RejectCall)
@@ -140,19 +149,19 @@ func NewRouter(
 
 	// Webhook events list (public info)
 	api.Get("/webhook/events", webhookHandler.ListWebhookEvents)
-	
+
 	// SSE routes (Server-Sent Events)
 	sse := api.Group("/sse")
-	sse.Get("/:instance", sseHandler.Stream)           // SSE stream for specific instance
-	sse.Get("/", sseHandler.StreamAll)                 // SSE stream for all instances
-	sse.Get("/:instance/info", sseHandler.Info)        // Get SSE connection info
+	sse.Get("/:instance", sseHandler.Stream)    // SSE stream for specific instance
+	sse.Get("/", sseHandler.StreamAll)          // SSE stream for all instances
+	sse.Get("/:instance/info", sseHandler.Info) // Get SSE connection info
 
 	// Stats routes
 	stats := api.Group("/stats")
 	stats.Get("/messages", statsHandler.GetMessageStats) // Get message statistics
 
 	// Legacy routes (without /api prefix) for backwards compatibility and easier manual testing
-	legacy := app.Group("/instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacy := app.Group("/instance", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacy.Post("/create", instanceHandler.Create)
 	legacy.Get("/list", instanceHandler.List)
 	legacy.Get("/:name", instanceHandler.Get)
@@ -165,7 +174,7 @@ func NewRouter(
 	legacy.Put("/:name/name", instanceHandler.UpdateName)
 
 	// Legacy message routes (without /api prefix)
-	legacyMessage := app.Group("/message/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
+	legacyMessage := app.Group("/message/:instance", middleware.AuthMiddleware(cfg, instanceRepo, apiKeyRepo))
 	legacyMessage.Post("/text", messageHandler.SendText)
 	legacyMessage.Post("/media", messageHandler.SendMedia)
 	legacyMessage.Post("/audio", messageHandler.SendAudio)
@@ -178,17 +187,17 @@ func NewRouter(
 	legacyMessage.Post("/list", messageHandler.SendList)
 	legacyMessage.Post("/carousel", messageHandler.SendCarousel)
 	legacyMessage.Post("/story", messageHandler.SendStory)
-	
+
 	// Legacy profile routes (without /api prefix)
 	legacyProfile := app.Group("/profile/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
 	legacyProfile.Get("/privacy", profileHandler.GetPrivacySettings)
 	legacyProfile.Post("/privacy", profileHandler.SetPrivacySetting)
 	legacyProfile.Post("/status", profileHandler.SetProfileStatus)
-	
+
 	// Legacy call routes (without /api prefix)
 	legacyCall := app.Group("/call/:instance", middleware.AuthMiddleware(cfg, instanceRepo))
 	legacyCall.Post("/reject", profileHandler.RejectCall)
-	
+
 	// Legacy SSE routes (without /api prefix)
 	legacySSE := app.Group("/sse", middleware.AuthMiddleware(cfg, instanceRepo))
 	legacySSE.Get("/:instance", sseHandler.Stream)
@@ -200,7 +209,6 @@ func NewRouter(
 
 	return app
 }
-
 
 func healthCheck(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{

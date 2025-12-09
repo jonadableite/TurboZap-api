@@ -10,9 +10,9 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/infrastructure/whatsapp"
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
+	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
-	"github.com/sirupsen/logrus"
 )
 
 // GroupHandler handles group-related requests
@@ -44,6 +44,13 @@ func (h *GroupHandler) getInstanceAndValidate(c *fiber.Ctx) (*entity.Instance, *
 	}
 	if instance == nil {
 		return nil, nil, response.NotFound(c, "Instance not found")
+	}
+
+	if c.Locals("isGlobalAdmin") != true {
+		userID, _ := c.Locals("userID").(string)
+		if userID != "" && instance.UserID != "" && instance.UserID != userID {
+			return nil, nil, response.Forbidden(c, "You don't have access to this instance")
+		}
 	}
 
 	client, exists := h.waManager.GetClient(instance.ID)

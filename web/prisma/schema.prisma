@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// Better-Auth Schema (Auth tables)
+// ==========================================
+
+enum Role {
+  USER
+  DEVELOPER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(USER)
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions  Session[]
+  accounts  Account[]
+  instances Instance[] // User's WhatsApp instances
+
+  @@map("auth_users")
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  expiresAt      DateTime
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("auth_verifications")
+}
+
+// ==========================================
+// TurboZap Tables (Extended with User relation)
+// ==========================================
+
+model Instance {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  apiKey      String   @unique @map("api_key") @db.VarChar(100)
+  status      String   @default("disconnected") @db.VarChar(20)
+  phoneNumber String?  @map("phone_number") @db.VarChar(20)
+  profileName String?  @map("profile_name") @db.VarChar(255)
+  profilePic  String?  @map("profile_pic")
+  qrCode      String?  @map("qr_code")
+  deviceJid   String?  @map("device_jid")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  // Owner relationship - links instance to authenticated user
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Other relations
+  webhook  Webhook?
+  messages Message[]
+
+  @@index([name])
+  @@index([apiKey], map: "idx_instances_api_key")
+  @@index([status])
+  @@index([deviceJid])
+  @@index([userId]) // Index for faster user queries
+  @@map("instances")
+}
+
+model Webhook {
+  id              String   @id @default(uuid()) @db.Uuid
+  instanceId      String   @unique @map("instance_id") @db.Uuid
+  url             String
+  events          String[] @default([])
+  headers         Json     @default("{}")
+  enabled         Boolean  @default(true)
+  webhookByEvents Boolean  @default(false) @map("webhook_by_events")
+  webhookBase64   Boolean  @default(false) @map("webhook_base64")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([enabled])
+  @@map("webhooks")
+}
+
+model Message {
+  id            String   @id @default(uuid()) @db.Uuid
+  instanceId    String   @map("instance_id") @db.Uuid
+  messageId     String?  @map("message_id") @db.VarChar(100)
+  remoteJid     String   @map("remote_jid") @db.VarChar(100)
+  fromMe        Boolean  @default(false) @map("from_me")
+  type          String   @db.VarChar(20)
+  status        String   @default("pending") @db.VarChar(20)
+  content       String?
+  mediaUrl      String?  @map("media_url")
+  mediaMimeType String?  @map("media_mime_type") @db.VarChar(100)
+  mediaCaption  String?  @map("media_caption")
+  quotedMsgId   String?  @map("quoted_msg_id") @db.VarChar(100)
+  timestamp     DateTime
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([instanceId, messageId])
+  @@index([instanceId, remoteJid])
+  @@index([timestamp])
+  @@map("messages")
+}
+
+// ==========================================
+// API Keys Table (for user API management)
+// ==========================================
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String    @db.VarChar(100)
+  key         String    @unique @db.VarChar(64)
+  userId      String    @map("user_id")
+  permissions String[]  @default([])
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  @@index([userId])
+  @@index([key])
+  @@map("api_keys")
+}
+
+// ==========================================
+// Activity Logs (for auditing)
+// ==========================================
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String   @db.VarChar(50)
+  resource   String   @db.VarChar(50)
+  resourceId String?  @map("resource_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
