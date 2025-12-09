@@ -1,14 +1,26 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { instanceApi } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
 import type { CreateInstanceRequest, Instance } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useApiConfig } from './useApiConfig';
 
 export const INSTANCES_QUERY_KEY = ['instances'];
 
 export function useInstances() {
   const { hasApiKey } = useApiConfig();
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+
+  // Clear cache when user changes (session changes)
+  useEffect(() => {
+    if (session?.user?.id) {
+      // Invalidate all queries when user changes to ensure fresh data
+      queryClient.invalidateQueries();
+    }
+  }, [session?.user?.id, queryClient]);
 
   return useQuery<Instance[]>({
     queryKey: INSTANCES_QUERY_KEY,

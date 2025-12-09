@@ -277,6 +277,27 @@ func (r *messagePostgresRepository) CountToday(ctx context.Context, instanceID *
 	return count, nil
 }
 
+// CountTodayByInstances counts messages sent/received today for multiple instances
+func (r *messagePostgresRepository) CountTodayByInstances(ctx context.Context, instanceIDs []uuid.UUID) (int64, error) {
+	if len(instanceIDs) == 0 {
+		return 0, nil
+	}
+
+	query := `
+		SELECT COUNT(*) 
+		FROM messages 
+		WHERE DATE(created_at) = CURRENT_DATE
+		AND instance_id = ANY($1)
+	`
+	
+	var count int64
+	err := r.pool.QueryRow(ctx, query, instanceIDs).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count messages today by instances: %w", err)
+	}
+	return count, nil
+}
+
 // CountTotal counts total messages
 func (r *messagePostgresRepository) CountTotal(ctx context.Context, instanceID *uuid.UUID) (int64, error) {
 	query := `SELECT COUNT(*) FROM messages`
@@ -291,6 +312,26 @@ func (r *messagePostgresRepository) CountTotal(ctx context.Context, instanceID *
 	err := r.pool.QueryRow(ctx, query, args...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count total messages: %w", err)
+	}
+	return count, nil
+}
+
+// CountTotalByInstances counts total messages for multiple instances
+func (r *messagePostgresRepository) CountTotalByInstances(ctx context.Context, instanceIDs []uuid.UUID) (int64, error) {
+	if len(instanceIDs) == 0 {
+		return 0, nil
+	}
+
+	query := `
+		SELECT COUNT(*) 
+		FROM messages 
+		WHERE instance_id = ANY($1)
+	`
+	
+	var count int64
+	err := r.pool.QueryRow(ctx, query, instanceIDs).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count total messages by instances: %w", err)
 	}
 	return count, nil
 }
