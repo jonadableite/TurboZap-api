@@ -47,7 +47,10 @@ export async function middleware(request: NextRequest) {
   );
 
   // Get session from cookie
-  const sessionCookie = request.cookies.get("turbozap.session_token")?.value;
+  // Better Auth em produção usa prefixo __Secure-
+  const sessionCookie =
+    request.cookies.get("__Secure-turbozap.session_token")?.value ||
+    request.cookies.get("turbozap.session_token")?.value;
 
   // If no session and trying to access protected route, redirect to sign-in
   if (!sessionCookie && !isPublicRoute) {
