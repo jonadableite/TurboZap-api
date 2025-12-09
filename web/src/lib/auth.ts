@@ -25,16 +25,33 @@ if (typeof window === "undefined" && !isBuildPhase) {
   }
 }
 
-// Create PostgreSQL Pool only if DATABASE_URL is available
+// Create PostgreSQL Pool - ensure it's created at runtime
 // During build time, skip pool creation
 let pool: Pool | null = null;
 
-if (DATABASE_URL && DATABASE_URL.trim() !== "" && !isBuildPhase) {
-  // Log database connection info (without sensitive data)
-  if (process.env.NODE_ENV === "development") {
+// Function to initialize pool (called at runtime)
+function initializePool() {
+  // If pool already exists, return it
+  if (pool) {
+    return pool;
+  }
+
+  // Check if we're in build phase
+  if (isBuildPhase) {
+    return null;
+  }
+
+  // Validate DATABASE_URL
+  if (!DATABASE_URL || DATABASE_URL.trim() === "") {
+    console.error("[Auth] DATABASE_URL is not set. Cannot create database pool.");
+    return null;
+  }
+
+  try {
+    // Log database connection info (without sensitive data)
     try {
       const dbUrl = new URL(DATABASE_URL);
-      console.log("[Auth] Database:", {
+      console.log("[Auth] Initializing database pool:", {
         host: dbUrl.hostname,
         port: dbUrl.port || "5432",
         database: dbUrl.pathname.slice(1) || "turbozap",
@@ -42,26 +59,23 @@ if (DATABASE_URL && DATABASE_URL.trim() !== "" && !isBuildPhase) {
       });
     } catch (err) {
       console.warn("[Auth] Could not parse DATABASE_URL:", err);
-      console.log("[Auth] DATABASE_URL format:", DATABASE_URL.substring(0, 20) + "...");
     }
-  }
 
-  // Create PostgreSQL Pool
-  pool = new Pool({
-    connectionString: DATABASE_URL,
-    // Add connection pool options for better reliability
-    max: 20, // Maximum number of clients in the pool
-    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-    connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-  });
+    // Create PostgreSQL Pool
+    pool = new Pool({
+      connectionString: DATABASE_URL,
+      // Add connection pool options for better reliability
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 5000, // Increased to 5 seconds for production
+    });
 
-  // Handle pool errors
-  pool.on("error", (err) => {
-    console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
-  });
+    // Handle pool errors
+    pool.on("error", (err) => {
+      console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
+    });
 
-  // Test connection in development
-  if (process.env.NODE_ENV === "development") {
+    // Test connection
     pool
       .query("SELECT NOW()")
       .then(() => {
@@ -70,13 +84,36 @@ if (DATABASE_URL && DATABASE_URL.trim() !== "" && !isBuildPhase) {
       .catch((err) => {
         console.error("[Auth] Database connection failed:", err.message);
       });
+
+    return pool;
+  } catch (err) {
+    console.error("[Auth] Failed to create database pool:", err);
+    return null;
   }
+}
+
+// Initialize pool immediately if not in build phase
+if (!isBuildPhase) {
+  initializePool();
+}
+
+// Get or create pool for auth (lazy initialization)
+function getAuthPool() {
+  if (isBuildPhase) {
+    return undefined;
+  }
+  // Ensure pool is initialized
+  if (!pool) {
+    const initializedPool = initializePool();
+    return initializedPool || undefined;
+  }
+  return pool;
 }
 
 // Only create auth instance if we have required values (not during build)
 // During build, create a minimal config that won't be used
 const authConfig = {
-  database: pool || undefined,
+  database: getAuthPool(),
 
   // App configuration
   appName: "TurboZap",
@@ -160,6 +197,8 @@ const authConfig = {
   advanced: {
     cookiePrefix: "turbozap",
     useSecureCookies: process.env.NODE_ENV === "production",
+    // Cookie settings for production
+    sameSite: "lax", // Allow cookies to work with redirects
   },
 
   // Plugins
