@@ -56,6 +56,8 @@ export default function SignInPage() {
     setErrors({});
 
     try {
+      // O authClient já está configurado com a URL correta
+      // Não precisamos logar aqui, o authClient já faz isso
       const { data, error } = await signIn.email({
         email: formData.email,
         password: formData.password,
@@ -114,11 +116,20 @@ export default function SignInPage() {
     } catch (err) {
       // Log do erro completo para debug
       console.error("[SignIn] Exception:", err);
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Erro inesperado. Tente novamente.";
-      setErrors({ general: errorMessage });
+
+      // Tratamento específico para "Failed to fetch" (problema de rede/CORS)
+      if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
+        setErrors({
+          general:
+            "Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente em instantes.",
+        });
+      } else {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Erro inesperado. Tente novamente.";
+        setErrors({ general: errorMessage });
+      }
     } finally {
       setIsLoading(false);
     }

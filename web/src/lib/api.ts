@@ -10,14 +10,23 @@ import type {
 } from "@/types";
 import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
 
-const DEFAULT_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://apizap.whatlead.com.br";
+// API URL - must be set in .env file
+// In development: http://localhost:8080
+// In production: your production API URL
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!DEFAULT_API_URL && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[API] NEXT_PUBLIC_API_URL is not set. " +
+    "Please set it in your .env file for production."
+  );
+}
 const API_KEY_STORAGE = "turbozap_api_key";
 const API_URL_STORAGE = "turbozap_api_url";
 
 // Create axios instance
 const api = axios.create({
-  baseURL: DEFAULT_API_URL,
+  baseURL: DEFAULT_API_URL || "http://localhost:8080", // Default to localhost in development
   timeout: 15000,
   timeoutErrorMessage: "Request timed out",
   headers: {
@@ -70,15 +79,17 @@ api.interceptors.response.use(
       );
     }
 
-    const message =
-      error.response?.data?.error?.message ||
-      error.message ||
-      "Erro desconhecido";
-
     // Don't log errors for optional endpoints like webhook events
     const isOptionalEndpoint = error.config?.url?.includes("/webhook/events");
 
-    if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) 
+    if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
+      const message =
+        error.response?.data?.error?.message ||
+        error.message ||
+        "Erro desconhecido";
+      console.error("[API] Request error:", message);
+    }
+    
     return Promise.reject(error);
   }
 );

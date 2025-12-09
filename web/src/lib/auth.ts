@@ -9,10 +9,58 @@ import { ac, admin, developer, user } from "./permissions";
  * Better Auth configuration
  * Tables use 'auth_' prefix to avoid conflicts with TurboZap backend tables
  */
+
+// Validate DATABASE_URL
+if (!DATABASE_URL || typeof DATABASE_URL !== "string") {
+  throw new Error(
+    "DATABASE_URL is required. Please set it in your environment variables."
+  );
+}
+
+// Log database connection info (without sensitive data)
+if (process.env.NODE_ENV === "development") {
+  try {
+    const dbUrl = new URL(DATABASE_URL);
+    console.log("[Auth] Database:", {
+      host: dbUrl.hostname,
+      port: dbUrl.port || "5432",
+      database: dbUrl.pathname.slice(1) || "turbozap",
+      ssl: dbUrl.searchParams.get("sslmode") !== "disable",
+    });
+  } catch (err) {
+    console.warn("[Auth] Could not parse DATABASE_URL:", err);
+    console.log("[Auth] DATABASE_URL format:", DATABASE_URL.substring(0, 20) + "...");
+  }
+}
+
+// Create PostgreSQL Pool
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  // Add connection pool options for better reliability
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+});
+
+// Handle pool errors
+pool.on("error", (err) => {
+  console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
+});
+
+// Test connection in development
+if (process.env.NODE_ENV === "development") {
+  pool
+    .query("SELECT NOW()")
+    .then(() => {
+      console.log("[Auth] Database connection successful");
+    })
+    .catch((err) => {
+      console.error("[Auth] Database connection failed:", err.message);
+    });
+}
+
 export const auth = betterAuth({
-  database: new Pool({
-    connectionString: DATABASE_URL,
-  }),
+  database: pool,
 
   // App configuration
   appName: "TurboZap",
@@ -94,7 +142,6 @@ export const auth = betterAuth({
 
   // Advanced settings
   advanced: {
-    generateId: () => crypto.randomUUID(),
     cookiePrefix: "turbozap",
     useSecureCookies: process.env.NODE_ENV === "production",
   },
@@ -118,10 +165,11 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     "http://localhost:8080",
-    process.env.BETTER_AUTH_URL || "",
-    process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://zap.whatlead.com.br",
-    process.env.NEXT_PUBLIC_API_URL || "https://apizap.whatlead.com.br",
-  ].filter(Boolean),
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_API_URL,
+  ].filter((origin): origin is string => Boolean(origin)), // Remove undefined/null values and ensure type safety
 });
 
 // Export types for use in the application
