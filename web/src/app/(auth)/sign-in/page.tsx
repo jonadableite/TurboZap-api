@@ -90,7 +90,14 @@ export default function SignInPage() {
         // Redirect to dashboard on success
         router.push("/");
         router.refresh();
+        return;
       }
+
+      // Se chegar aqui, nem data nem error foram retornados — trate como falha genérica
+      setErrors({
+        general:
+          "Não foi possível efetuar login agora. Tente novamente em instantes.",
+      });
     } catch (err) {
       setErrors({ general: "Erro inesperado. Tente novamente." });
     } finally {
