@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, type Session } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = (await auth.api.getSession({ headers: request.headers })) as Session | null;
   if (!session) {
     return NextResponse.json(
       { success: false, error: { message: "Unauthorized" } },

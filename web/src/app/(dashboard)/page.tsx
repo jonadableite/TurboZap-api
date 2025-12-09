@@ -14,6 +14,7 @@ import { useInstances } from "@/hooks/useInstances";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus, Zap } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
@@ -47,22 +48,22 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--rocket-purple)]/20 via-[var(--rocket-purple)]/10 to-transparent border border-[var(--rocket-purple)]/30 p-8"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--rocket-purple)]/20 via-[var(--rocket-purple)]/10 to-transparent border border-[var(--rocket-purple)]/30 p-4 sm:p-6 md:p-8"
         >
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-6 h-6 text-[var(--rocket-purple)]" />
               <Badge variant="purple">TurboZap API</Badge>
             </div>
-            <h2 className="text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
               Bem-vindo ao TurboZap! 🚀
             </h2>
-            <p className="text-[var(--rocket-gray-300)] max-w-2xl mb-6">
+            <p className="text-[var(--rocket-gray-300)] max-w-2xl mb-6 pr-0 sm:pr-36 md:pr-52 lg:pr-64 xl:pr-72 2xl:pr-80">
               Gerencie suas instâncias do WhatsApp, envie mensagens em massa,
               configure webhooks e muito mais com nossa API poderosa e fácil de
               usar.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Button
                 onClick={() => canCreateInstance && setShowCreateModal(true)}
                 leftIcon={<Plus className="w-4 h-4" />}
@@ -91,8 +92,40 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-30">
+          {/* Android Image - Front Layer */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, x: 50 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              x: 0
+            }}
+            transition={{ 
+              delay: 0.3, 
+              duration: 0.6, 
+              ease: "easeOut"
+            }}
+            className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-72 lg:h-72 xl:w-80 xl:h-80 2xl:w-96 2xl:h-96 z-20 pointer-events-none overflow-visible -mr-2 sm:mr-0"
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src="/bg_white-removebg-preview.png"
+                alt="Android Device"
+                fill
+                className="object-contain"
+                priority
+                sizes="(max-width: 640px) 96px, (max-width: 768px) 160px, (max-width: 1024px) 224px, (max-width: 1280px) 288px, (max-width: 1536px) 320px, 384px"
+                style={{
+                  filter: "drop-shadow(0 25px 50px rgba(139, 92, 246, 0.4)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.2))",
+                }}
+              />
+              {/* Static Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--rocket-purple)]/20 via-transparent to-transparent rounded-full blur-3xl" />
+            </div>
+          </motion.div>
+
+          {/* Decorative SVG elements - Back Layer */}
+          <div className="absolute top-0 right-0 w-64 h-64 opacity-20 z-10">
             <svg viewBox="0 0 200 200" className="w-full h-full">
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">

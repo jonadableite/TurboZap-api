@@ -195,5 +195,13 @@ const authConfig = {
 export const auth = betterAuth(authConfig as any);
 
 // Export types for use in the application
-export type Session = typeof auth.$Infer.Session;
-export type User = typeof auth.$Infer.Session.user;
+export type User = typeof auth.$Infer.Session.user & {
+  role?: string;
+  banned?: boolean;
+  banReason?: string | null;
+  banExpires?: Date | null;
+};
+
+export type Session = Omit<typeof auth.$Infer.Session, 'user'> & {
+  user: User;
+};
