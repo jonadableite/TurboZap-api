@@ -21,13 +21,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o turbozap ./cmd/api
 
 # Build database setup script
-#RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o setup_db ./scripts/setup_db.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o setup_db ./scripts/setup_db.go
 
 # Build seed script
-#RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed_db ./scripts/seed.go
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/setup_db ./scripts/setup_db.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/seed_db ./scripts/seed.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed_db ./scripts/seed.go
 
 # ============================================
 # Stage 2: Build Frontend (Next.js)
@@ -80,7 +77,6 @@ COPY --from=backend-builder /app/turbozap /app/turbozap
 # Copy database setup scripts
 COPY --from=backend-builder /app/setup_db /app/setup_db
 COPY --from=backend-builder /app/seed_db /app/seed_db
-
 
 # Copy frontend standalone build from builder
 # Next.js standalone output includes only necessary files
