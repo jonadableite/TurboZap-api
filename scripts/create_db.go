@@ -11,6 +11,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// create_db.go - Script simples para criar apenas o banco de dados
+// Para setup completo (migrations + seed), use setup_db.go
+
 func main() {
 	// Load .env
 	_ = godotenv.Load()
@@ -25,6 +28,12 @@ func main() {
 	config, err := pgx.ParseConfig(dbURL)
 	if err != nil {
 		fmt.Printf("❌ Erro ao parsear DATABASE_URL: %v\n", err)
+		os.Exit(1)
+	}
+
+	dbName := config.Database
+	if dbName == "" {
+		fmt.Println("❌ Nome do banco não encontrado na DATABASE_URL")
 		os.Exit(1)
 	}
 
@@ -48,21 +57,21 @@ func main() {
 
 	// Check if database exists
 	var exists bool
-	err = conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", "turbozap").Scan(&exists)
+	err = conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists)
 	if err != nil {
 		fmt.Printf("❌ Erro ao verificar banco: %v\n", err)
 		os.Exit(1)
 	}
 
 	if exists {
-		fmt.Println("✅ Banco de dados 'turbozap' já existe!")
+		fmt.Printf("✅ Banco de dados '%s' já existe!\n", dbName)
 	} else {
 		// Create database
-		_, err = conn.Exec(ctx, "CREATE DATABASE turbozap")
+		_, err = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
 		if err != nil {
 			fmt.Printf("❌ Erro ao criar banco: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println("✅ Banco de dados 'turbozap' criado com sucesso!")
+		fmt.Printf("✅ Banco de dados '%s' criado com sucesso!\n", dbName)
 	}
 }

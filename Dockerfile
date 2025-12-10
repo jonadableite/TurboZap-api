@@ -20,6 +20,12 @@ COPY . .
 # Build the backend application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o turbozap ./cmd/api
 
+# Build database setup script
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o setup_db ./scripts/setup_db.go
+
+# Build seed script
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed_db ./scripts/seed.go
+
 # ============================================
 # Stage 2: Build Frontend (Next.js)
 # ============================================
@@ -50,7 +56,8 @@ RUN apk --no-cache add \
     tzdata \
     nodejs \
     curl \
-    bash
+    bash \
+    netcat-openbsd
 
 # Runtime defaults (can be overridden at deploy time)
 ENV NODE_ENV=production \
@@ -66,6 +73,10 @@ WORKDIR /app
 
 # Copy backend binary from builder
 COPY --from=backend-builder /app/turbozap /app/turbozap
+
+# Copy database setup scripts
+COPY --from=backend-builder /app/setup_db /app/setup_db
+COPY --from=backend-builder /app/seed_db /app/seed_db
 
 # Copy frontend standalone build from builder
 # Next.js standalone output includes only necessary files
@@ -88,6 +99,45 @@ export PORT="${FRONTEND_PORT}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export NODE_ENV="${NODE_ENV:-production}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+
+# Wait for database to be ready (if using external DB)
+if [ -n "${DATABASE_URL:-}" ]; then
+  echo "⏳ Aguardando banco de dados estar pronto..."
+  max_attempts=30
+  attempt=0
+  
+  # Extract host and port from DATABASE_URL
+  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+  
+  if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
+    while [ $attempt -lt $max_attempts ]; do
+      if nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+        echo "✅ Banco de dados está pronto!"
+        break
+      fi
+      attempt=$((attempt + 1))
+      echo "  Tentativa $attempt/$max_attempts..."
+      sleep 2
+    done
+    
+    if [ $attempt -eq $max_attempts ]; then
+      echo "⚠️  Aviso: Não foi possível conectar ao banco após $max_attempts tentativas"
+      echo "   Continuando mesmo assim..."
+    fi
+  fi
+  
+  # Setup database (create, migrate, seed)
+  echo "🔧 Configurando banco de dados..."
+  if [ -f /app/setup_db ]; then
+    /app/setup_db || {
+      echo "⚠️  Aviso: Erro ao configurar banco de dados"
+      echo "   Continuando mesmo assim..."
+    }
+  else
+    echo "⚠️  Aviso: Script setup_db não encontrado"
+  fi
+fi
 
 echo "Starting TurboZap API (port: ${SERVER_PORT})..."
 /app/turbozap &

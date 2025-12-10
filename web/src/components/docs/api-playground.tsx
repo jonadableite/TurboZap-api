@@ -2,6 +2,7 @@
 
 import { Badge, Button, Input } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
+import { getApiBaseUrl } from "@/lib/api-url";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
@@ -180,10 +181,14 @@ const LanguageSelector = ({
                     "hover:scale-[1.01]"
                   ),
               // Hover gradient backgrounds
-              lang === "cURL" && "hover:bg-gradient-to-tr hover:from-white/10 hover:to-black/40",
-              lang === "JavaScript" && "hover:bg-gradient-to-tr hover:from-yellow-500/10 hover:to-black/40",
-              lang === "Python" && "hover:bg-gradient-to-tr hover:from-blue-500/10 hover:to-black/40",
-              lang === "Go" && "hover:bg-gradient-to-tr hover:from-cyan-500/10 hover:to-black/40"
+              lang === "cURL" &&
+                "hover:bg-gradient-to-tr hover:from-white/10 hover:to-black/40",
+              lang === "JavaScript" &&
+                "hover:bg-gradient-to-tr hover:from-yellow-500/10 hover:to-black/40",
+              lang === "Python" &&
+                "hover:bg-gradient-to-tr hover:from-blue-500/10 hover:to-black/40",
+              lang === "Go" &&
+                "hover:bg-gradient-to-tr hover:from-cyan-500/10 hover:to-black/40"
             )}
             title={`Switch to ${lang} code example`}
           >
@@ -207,9 +212,15 @@ const LanguageSelector = ({
                     isSelected
                       ? config.color
                       : "opacity-70 group-hover:opacity-100",
-                    !isSelected && lang === "cURL" && "group-hover:text-gray-200",
-                    !isSelected && lang === "JavaScript" && "group-hover:text-yellow-300",
-                    !isSelected && lang === "Python" && "group-hover:text-blue-300",
+                    !isSelected &&
+                      lang === "cURL" &&
+                      "group-hover:text-gray-200",
+                    !isSelected &&
+                      lang === "JavaScript" &&
+                      "group-hover:text-yellow-300",
+                    !isSelected &&
+                      lang === "Python" &&
+                      "group-hover:text-blue-300",
                     !isSelected && lang === "Go" && "group-hover:text-cyan-300"
                   )}
                 />
@@ -221,8 +232,12 @@ const LanguageSelector = ({
                   "text-xs font-medium leading-none transition-all duration-300",
                   isSelected ? config.color : "text-gray-400",
                   !isSelected && lang === "cURL" && "group-hover:text-gray-200",
-                  !isSelected && lang === "JavaScript" && "group-hover:text-yellow-300",
-                  !isSelected && lang === "Python" && "group-hover:text-blue-300",
+                  !isSelected &&
+                    lang === "JavaScript" &&
+                    "group-hover:text-yellow-300",
+                  !isSelected &&
+                    lang === "Python" &&
+                    "group-hover:text-blue-300",
                   !isSelected && lang === "Go" && "group-hover:text-cyan-300"
                 )}
               >
@@ -274,9 +289,11 @@ export function ApiPlayground({
   };
 
   const getBaseUrl = () => {
-    return (
-      storedApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    );
+    // Use stored URL if available, otherwise use shared utility
+    if (storedApiUrl && storedApiUrl.trim()) {
+      return storedApiUrl.trim();
+    }
+    return getApiBaseUrl();
   };
 
   const getFullUrl = () => {
@@ -674,7 +691,9 @@ func main() {
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-3 opacity-50 py-12">
                         <Terminal className="w-10 h-10" />
-                        <p className="text-sm">Execute a request to see the response</p>
+                        <p className="text-sm">
+                          Execute a request to see the response
+                        </p>
                       </div>
                     )
                   ) : (

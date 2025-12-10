@@ -9,15 +9,9 @@ import type {
   QRCodeResponse,
 } from "@/types";
 import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
-
-// API URL - must be set in .env file
-// In development: http://localhost:8080
-// In production: your production API URL
-// IMPORTANT: NEXT_PUBLIC_* variables are embedded at build time
-const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
+import { getApiBaseUrl } from "./api-url";
 
 const API_KEY_STORAGE = "turbozap_api_key";
-const API_URL_STORAGE = "turbozap_api_url";
 
 // Helper to safely get from localStorage (client-side only)
 const getFromStorage = (key: string): string | null => {
@@ -33,73 +27,9 @@ const getFromStorage = (key: string): string | null => {
   }
 };
 
-// Get base URL - prioritize stored URL, then env var, then smart fallback
+// Get base URL - uses shared utility
 function getBaseURL(): string {
-  // 1. Check localStorage first (user override - highest priority)
-  if (typeof window !== "undefined") {
-    const storedUrl = getFromStorage(API_URL_STORAGE);
-    if (storedUrl && storedUrl.trim()) {
-      const url = storedUrl.trim();
-      if (process.env.NODE_ENV === "development") {
-        console.log("[API] Using stored URL from localStorage:", url);
-      }
-      return url;
-    }
-  }
-  
-  // 2. Use env var if available (works in both SSR and client)
-  // This is embedded at build time for NEXT_PUBLIC_* variables
-  if (DEFAULT_API_URL) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[API] Using URL from NEXT_PUBLIC_API_URL:", DEFAULT_API_URL);
-    }
-    return DEFAULT_API_URL;
-  }
-  
-  // 3. In browser, try to infer from current origin
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    
-    // Smart inference: zap.whatlead.com.br -> apizap.whatlead.com.br
-    if (origin.includes("zap.whatlead.com.br")) {
-      const inferredUrl = "https://apizap.whatlead.com.br";
-      if (process.env.NODE_ENV === "development") {
-        console.log("[API] Inferred URL from origin:", inferredUrl);
-      }
-      return inferredUrl;
-    }
-    
-    // For localhost, use localhost:8080
-    if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-      return "http://localhost:8080";
-    }
-    
-    // Last resort: use same origin (assumes API is on same domain)
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[API] Using same origin as fallback:", origin);
-    }
-    return origin;
-  }
-  
-  // 4. SSR: only use localhost in development
-  if (process.env.NODE_ENV === "development") {
-    return "http://localhost:8080";
-  }
-  
-  // 5. Production SSR: must have env var
-  // This should not happen if NEXT_PUBLIC_API_URL is set at build time
-  console.error(
-    "[API] NEXT_PUBLIC_API_URL is not set in production. " +
-    "Please set it in your .env file and rebuild the application."
-  );
-  
-  // Try to use a sensible default based on common patterns
-  // This is a last resort and should be avoided
-  throw new Error(
-    "NEXT_PUBLIC_API_URL não está definido. " +
-    "Defina esta variável no arquivo .env.local ou .env.production " +
-    "e reconstrua a aplicação (ex: NEXT_PUBLIC_API_URL=https://apizap.whatlead.com.br)"
-  );
+  return getApiBaseUrl();
 }
 
 // Create axios instance with undefined baseURL initially
@@ -122,8 +52,8 @@ api.interceptors.request.use(
       const baseURL = getBaseURL();
       config.baseURL = baseURL;
       
-      // Log in development for debugging
-      if (process.env.NODE_ENV === "development" && config.url) {
+      // Log for debugging (both dev and prod to help diagnose issues)
+      if (config.url) {
         console.log(`[API] Request to ${baseURL}${config.url}`);
       }
     } catch (error) {
@@ -135,11 +65,13 @@ api.interceptors.request.use(
         if (typeof window !== "undefined") {
           const origin = window.location.origin;
           
-          // Smart inference for known domains
-          if (origin.includes("zap.whatlead.com.br")) {
-            config.baseURL = "https://apizap.whatlead.com.br";
+          // Try to use the shared utility for inference
+          try {
+            const { getApiBaseUrl } = require("./api-url");
+            config.baseURL = getApiBaseUrl();
             console.warn("[API] Using inferred URL as fallback:", config.baseURL);
-          } else {
+          } catch {
+            // If inference fails, use same origin
             config.baseURL = origin;
             console.warn("[API] Using same origin as fallback:", config.baseURL);
           }
@@ -298,8 +230,7 @@ export const instanceApi = {
     if (storedKey) {
       overrideHeaders["X-API-Key"] = storedKey;
     }
-    const storedUrl = getFromStorage(API_URL_STORAGE);
-    const finalUrl = storedUrl || DEFAULT_API_URL || getBaseURL();
+    const finalUrl = getBaseURL();
 
     const response = await api.post<CreateInstanceResponse>(
       "/instance/create",
