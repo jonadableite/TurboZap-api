@@ -72,7 +72,7 @@ docker-compose*.yml
 .dockerignore
 
 # Scripts (keep only what's needed)
-scripts/
+#scripts/
 
 # Prometheus
 prometheus.yml
