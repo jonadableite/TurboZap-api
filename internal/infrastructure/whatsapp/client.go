@@ -110,6 +110,11 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 		return client, nil
 	}
 
+	// Validate container
+	if m.container == nil {
+		return nil, fmt.Errorf("database container is not initialized")
+	}
+
 	// Try to load existing device by JID if available for session persistence
 	var device *store.Device
 	if instance.DeviceJID != "" {
@@ -150,7 +155,7 @@ func (m *Manager) CreateClient(instance *entity.Instance) (*Client, error) {
 	}
 
 	// Create event handler
-		handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher, m.messageRepo)
+	handler := NewEventHandler(instance.ID, instance.Name, m.logger, m.dispatcher, m.messageRepo)
 	handler.SetWAClient(waClient)
 
 	client := &Client{
@@ -265,7 +270,7 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 	}
 
 	m.logger.WithFields(logrus.Fields{
-		"instance":  client.Instance.Name,
+		"instance":   client.Instance.Name,
 		"hasSession": hasSession,
 	}).Info("Connecting WhatsApp client")
 
@@ -600,7 +605,7 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 		if err != nil {
 			m.logger.WithFields(logrus.Fields{
 				"instance": instance.Name,
-				"error":   err.Error(),
+				"error":    err.Error(),
 			}).Error("Failed to create client during restore")
 			continue
 		}
@@ -665,8 +670,8 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 				reconnectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 				m.logger.WithFields(logrus.Fields{
-					"instance": inst.Name,
-					"attempt": attempt,
+					"instance":   inst.Name,
+					"attempt":    attempt,
 					"maxRetries": maxRetries,
 				}).Info("Attempting to restore connection for instance")
 
@@ -676,8 +681,8 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 				if err != nil {
 					m.logger.WithFields(logrus.Fields{
 						"instance": inst.Name,
-						"attempt": attempt,
-						"error":   err.Error(),
+						"attempt":  attempt,
+						"error":    err.Error(),
 					}).Warn("Failed to connect instance, will retry")
 
 					if attempt < maxRetries {
@@ -686,7 +691,7 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 						continue
 					} else {
 						m.logger.WithFields(logrus.Fields{
-							"instance": inst.Name,
+							"instance":   inst.Name,
 							"maxRetries": maxRetries,
 						}).Error("Failed to restore connection after all retries")
 						return
@@ -702,7 +707,7 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 
 				if isConnected {
 					m.logger.WithFields(logrus.Fields{
-						"instance": inst.Name,
+						"instance":   inst.Name,
 						"hasSession": hasSessionAfterConnect,
 					}).Info("Successfully restored connection for instance")
 					return

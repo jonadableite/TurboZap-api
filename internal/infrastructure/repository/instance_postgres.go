@@ -28,11 +28,16 @@ func (r *instancePostgresRepository) Create(ctx context.Context, instance *entit
 		INSERT INTO instances (id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
+	var userID *string
+	if instance.UserID != "" {
+		userID = &instance.UserID
+	}
+
 	_, err := r.pool.Exec(ctx, query,
 		instance.ID,
 		instance.Name,
 		instance.APIKey,
-		instance.UserID,
+		userID,
 		string(instance.Status),
 		instance.PhoneNumber,
 		instance.ProfileName,

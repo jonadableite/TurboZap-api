@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -62,4 +64,3 @@ func main() {
 
 	fmt.Printf("Fixed %s\n", file)
 }
-
