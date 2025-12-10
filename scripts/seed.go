@@ -61,4 +61,3 @@ func main() {
 	fmt.Println("✅ Seed concluído! O banco está pronto para uso.")
 	fmt.Println("💡 Dica: Crie instâncias e usuários através da API/web interface.")
 }
-
