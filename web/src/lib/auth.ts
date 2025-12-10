@@ -8,6 +8,9 @@ import { ac, admin, developer, user } from "./permissions";
 /**
  * Better Auth configuration
  * Tables use 'auth_' prefix to avoid conflicts with TurboZap backend tables
+ * 
+ * Following the official Better Auth documentation pattern:
+ * https://www.better-auth.com/docs/installation
  */
 
 // Check if we're in build phase
@@ -15,187 +18,36 @@ const isBuildPhase =
   process.env.NEXT_PHASE === "phase-production-build" ||
   process.env.NEXT_PHASE === "phase-development";
 
-// Validate DATABASE_URL only at runtime (not during build)
-// During build, DATABASE_URL may be empty, which is acceptable
-if (typeof window === "undefined" && !isBuildPhase) {
-  if (!DATABASE_URL || typeof DATABASE_URL !== "string" || DATABASE_URL.trim() === "") {
-    throw new Error(
-      "DATABASE_URL is required. Please set it in your environment variables."
-    );
-  }
+// Create PostgreSQL Pool - simple and direct as per Better Auth docs
+// During build, create a dummy pool to avoid errors
+let pool: Pool | undefined;
+
+if (isBuildPhase || !DATABASE_URL || DATABASE_URL.trim() === "") {
+  // Build phase or no DATABASE_URL: create dummy pool
+  pool = new Pool({
+    connectionString: "postgres://dummy:dummy@localhost:5432/dummy",
+  });
+} else {
+  // Runtime: create real pool exactly as Better Auth documentation shows
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+  });
+
+  // Handle pool errors
+  pool.on("error", (err) => {
+    console.error("[Auth] Unexpected error on idle PostgreSQL client:", err);
+  });
 }
 
-// Create PostgreSQL Pool - ensure it's created at runtime
-// During build time, skip pool creation
-let pool: Pool | null = null;
-
-// Function to initialize pool (called at runtime)
-function initializePool() {
-  // If pool already exists, return it
-  if (pool) {
-    return pool;
-  }
-
-  // Check if we're in build phase
-  if (isBuildPhase) {
-    return null;
-  }
-
-  // Validate DATABASE_URL
-  if (!DATABASE_URL || DATABASE_URL.trim() === "") {
-    const error = new Error("[Auth] DATABASE_URL is not set. Cannot create database pool.");
-    console.error(error.message);
-    return null;
-  }
-
-  try {
-    // Log database connection info (without sensitive data)
-    try {
-      const dbUrl = new URL(DATABASE_URL);
-      console.log("[Auth] Initializing database pool:", {
-        host: dbUrl.hostname,
-        port: dbUrl.port || "5432",
-        database: dbUrl.pathname.slice(1) || "turbozap",
-        ssl: dbUrl.searchParams.get("sslmode") !== "disable",
-      });
-    } catch (err) {
-      console.warn("[Auth] Could not parse DATABASE_URL:", err);
-    }
-
-    // Create PostgreSQL Pool
-    pool = new Pool({
-      connectionString: DATABASE_URL,
-      // Add connection pool options for better reliability
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 10000, // Increased to 10 seconds for production
-      // Retry connection on failure
-      allowExitOnIdle: false,
-    });
-
-    // Handle pool errors
-    pool.on("error", (err: Error & { code?: string }) => {
-      console.error("[Auth] Unexpected error on idle PostgreSQL client:", {
-        message: err.message,
-        code: err.code,
-        stack: err.stack,
-      });
-    });
-
-    // Test connection immediately (synchronously if possible)
-    // This will help catch connection issues early
-    const testConnection = async () => {
-      try {
-        const result = await pool!.query("SELECT NOW() as now, current_database() as db");
-        console.log("[Auth] Database connection successful:", {
-          database: result.rows[0]?.db,
-          timestamp: result.rows[0]?.now,
-        });
-      } catch (err: unknown) {
-        const error = err as Error & { code?: string; detail?: string; hint?: string };
-        console.error("[Auth] Database connection test failed:", {
-          message: error.message,
-          code: error.code,
-          detail: error.detail,
-          hint: error.hint,
-        });
-        // Don't close pool here, let it retry
-      }
-    };
-    
-    // Test connection asynchronously (don't block initialization)
-    testConnection().catch(() => {
-      // Error already logged above
-    });
-
-    return pool;
-  } catch (err: unknown) {
-    const error = err as Error & { code?: string };
-    console.error("[Auth] Failed to create database pool:", {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-    });
-    return null;
-  }
-}
-
-// Initialize pool immediately if not in build phase
-// But only if we have a valid DATABASE_URL
-if (!isBuildPhase && DATABASE_URL && DATABASE_URL.trim()) {
-  try {
-    initializePool();
-  } catch (error) {
-    console.error("[Auth] Failed to initialize pool at module load:", error);
-    // Don't throw - pool will be initialized lazily when needed
-  }
-}
-
-// Get or create pool for auth (lazy initialization)
-function getAuthPool() {
-  if (isBuildPhase) {
-    return undefined;
-  }
-  
-  // Ensure pool is initialized
-  if (!pool) {
-    console.log("[Auth] Pool not initialized, creating new pool...");
-    const initializedPool = initializePool();
-    if (!initializedPool) {
-      // Log error but don't throw - Better Auth can work without DB in some cases
-      console.error(
-        "[Auth] Failed to initialize database pool. " +
-        "Authentication may not work properly. " +
-        "Please check your DATABASE_URL configuration."
-      );
-      return undefined;
-    }
-    console.log("[Auth] Pool initialized successfully");
-    return initializedPool;
-  }
-  
-  // Verify pool is still valid
-  if (pool && pool.totalCount === 0 && pool.idleCount === 0) {
-    // Pool might be closed, try to reinitialize
-    console.warn("[Auth] Database pool appears closed, reinitializing...");
-    pool = null;
-    return getAuthPool();
-  }
-  
-  return pool;
-}
-
-// Only create auth instance if we have required values (not during build)
-// During build, create a minimal config that won't be used
-const authConfig = {
-  // Database pool - will be initialized lazily when needed
-  database: getAuthPool(),
+// Create auth instance - following Better Auth documentation pattern
+export const auth = betterAuth({
+  // Database - pass Pool directly as shown in docs
+  database: pool,
 
   // App configuration
   appName: "TurboZap",
   secret: BETTER_AUTH_SECRET || "dummy-secret-for-build-time-only",
-  baseURL: (() => {
-    // Priority: BETTER_AUTH_URL > NEXT_PUBLIC_BETTER_AUTH_URL > localhost
-    const url = 
-      BETTER_AUTH_URL || 
-      process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 
-      (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "");
-    
-    // Validate URL in production
-    if (process.env.NODE_ENV === "production" && !url) {
-      console.error(
-        "[Auth] BETTER_AUTH_URL or NEXT_PUBLIC_BETTER_AUTH_URL must be set in production. " +
-        "Please set it in your .env file."
-      );
-    }
-    
-    // Log in development for debugging
-    if (process.env.NODE_ENV === "development") {
-      console.log("[Auth] Using baseURL:", url);
-    }
-    
-    return url || "http://localhost:3000";
-  })(),
+  baseURL: BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
 
   // Email and Password authentication
   emailAndPassword: {
@@ -291,37 +143,12 @@ const authConfig = {
         DEVELOPER: developer,
         USER: user,
       },
-      defaultRole: "USER", // Deve ser maiúsculo para corresponder ao enum Role no PostgreSQL
-      adminRoles: ["ADMIN"], // Deve ser maiúsculo
+      defaultRole: "USER",
+      adminRoles: ["ADMIN"],
     }),
-    nextCookies(), // Server Actions cookie handling (must be last)
+    nextCookies(), // Must be last
   ],
-
-  // Trusted origins for CORS
-  trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:8080",
-    process.env.BETTER_AUTH_URL,
-    process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_API_URL,
-    BETTER_AUTH_URL,
-  ].filter((origin): origin is string => Boolean(origin)), // Remove undefined/null values and ensure type safety
-};
-
-// Type assertion needed due to build-time config variations and Better Auth type complexity
-// During build, some values may be empty strings, but Better Auth will handle this at runtime
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const auth = betterAuth(authConfig as any);
-
-// Log auth configuration status (only in development)
-if (process.env.NODE_ENV === "development") {
-  console.log("[Auth] Better Auth initialized:", {
-    hasDatabase: !!authConfig.database,
-    baseURL: authConfig.baseURL,
-    hasSecret: !!authConfig.secret && authConfig.secret !== "dummy-secret-for-build-time-only",
-  });
-}
+});
 
 // Export types for use in the application
 export type User = typeof auth.$Infer.Session.user & {
