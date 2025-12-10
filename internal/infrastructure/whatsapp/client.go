@@ -250,6 +250,7 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 	// Check if already connected (without holding lock during connect)
 	client.mu.RLock()
 	if client.WAClient == nil {
+		client.mu.RUnlock()
 		return fmt.Errorf("WhatsApp client is not initialized")
 	}
 	isConnected := client.WAClient.IsConnected()
@@ -257,8 +258,16 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 	client.mu.RUnlock()
 
 	if isConnected {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Debug("Client already connected, skipping")
 		return nil
 	}
+
+	m.logger.WithFields(logrus.Fields{
+		"instance":  client.Instance.Name,
+		"hasSession": hasSession,
+	}).Info("Connecting WhatsApp client")
 
 	client.Instance.SetConnecting()
 	m.persistInstanceState(client.Instance)
@@ -275,13 +284,39 @@ func (m *Manager) Connect(ctx context.Context, instanceID uuid.UUID) error {
 		} else {
 			// Start goroutine to handle QR codes
 			go m.handleQRChannel(client, qrChan)
+			m.logger.WithFields(logrus.Fields{
+				"instance": client.Instance.Name,
+			}).Info("QR channel handler started")
 		}
 	}
 
-	// Connect
+	// Connect with error handling
 	err := client.WAClient.Connect()
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).WithError(err).Error("Failed to connect WhatsApp client")
+		client.Instance.SetDisconnected()
+		m.persistInstanceState(client.Instance)
 		return fmt.Errorf("failed to connect: %w", err)
+	}
+
+	// Give it a moment to establish connection
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify connection was established
+	client.mu.RLock()
+	isNowConnected := client.WAClient.IsConnected()
+	client.mu.RUnlock()
+
+	if isNowConnected {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Info("WhatsApp client connected successfully")
+	} else {
+		m.logger.WithFields(logrus.Fields{
+			"instance": client.Instance.Name,
+		}).Warn("WhatsApp client Connect() returned no error but client is not connected")
 	}
 
 	return nil
@@ -561,13 +596,25 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 
 	for _, instance := range instances {
 		// Create client first
-		if _, err := m.CreateClient(instance); err != nil {
+		_, err := m.CreateClient(instance)
+		if err != nil {
+			m.logger.WithFields(logrus.Fields{
+				"instance": instance.Name,
+				"error":   err.Error(),
+			}).Error("Failed to create client during restore")
 			continue
 		}
 
+		m.logger.WithFields(logrus.Fields{
+			"instance": instance.Name,
+			"status":   instance.Status,
+		}).Info("Client created for instance")
+
 		// Skip auto-reconnect if disabled
 		if !m.config.WhatsApp.AutoReconnect {
-			m.logger.Debug("Auto-reconnect disabled, skipping")
+			m.logger.WithFields(logrus.Fields{
+				"instance": instance.Name,
+			}).Debug("Auto-reconnect disabled, skipping")
 			continue
 		}
 
@@ -575,36 +622,104 @@ func (m *Manager) RestoreInstances(ctx context.Context) error {
 		// Note: This will work if the device already has a session saved
 		// For new devices, they will need QR code scan
 		go func(inst *entity.Instance) {
-			// Small delay to allow client initialization
-			time.Sleep(1 * time.Second)
+			// Initial delay to allow client initialization
+			time.Sleep(2 * time.Second)
 
 			client, exists := m.GetClient(inst.ID)
 			if !exists || client == nil || client.WAClient == nil {
-				m.logger.Debug("Client not ready for reconnect")
+				m.logger.WithFields(logrus.Fields{
+					"instance": inst.Name,
+				}).Warn("Client not ready for reconnect after delay")
 				return
 			}
 
 			// Check if device has a valid session (previously logged in)
 			client.mu.RLock()
 			hasSession := client.WAClient.Store.ID != nil
+			isAlreadyConnected := client.WAClient.IsConnected()
 			client.mu.RUnlock()
 
+			if isAlreadyConnected {
+				m.logger.WithFields(logrus.Fields{
+					"instance": inst.Name,
+				}).Info("Client already connected, skipping reconnect")
+				return
+			}
+
 			if !hasSession {
-				m.logger.Debug("No valid session found for instance, skipping auto-reconnect")
-				return
+				m.logger.WithFields(logrus.Fields{
+					"instance": inst.Name,
+				}).Info("No valid session found for instance, will need QR code scan")
+				// Still try to connect to get QR code
+			} else {
+				m.logger.WithFields(logrus.Fields{
+					"instance": inst.Name,
+				}).Info("Valid session found, attempting to restore connection")
 			}
 
-			// Attempt to reconnect
-			reconnectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
+			// Attempt to reconnect with retry logic
+			maxRetries := 3
+			retryDelay := 2 * time.Second
 
-			m.logger.Info("Attempting to restore connection for instance")
+			for attempt := 1; attempt <= maxRetries; attempt++ {
+				reconnectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
-			if err := m.Connect(reconnectCtx, inst.ID); err != nil {
-				return
+				m.logger.WithFields(logrus.Fields{
+					"instance": inst.Name,
+					"attempt": attempt,
+					"maxRetries": maxRetries,
+				}).Info("Attempting to restore connection for instance")
+
+				err := m.Connect(reconnectCtx, inst.ID)
+				cancel()
+
+				if err != nil {
+					m.logger.WithFields(logrus.Fields{
+						"instance": inst.Name,
+						"attempt": attempt,
+						"error":   err.Error(),
+					}).Warn("Failed to connect instance, will retry")
+
+					if attempt < maxRetries {
+						time.Sleep(retryDelay)
+						retryDelay *= 2 // Exponential backoff
+						continue
+					} else {
+						m.logger.WithFields(logrus.Fields{
+							"instance": inst.Name,
+							"maxRetries": maxRetries,
+						}).Error("Failed to restore connection after all retries")
+						return
+					}
+				}
+
+				// Verify connection was established
+				time.Sleep(1 * time.Second) // Give it a moment to establish connection
+				client.mu.RLock()
+				isConnected := client.WAClient.IsConnected()
+				hasSessionAfterConnect := client.WAClient.Store.ID != nil
+				client.mu.RUnlock()
+
+				if isConnected {
+					m.logger.WithFields(logrus.Fields{
+						"instance": inst.Name,
+						"hasSession": hasSessionAfterConnect,
+					}).Info("Successfully restored connection for instance")
+					return
+				} else if hasSessionAfterConnect {
+					// Has session but not connected - might be in process of connecting
+					m.logger.WithFields(logrus.Fields{
+						"instance": inst.Name,
+					}).Info("Connection in progress, session exists")
+					return
+				} else {
+					// No session - will need QR code
+					m.logger.WithFields(logrus.Fields{
+						"instance": inst.Name,
+					}).Info("No session found, QR code will be required")
+					return
+				}
 			}
-
-			m.logger.Info("Successfully restored connection for instance")
 		}(instance)
 	}
 
