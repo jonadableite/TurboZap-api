@@ -12,7 +12,9 @@ export const metadata: Metadata = {
   title: "TurboZap - WhatsApp Manager",
   description: "Gerencie suas instâncias do WhatsApp com facilidade",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/whatsapp.svg",
+    shortcut: "/whatsapp.svg",
+    apple: "/whatsapp.svg",
   },
 };
 
