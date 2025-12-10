@@ -199,6 +199,10 @@ const authConfig = {
     useSecureCookies: process.env.NODE_ENV === "production",
     // Cookie settings for production
     sameSite: "lax", // Allow cookies to work with redirects
+    // Ensure cookies work across subdomains if needed
+    cookieDomain: process.env.NODE_ENV === "production" 
+      ? process.env.COOKIE_DOMAIN || undefined 
+      : undefined,
   },
 
   // Plugins

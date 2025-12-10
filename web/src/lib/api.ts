@@ -13,20 +13,99 @@ import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
 // API URL - must be set in .env file
 // In development: http://localhost:8080
 // In production: your production API URL
-const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL;
+// IMPORTANT: NEXT_PUBLIC_* variables are embedded at build time
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
 
-if (!DEFAULT_API_URL && process.env.NODE_ENV === "production") {
-  console.warn(
-    "[API] NEXT_PUBLIC_API_URL is not set. " +
-    "Please set it in your .env file for production."
-  );
-}
 const API_KEY_STORAGE = "turbozap_api_key";
 const API_URL_STORAGE = "turbozap_api_url";
 
-// Create axios instance
+// Helper to safely get from localStorage (client-side only)
+const getFromStorage = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    // localStorage may be disabled or unavailable
+    if (process.env.NODE_ENV === "development") {
+      console.warn(`[API] Failed to access localStorage for key "${key}":`, error);
+    }
+    return null;
+  }
+};
+
+// Get base URL - prioritize stored URL, then env var, then smart fallback
+function getBaseURL(): string {
+  // 1. Check localStorage first (user override - highest priority)
+  if (typeof window !== "undefined") {
+    const storedUrl = getFromStorage(API_URL_STORAGE);
+    if (storedUrl && storedUrl.trim()) {
+      const url = storedUrl.trim();
+      if (process.env.NODE_ENV === "development") {
+        console.log("[API] Using stored URL from localStorage:", url);
+      }
+      return url;
+    }
+  }
+  
+  // 2. Use env var if available (works in both SSR and client)
+  // This is embedded at build time for NEXT_PUBLIC_* variables
+  if (DEFAULT_API_URL) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[API] Using URL from NEXT_PUBLIC_API_URL:", DEFAULT_API_URL);
+    }
+    return DEFAULT_API_URL;
+  }
+  
+  // 3. In browser, try to infer from current origin
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    
+    // Smart inference: zap.whatlead.com.br -> apizap.whatlead.com.br
+    if (origin.includes("zap.whatlead.com.br")) {
+      const inferredUrl = "https://apizap.whatlead.com.br";
+      if (process.env.NODE_ENV === "development") {
+        console.log("[API] Inferred URL from origin:", inferredUrl);
+      }
+      return inferredUrl;
+    }
+    
+    // For localhost, use localhost:8080
+    if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+      return "http://localhost:8080";
+    }
+    
+    // Last resort: use same origin (assumes API is on same domain)
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[API] Using same origin as fallback:", origin);
+    }
+    return origin;
+  }
+  
+  // 4. SSR: only use localhost in development
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:8080";
+  }
+  
+  // 5. Production SSR: must have env var
+  // This should not happen if NEXT_PUBLIC_API_URL is set at build time
+  console.error(
+    "[API] NEXT_PUBLIC_API_URL is not set in production. " +
+    "Please set it in your .env file and rebuild the application."
+  );
+  
+  // Try to use a sensible default based on common patterns
+  // This is a last resort and should be avoided
+  throw new Error(
+    "NEXT_PUBLIC_API_URL não está definido. " +
+    "Defina esta variável no arquivo .env.local ou .env.production " +
+    "e reconstrua a aplicação (ex: NEXT_PUBLIC_API_URL=https://apizap.whatlead.com.br)"
+  );
+}
+
+// Create axios instance with undefined baseURL initially
+// It will be set dynamically in the request interceptor
 const api = axios.create({
-  baseURL: DEFAULT_API_URL || "http://localhost:8080", // Default to localhost in development
+  baseURL: undefined, // Will be set in interceptor
   timeout: 15000,
   timeoutErrorMessage: "Request timed out",
   headers: {
@@ -34,39 +113,72 @@ const api = axios.create({
   },
 });
 
-const getFromStorage = (key: string) => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(key);
-};
-
 // Request interceptor to add API key and dynamic base URL
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const storedUrl = getFromStorage(API_URL_STORAGE);
-    if (storedUrl) {
-      config.baseURL = storedUrl;
+api.interceptors.request.use(
+  (config) => {
+    // Always recalculate baseURL to get the most up-to-date value
+    // This ensures localStorage changes are picked up immediately
+    try {
+      const baseURL = getBaseURL();
+      config.baseURL = baseURL;
+      
+      // Log in development for debugging
+      if (process.env.NODE_ENV === "development" && config.url) {
+        console.log(`[API] Request to ${baseURL}${config.url}`);
+      }
+    } catch (error) {
+      // In production, try to recover gracefully
+      if (process.env.NODE_ENV === "production") {
+        console.error("[API] Failed to get base URL:", error);
+        
+        // Try to use current origin as last resort (client-side only)
+        if (typeof window !== "undefined") {
+          const origin = window.location.origin;
+          
+          // Smart inference for known domains
+          if (origin.includes("zap.whatlead.com.br")) {
+            config.baseURL = "https://apizap.whatlead.com.br";
+            console.warn("[API] Using inferred URL as fallback:", config.baseURL);
+          } else {
+            config.baseURL = origin;
+            console.warn("[API] Using same origin as fallback:", config.baseURL);
+          }
+        } else {
+          // SSR: can't recover, must have env var
+          throw error;
+        }
+      } else {
+        // Development: throw error to catch configuration issues early
+        throw error;
+      }
     }
-  }
-
-  const apiKey = getFromStorage(API_KEY_STORAGE);
-  if (apiKey) {
-    const headers = (config.headers || {}) as AxiosRequestHeaders;
-    headers["X-API-Key"] = apiKey;
-    config.headers = headers;
-  } else {
-    // Log warning in development if API key is missing for non-public endpoints
-    // Some endpoints might be public (like health check), so we don't block the request
-    if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
-      console.warn(
-        "[API] No API key found in localStorage. " +
-        "Some endpoints may require authentication. " +
-        "Configure your API key in Settings or Header."
-      );
+    
+    // Add API key from localStorage if available
+    if (typeof window !== "undefined") {
+      const apiKey = getFromStorage(API_KEY_STORAGE);
+      if (apiKey && apiKey.trim()) {
+        const headers = (config.headers || {}) as AxiosRequestHeaders;
+        headers["X-API-Key"] = apiKey.trim();
+        config.headers = headers;
+      } else {
+        // Log warning in development if API key is missing for non-public endpoints
+        // Some endpoints might be public (like health check), so we don't block the request
+        if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
+          console.warn(
+            "[API] No API key found in localStorage. " +
+            "Some endpoints may require authentication. " +
+            "Configure your API key in Settings or Header."
+          );
+        }
+      }
     }
-  }
 
-  return config;
-});
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor for error handling
 const isTimeoutError = (error: AxiosError) =>
@@ -187,12 +299,13 @@ export const instanceApi = {
       overrideHeaders["X-API-Key"] = storedKey;
     }
     const storedUrl = getFromStorage(API_URL_STORAGE);
+    const finalUrl = storedUrl || DEFAULT_API_URL || getBaseURL();
 
     const response = await api.post<CreateInstanceResponse>(
       "/instance/create",
       data,
       {
-        baseURL: storedUrl || DEFAULT_API_URL,
+        baseURL: finalUrl,
         headers: Object.keys(overrideHeaders).length ? overrideHeaders : undefined,
       }
     );
