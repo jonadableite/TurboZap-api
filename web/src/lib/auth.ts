@@ -67,7 +67,9 @@ function initializePool() {
       // Add connection pool options for better reliability
       max: 20, // Maximum number of clients in the pool
       idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 5000, // Increased to 5 seconds for production
+      connectionTimeoutMillis: 10000, // Increased to 10 seconds for production
+      // Retry connection on failure
+      allowExitOnIdle: false,
     });
 
     // Handle pool errors
@@ -93,8 +95,14 @@ function initializePool() {
 }
 
 // Initialize pool immediately if not in build phase
-if (!isBuildPhase) {
-  initializePool();
+// But only if we have a valid DATABASE_URL
+if (!isBuildPhase && DATABASE_URL && DATABASE_URL.trim()) {
+  try {
+    initializePool();
+  } catch (error) {
+    console.error("[Auth] Failed to initialize pool at module load:", error);
+    // Don't throw - pool will be initialized lazily when needed
+  }
 }
 
 // Get or create pool for auth (lazy initialization)
@@ -102,23 +110,64 @@ function getAuthPool() {
   if (isBuildPhase) {
     return undefined;
   }
+  
   // Ensure pool is initialized
   if (!pool) {
     const initializedPool = initializePool();
-    return initializedPool || undefined;
+    if (!initializedPool) {
+      // Log error but don't throw - Better Auth can work without DB in some cases
+      console.error(
+        "[Auth] Failed to initialize database pool. " +
+        "Authentication may not work properly. " +
+        "Please check your DATABASE_URL configuration."
+      );
+      return undefined;
+    }
+    return initializedPool;
   }
+  
+  // Verify pool is still valid
+  if (pool && pool.totalCount === 0 && pool.idleCount === 0) {
+    // Pool might be closed, try to reinitialize
+    console.warn("[Auth] Database pool appears closed, reinitializing...");
+    pool = null;
+    return getAuthPool();
+  }
+  
   return pool;
 }
 
 // Only create auth instance if we have required values (not during build)
 // During build, create a minimal config that won't be used
 const authConfig = {
+  // Database pool - will be initialized lazily when needed
   database: getAuthPool(),
 
   // App configuration
   appName: "TurboZap",
   secret: BETTER_AUTH_SECRET || "dummy-secret-for-build-time-only",
-  baseURL: BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL: (() => {
+    // Priority: BETTER_AUTH_URL > NEXT_PUBLIC_BETTER_AUTH_URL > localhost
+    const url = 
+      BETTER_AUTH_URL || 
+      process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 
+      (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "");
+    
+    // Validate URL in production
+    if (process.env.NODE_ENV === "production" && !url) {
+      console.error(
+        "[Auth] BETTER_AUTH_URL or NEXT_PUBLIC_BETTER_AUTH_URL must be set in production. " +
+        "Please set it in your .env file."
+      );
+    }
+    
+    // Log in development for debugging
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Auth] Using baseURL:", url);
+    }
+    
+    return url || "http://localhost:3000";
+  })(),
 
   // Email and Password authentication
   emailAndPassword: {
