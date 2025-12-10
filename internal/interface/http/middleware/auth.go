@@ -153,7 +153,9 @@ func GlobalAdminMiddleware(cfg *config.Config) fiber.Handler {
 }
 
 // InstanceAuthMiddleware ensures the request is for a specific instance
-func InstanceAuthMiddleware() fiber.Handler {
+// This middleware is deprecated in favor of AuthorizeInstanceAccess in handlers
+// It's kept for backwards compatibility but should be replaced with handler-level checks
+func InstanceAuthMiddleware(instanceRepo repository.InstanceRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Check if user is global admin (can access any instance)
 		if c.Locals("isGlobalAdmin") == true {
@@ -166,9 +168,18 @@ func InstanceAuthMiddleware() fiber.Handler {
 			return c.Next()
 		}
 
-		// Check if authenticated instance matches the requested instance
+		// Check if using instance API key (legacy) - exact match required
 		authInstanceName := c.Locals("instanceName")
 		if authInstanceName != nil && authInstanceName.(string) == instanceName {
+			return c.Next()
+		}
+
+		// For user API keys, we need to check if the instance belongs to the user
+		// This requires a database lookup, so it's better to do this in handlers
+		// For now, we'll allow it and let handlers validate with AuthorizeInstanceAccess
+		userID, _ := c.Locals("userID").(string)
+		if userID != "" {
+			// User API key - let handler validate ownership
 			return c.Next()
 		}
 
