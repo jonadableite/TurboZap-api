@@ -43,7 +43,8 @@ function initializePool() {
 
   // Validate DATABASE_URL
   if (!DATABASE_URL || DATABASE_URL.trim() === "") {
-    console.error("[Auth] DATABASE_URL is not set. Cannot create database pool.");
+    const error = new Error("[Auth] DATABASE_URL is not set. Cannot create database pool.");
+    console.error(error.message);
     return null;
   }
 
@@ -73,23 +74,48 @@ function initializePool() {
     });
 
     // Handle pool errors
-    pool.on("error", (err) => {
-      console.error("[Auth] Unexpected error on idle PostgreSQL client", err);
+    pool.on("error", (err: Error & { code?: string }) => {
+      console.error("[Auth] Unexpected error on idle PostgreSQL client:", {
+        message: err.message,
+        code: err.code,
+        stack: err.stack,
+      });
     });
 
-    // Test connection
-    pool
-      .query("SELECT NOW()")
-      .then(() => {
-        console.log("[Auth] Database connection successful");
-      })
-      .catch((err) => {
-        console.error("[Auth] Database connection failed:", err.message);
-      });
+    // Test connection immediately (synchronously if possible)
+    // This will help catch connection issues early
+    const testConnection = async () => {
+      try {
+        const result = await pool!.query("SELECT NOW() as now, current_database() as db");
+        console.log("[Auth] Database connection successful:", {
+          database: result.rows[0]?.db,
+          timestamp: result.rows[0]?.now,
+        });
+      } catch (err: unknown) {
+        const error = err as Error & { code?: string; detail?: string; hint?: string };
+        console.error("[Auth] Database connection test failed:", {
+          message: error.message,
+          code: error.code,
+          detail: error.detail,
+          hint: error.hint,
+        });
+        // Don't close pool here, let it retry
+      }
+    };
+    
+    // Test connection asynchronously (don't block initialization)
+    testConnection().catch(() => {
+      // Error already logged above
+    });
 
     return pool;
-  } catch (err) {
-    console.error("[Auth] Failed to create database pool:", err);
+  } catch (err: unknown) {
+    const error = err as Error & { code?: string };
+    console.error("[Auth] Failed to create database pool:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return null;
   }
 }
@@ -113,6 +139,7 @@ function getAuthPool() {
   
   // Ensure pool is initialized
   if (!pool) {
+    console.log("[Auth] Pool not initialized, creating new pool...");
     const initializedPool = initializePool();
     if (!initializedPool) {
       // Log error but don't throw - Better Auth can work without DB in some cases
@@ -123,6 +150,7 @@ function getAuthPool() {
       );
       return undefined;
     }
+    console.log("[Auth] Pool initialized successfully");
     return initializedPool;
   }
   
@@ -285,6 +313,15 @@ const authConfig = {
 // During build, some values may be empty strings, but Better Auth will handle this at runtime
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const auth = betterAuth(authConfig as any);
+
+// Log auth configuration status (only in development)
+if (process.env.NODE_ENV === "development") {
+  console.log("[Auth] Better Auth initialized:", {
+    hasDatabase: !!authConfig.database,
+    baseURL: authConfig.baseURL,
+    hasSecret: !!authConfig.secret && authConfig.secret !== "dummy-secret-for-build-time-only",
+  });
+}
 
 // Export types for use in the application
 export type User = typeof auth.$Infer.Session.user & {
