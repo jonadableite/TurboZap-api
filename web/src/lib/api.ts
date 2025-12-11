@@ -47,77 +47,59 @@ const api = axios.create({
 // Request interceptor to add API key and dynamic base URL
 api.interceptors.request.use(
   (config) => {
-    // Check if this is a Next.js API route (starts with /api/)
-    // These routes should be called relatively, not with the backend baseURL
-    const isNextJsApiRoute = config.url?.startsWith("/api/");
-    
-    if (isNextJsApiRoute) {
-      // For Next.js API routes, use relative URLs (no baseURL)
-      config.baseURL = "";
-      
-      // Log for debugging
-      if (config.url) {
-        console.log(`[API] Next.js API route: ${config.url}`);
-      }
-    } else {
-      // For backend Go API routes, use the configured baseURL
+    const isAbsoluteUrl = typeof config.url === "string" && /^https?:\/\//i.test(config.url);
+    const nextApiPrefixes = ["/api/admin/", "/api/auth/", "/api/user/"];
+    const isNextApiRoute =
+      typeof config.url === "string" && nextApiPrefixes.some((prefix) => config.url!.startsWith(prefix));
+
+    // Next.js API routes stay relative (served by Next); everything else goes to backend base URL
+    if (!isAbsoluteUrl && !isNextApiRoute) {
       try {
         const baseURL = getBaseURL();
         config.baseURL = baseURL;
-        
-        // Log for debugging (both dev and prod to help diagnose issues)
+
         if (config.url) {
           console.log(`[API] Backend API request to ${baseURL}${config.url}`);
         }
       } catch (error) {
-      // In production, try to recover gracefully
-      if (process.env.NODE_ENV === "production") {
-        console.error("[API] Failed to get base URL:", error);
-        
-        // Try to use current origin as last resort (client-side only)
-        if (typeof window !== "undefined") {
-          const origin = window.location.origin;
-          
-          // Try to use the shared utility for inference
-          try {
-            const { getApiBaseUrl } = require("./api-url");
-            config.baseURL = getApiBaseUrl();
-            console.warn("[API] Using inferred URL as fallback:", config.baseURL);
-          } catch {
+        // In production, try to recover gracefully
+        if (process.env.NODE_ENV === "production") {
+          console.error("[API] Failed to get base URL:", error);
+
+          // Try to use current origin as last resort (client-side only)
+          if (typeof window !== "undefined") {
+            const origin = window.location.origin;
+
             // If inference fails, use same origin
             config.baseURL = origin;
             console.warn("[API] Using same origin as fallback:", config.baseURL);
+          } else {
+            // SSR: can't recover, must have env var
+            throw error;
           }
         } else {
-          // SSR: can't recover, must have env var
+          // Development: throw error to catch configuration issues early
           throw error;
         }
-      } else {
-        // Development: throw error to catch configuration issues early
-        throw error;
-      }
       }
     }
-    
-    // Add API key from localStorage if available (only for backend API routes)
-    // Next.js API routes handle authentication via cookies/session
-    if (!isNextJsApiRoute) {
-      if (typeof window !== "undefined") {
-        const apiKey = getFromStorage(API_KEY_STORAGE);
-        if (apiKey && apiKey.trim()) {
-          const headers = (config.headers || {}) as AxiosRequestHeaders;
-          headers["X-API-Key"] = apiKey.trim();
-          config.headers = headers;
-        } else {
-          // Log warning in development if API key is missing for non-public endpoints
-          // Some endpoints might be public (like health check), so we don't block the request
-          if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
-            console.warn(
-              "[API] No API key found in localStorage. " +
+
+    // Add API key from localStorage if available (backend routes)
+    if (typeof window !== "undefined") {
+      const apiKey = getFromStorage(API_KEY_STORAGE);
+      if (apiKey && apiKey.trim()) {
+        const headers = (config.headers || {}) as AxiosRequestHeaders;
+        headers["X-API-Key"] = apiKey.trim();
+        config.headers = headers;
+      } else {
+        // Log warning in development if API key is missing for non-public endpoints
+        // Some endpoints might be public (like health check), so we don't block the request
+        if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
+          console.warn(
+            "[API] No API key found in localStorage. " +
               "Some endpoints may require authentication. " +
               "Configure your API key in Settings or Header."
-            );
-          }
+          );
         }
       }
     }
@@ -138,6 +120,12 @@ const isTimeoutError = (error: AxiosError) =>
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ error?: { message: string } }>) => {
+    const status = error.response?.status;
+    const contentType = error.response?.headers
+      ? (error.response.headers["content-type"] as string | undefined)
+      : undefined;
+    const isHtmlResponse = contentType?.includes("text/html");
+
     if (isTimeoutError(error)) {
       return Promise.reject(
         new AxiosError(
@@ -181,9 +169,17 @@ api.interceptors.response.use(
           `[API] Route not found: ${error.config?.method || "GET"} ${error.config?.url}. ` +
           "Make sure the route exists and the Next.js server is running."
         );
+      } else if (status === 404) {
+        // Avoid noisy logs for 404 (e.g., hitting Next.js fallback pages)
+        console.warn("[API] Endpoint retornou 404:", error.config?.url);
+      } else if (isHtmlResponse) {
+        // Avoid dumping HTML in console; summarize instead
+        console.error(
+          `[API] Request error (${status ?? "no-status"}): HTML response returned from ${error.config?.url}`
+        );
       } else {
         console.error("[API] Request error:", message);
-        // Log full error details in development
+        // Log full error details in development when not HTML
         if (process.env.NODE_ENV === "development" && error.response) {
           console.error("[API] Response data:", error.response.data);
           console.error("[API] Response status:", error.response.status);
