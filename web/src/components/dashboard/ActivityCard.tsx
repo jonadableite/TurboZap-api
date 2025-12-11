@@ -1,14 +1,14 @@
 "use client";
 
-import { Badge } from "@/components/ui";
+import { Badge, LottieIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   BarChart3,
   Briefcase,
   ChevronRight,
-  Flame,
 } from "lucide-react";
+import incendioAnimation from "../../../public/incendio.json";
 
 export interface ActivityCardProps {
   id: string;
@@ -112,7 +112,12 @@ export function ActivityCard({
 
           {/* Title with icon */}
           <div className="flex items-start gap-2 mb-2">
-            <Flame className="w-4 h-4 text-[var(--rocket-green)] flex-shrink-0 mt-0.5" />
+            <div className="flex-shrink-0 mt-0.5 w-4 h-4">
+              <LottieIcon 
+                animationData={incendioAnimation} 
+                className="w-4 h-4" 
+              />
+            </div>
             <h3 className="text-sm font-semibold text-[var(--rocket-gray-50)] leading-tight">
               {title}
             </h3>
