@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, Spinner } from "@/components/ui";
+import { Badge, Button, Spinner, Portal } from "@/components/ui";
 import type { AdminUser, ListUsersParams } from "@/hooks/useAdminUsers";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -19,7 +19,7 @@ import {
   UserX,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface UserTableProps {
   users: AdminUser[];
@@ -55,6 +55,26 @@ export function UserTable({
   currentUserId,
 }: UserTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Close menu on scroll or resize
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handleClose = () => {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+    };
+
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+
+    return () => {
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+    };
+  }, [openMenuId]);
 
   const limit = filters.limit ?? 10;
   const offset = filters.offset ?? 0;
@@ -150,7 +170,8 @@ export function UserTable({
       {/* Table */}
       <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <div className="min-w-[800px]">
+            <table className="w-full">
             <thead>
               <tr className="border-b border-[#29292e] bg-[#0f0f14]">
                 <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
@@ -240,30 +261,47 @@ export function UserTable({
                       {/* More Actions Menu */}
                       <div className="relative">
                         <Button
+                          ref={(el) => {
+                            buttonRefs.current[user.id] = el;
+                          }}
                           size="sm"
                           variant="ghost"
-                          onClick={() =>
-                            setOpenMenuId(openMenuId === user.id ? null : user.id)
-                          }
+                          onClick={(e) => {
+                            const button = e.currentTarget;
+                            const rect = button.getBoundingClientRect();
+                            setMenuPosition({
+                              top: rect.bottom + 4,
+                              right: window.innerWidth - rect.right,
+                            });
+                            setOpenMenuId(openMenuId === user.id ? null : user.id);
+                          }}
                           className="h-8 w-8 p-0"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
 
-                        {openMenuId === user.id && (
-                          <>
-                            {/* Backdrop */}
-                            <div
-                              className="fixed inset-0 z-10"
-                              onClick={() => setOpenMenuId(null)}
-                            />
+                        {openMenuId === user.id && menuPosition && (
+                          <Portal>
+                            <>
+                              {/* Backdrop */}
+                              <div
+                                className="fixed inset-0 z-[100]"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  setMenuPosition(null);
+                                }}
+                              />
 
-                            {/* Menu */}
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="absolute right-0 mt-1 w-48 rounded-lg bg-[#1a1a24] border border-[#29292e] shadow-xl z-20 py-1"
-                            >
+                              {/* Menu - Rendered via Portal */}
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                className="fixed z-[101] w-48 rounded-lg bg-[#1a1a24] border border-[#29292e] shadow-xl py-1"
+                                style={{
+                                  top: `${menuPosition.top}px`,
+                                  right: `${menuPosition.right}px`,
+                                }}
+                              >
                               <button
                                 onClick={() => {
                                   onChangeRole(user);
@@ -350,8 +388,9 @@ export function UserTable({
                                   </button>
                                 </>
                               )}
-                            </motion.div>
-                          </>
+                              </motion.div>
+                            </>
+                          </Portal>
                         )}
                       </div>
                     </div>
@@ -360,6 +399,7 @@ export function UserTable({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

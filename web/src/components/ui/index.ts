@@ -9,4 +9,5 @@ export { ShineBorder } from './ShineBorder';
 export { LottieIcon } from './LottieIcon';
 export { ToastProvider, useToast } from './Toast';
 export { AnimatedCard } from './AnimatedCard';
+export { Portal } from './Portal';
 

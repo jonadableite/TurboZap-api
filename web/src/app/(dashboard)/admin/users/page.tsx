@@ -170,7 +170,7 @@ export default function AdminUsersPage() {
         description="Administre os usuários da plataforma"
       />
 
-      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-7xl mx-auto w-full space-y-6">
+      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-7xl mx-auto w-full space-y-6 overflow-x-hidden">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div
