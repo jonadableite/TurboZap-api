@@ -32,6 +32,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_reminders_updated_at ON reminders;
+
 CREATE TRIGGER update_reminders_updated_at
   BEFORE UPDATE ON reminders
   FOR EACH ROW

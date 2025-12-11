@@ -144,7 +144,15 @@ export const auth = betterAuth({
         USER: user,
       },
       defaultRole: "USER",
-      adminRoles: ["ADMIN"],
+      // Abrange variações de role em caixa alta/baixa e permite DEVELOPER como admin também
+      adminRoles: ["ADMIN", "admin", "DEVELOPER", "developer"],
+      // Permite liberar admins explícitos via env (lista separada por vírgula) + fallback do ID informado
+      adminUserIds: [
+        "siJWuJKZOb90SnEyWkU3tlptDxJyIPpP", // Jonadab (admin informado)
+        ...(process.env.ADMIN_USER_IDS?.split(",")
+          .map((id) => id.trim())
+          .filter(Boolean) || []),
+      ],
     }),
     nextCookies(), // Must be last
   ],

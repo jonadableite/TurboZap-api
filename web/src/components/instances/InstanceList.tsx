@@ -9,19 +9,16 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
+  Input,
   LottieIcon,
   Spinner,
 } from "@/components/ui";
-import FancyButton from "@/components/ui/FancyButton";
-import FancyPattern from "@/components/ui/FancyPattern";
-import FancySearch from "@/components/ui/FancySearch";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useInstances } from "@/hooks/useInstances";
 import { motion } from "framer-motion";
 import { Key, Plus, RefreshCw, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import diagramaAnimation from "../../../public/diagrama.json";
 import smartphoneAnimation from "../../../public/responsivo.json";
 import { InstanceCard } from "./InstanceCard";
 
@@ -144,79 +141,77 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
       {/* Stats cards */}
       {instances.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-gray-800)] border border-[var(--rocket-gray-600)] shadow-inner shadow-black/20"
-          >
-            <FancyPattern color="#8257e5" />
-            <div className="relative z-10">
-              <p className="text-sm text-[var(--rocket-gray-400)]">Total</p>
-              <p className="text-2xl font-bold text-[var(--rocket-gray-50)]">
-                {instances.length}
+          {[
+            {
+              label: "Total",
+              value: instances.length,
+              color: "var(--rocket-gray-50)",
+              badgeColor: "var(--rocket-gray-400)",
+            },
+            {
+              label: "Conectadas",
+              value: connectedCount,
+              color: "var(--rocket-green)",
+              badgeColor: "var(--rocket-green)",
+            },
+            {
+              label: "Desconectadas",
+              value: disconnectedCount,
+              color: "var(--rocket-danger)",
+              badgeColor: "var(--rocket-danger)",
+            },
+          ].map((card, index) => (
+            <motion.div
+              key={card.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * index }}
+              className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 flex flex-col gap-2"
+            >
+              <p
+                className="text-sm"
+                style={{ color: card.badgeColor }}
+              >
+                {card.label}
               </p>
-            </div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-green)]/10 border border-[var(--rocket-green)]/30 shadow-inner shadow-[var(--rocket-green)]/10"
-          >
-            <FancyPattern color="#04d361" />
-            <div className="relative z-10">
-              <p className="text-sm text-[var(--rocket-green)]">Conectadas</p>
-              <p className="text-2xl font-bold text-[var(--rocket-green)]">
-                {connectedCount}
+              <p
+                className="text-2xl font-semibold"
+                style={{ color: card.color }}
+              >
+                {card.value}
               </p>
-            </div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="relative overflow-hidden p-5 rounded-2xl bg-[var(--rocket-danger)]/10 border border-[var(--rocket-danger)]/30 shadow-inner shadow-[var(--rocket-danger)]/10"
-          >
-            <FancyPattern color="#f75a68" />
-            <div className="relative z-10">
-              <p className="text-sm text-[var(--rocket-danger)]">
-                Desconectadas
-              </p>
-              <p className="text-2xl font-bold text-[var(--rocket-danger)]">
-                {disconnectedCount}
-              </p>
-            </div>
-          </motion.div>
+            </motion.div>
+          ))}
         </div>
       )}
 
       {/* Search and actions */}
       <div className="flex flex-col gap-4 rounded-2xl border border-[var(--rocket-gray-600)] bg-[var(--rocket-gray-800)]/80 p-4 md:flex-row md:items-center md:justify-between shadow-inner shadow-black/20">
         <div className="w-full md:max-w-sm flex justify-center md:justify-start">
-          <FancySearch
-            placeholder="Buscar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--rocket-gray-400)]" />
+            <Input
+              placeholder="Buscar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 bg-[#0f0f14] border-[#29292e]"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => refetch()}
             leftIcon={
-              <LottieIcon
-                animationData={diagramaAnimation}
-                className="w-4 h-4"
-              />
+              <RefreshCw className="w-4 h-4" />
             }
           >
             Atualizar
           </Button>
-          <FancyButton onClick={onCreateClick}>
-            <Plus className="icon w-5 h-5 mr-2" />
+          <Button onClick={onCreateClick} leftIcon={<Plus className="w-4 h-4" />}>
             Nova Instância
-          </FancyButton>
+          </Button>
         </div>
       </div>
 

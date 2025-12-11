@@ -34,13 +34,17 @@ export function useAuth(): UseAuthReturn {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const normalizedRole = session?.user?.role
+    ? (session.user.role as string).toUpperCase()
+    : "USER";
+
   const user: AuthUser | null = session?.user
     ? {
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
         image: session.user.image,
-        role: (session.user.role as UserRole) || "USER",
+        role: (normalizedRole as UserRole) || "USER",
         emailVerified: session.user.emailVerified ?? false,
       }
     : null;

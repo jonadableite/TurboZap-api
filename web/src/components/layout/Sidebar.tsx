@@ -4,7 +4,7 @@ import { LottieIcon } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, Shield, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -170,26 +170,64 @@ export function Sidebar() {
                 )}
               </AnimatePresence>
             </div>
-            <Link href="/admin/reminders">
+
+            {/* Admin Users */}
+            <Link href="/admin/users">
               <motion.div
                 whileHover={{ x: 4 }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
                   "relative overflow-hidden group",
-                  pathname === "/admin/reminders" || pathname.startsWith("/admin/")
+                  pathname === "/admin/users"
                     ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
                     : "text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
                 )}
               >
-                {pathname === "/admin/reminders" || pathname.startsWith("/admin/") ? (
+                {pathname === "/admin/users" && (
                   <motion.div
                     layoutId="sidebar-admin-active"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]"
                     initial={false}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
-                ) : null}
-                <Shield className="w-5 h-5 flex-shrink-0" />
+                )}
+                <Users className="w-5 h-5 flex-shrink-0" />
+                <AnimatePresence>
+                  {!isCollapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="flex-1 whitespace-nowrap overflow-hidden"
+                    >
+                      Usuários
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </Link>
+
+            {/* Admin Reminders */}
+            <Link href="/admin/reminders">
+              <motion.div
+                whileHover={{ x: 4 }}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                  "relative overflow-hidden group",
+                  pathname === "/admin/reminders"
+                    ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
+                    : "text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
+                )}
+              >
+                {pathname === "/admin/reminders" && (
+                  <motion.div
+                    layoutId="sidebar-admin-reminders"
+                    className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]"
+                    initial={false}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Bell className="w-5 h-5 flex-shrink-0" />
                 <AnimatePresence>
                   {!isCollapsed && (
                     <motion.span

@@ -3,9 +3,11 @@
 import { Button, Input, Modal, ModalFooter } from "@/components/ui";
 import { UserMenu } from "@/components/auth";
 import { useApiConfig } from "@/hooks/useApiConfig";
+import { useStopImpersonating } from "@/hooks/useAdminUsers";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Check, Copy, Eye, EyeOff, Key } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Key, LogOut, UserCog } from "lucide-react";
 import { useState } from "react";
 
 interface HeaderProps {
@@ -20,6 +22,15 @@ export function Header({ title, description }: HeaderProps) {
   const [copied, setCopied] = useState(false);
   const { apiKey, hasApiKey, updateConfig, isReady } = useApiConfig();
   const displayHasApiKey = isReady && hasApiKey;
+
+  // Impersonation detection
+  const { data: session } = useSession();
+  const stopImpersonating = useStopImpersonating();
+  const isImpersonating = !!(session?.session as { impersonatedBy?: string })?.impersonatedBy;
+
+  const handleStopImpersonating = async () => {
+    await stopImpersonating.mutateAsync();
+  };
 
   const handleSaveApiKey = () => {
     updateConfig(apiKeyInput.trim() || undefined);
@@ -53,6 +64,30 @@ export function Header({ title, description }: HeaderProps) {
 
             {/* Right side - Actions */}
             <div className="flex items-center gap-4">
+              {/* Impersonation Banner */}
+              {isImpersonating && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--rocket-warning)]/20 border border-[var(--rocket-warning)]/30"
+                >
+                  <UserCog className="w-4 h-4 text-[var(--rocket-warning)]" />
+                  <span className="text-sm font-medium text-[var(--rocket-warning)] hidden sm:inline">
+                    Modo Impersonação
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleStopImpersonating}
+                    disabled={stopImpersonating.isPending}
+                    className="h-7 px-2 text-[var(--rocket-warning)] hover:bg-[var(--rocket-warning)]/20"
+                    leftIcon={<LogOut className="w-3 h-3" />}
+                  >
+                    {stopImpersonating.isPending ? "..." : "Sair"}
+                  </Button>
+                </motion.div>
+              )}
+
               {/* API Key indicator */}
               <motion.button
                 whileHover={{ scale: 1.05 }}

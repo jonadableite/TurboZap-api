@@ -3,10 +3,8 @@
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Activity,
   ChevronDown,
   Code,
-  Key,
   LogOut,
   Settings,
   Shield,
@@ -198,66 +196,6 @@ export function UserMenu() {
                     </div>
                   </div>
                 </Link>
-
-                {/* Developer/Admin only items */}
-                {isDeveloper && (
-                  <>
-                    <div className="h-px my-1 bg-white/10" />
-                    <Link
-                      href="/api-keys"
-                      onClick={() => setIsOpen(false)}
-                      className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all hover:bg-white/12 active:scale-[0.99] text-[var(--rocket-purple-light)]"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-purple)]/16 border border-[var(--rocket-purple)]/28 shadow-[0_12px_36px_rgba(130,87,229,0.28)]">
-                        <Key className="w-5 h-5" />
-                      </span>
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold">API Keys</div>
-                        <div className="text-[11px] text-[var(--rocket-gray-400)]">
-                          Gerenciar chaves de API
-                        </div>
-                      </div>
-                    </Link>
-
-                    <Link
-                      href="/logs"
-                      onClick={() => setIsOpen(false)}
-                      className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all hover:bg-white/12 active:scale-[0.99] text-[var(--rocket-purple-light)]"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-purple)]/16 border border-[var(--rocket-purple)]/28 shadow-[0_12px_36px_rgba(130,87,229,0.28)]">
-                        <Activity className="w-5 h-5" />
-                      </span>
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold">Logs de Atividade</div>
-                        <div className="text-[11px] text-[var(--rocket-gray-400)]">
-                          Histórico de ações
-                        </div>
-                      </div>
-                    </Link>
-                  </>
-                )}
-
-                {/* Admin only items */}
-                {isAdmin && (
-                  <>
-                    <div className="h-px my-1 bg-white/10" />
-                    <Link
-                      href="/admin/users"
-                      onClick={() => setIsOpen(false)}
-                      className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all hover:bg-white/12 active:scale-[0.99] text-[var(--rocket-purple-light)]"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-purple)]/16 border border-[var(--rocket-purple)]/28 shadow-[0_12px_36px_rgba(130,87,229,0.28)]">
-                        <Shield className="w-5 h-5" />
-                      </span>
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold">Gerenciar Usuários</div>
-                        <div className="text-[11px] text-[var(--rocket-gray-400)]">
-                          Administrar contas
-                        </div>
-                      </div>
-                    </Link>
-                  </>
-                )}
 
                 <div className="h-px my-1 bg-white/10" />
 
