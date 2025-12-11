@@ -142,7 +142,17 @@ api.interceptors.response.use(
         error.message ||
         "Erro desconhecido";
       
-      // Provide helpful message for missing API key
+      // Check if API key is configured before logging API key errors
+      const hasApiKey = typeof window !== "undefined" && getFromStorage(API_KEY_STORAGE)?.trim();
+      
+      // Provide helpful message for missing API key only if API key is actually missing
+      if ((message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) && !hasApiKey) {
+        // Don't log error if API key is not configured - this is expected behavior
+        // The hook should handle this gracefully by not making the request
+        return Promise.reject(error);
+      }
+      
+      // Log other errors normally
       if (message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) {
         console.error(
           "[API] Request error: API key is required. " +

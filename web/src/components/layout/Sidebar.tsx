@@ -12,8 +12,6 @@ import dashboardAnimation from "../../../public/grafico-de-barras.json";
 import htmlAnimation from "../../../public/html.json";
 import instanceAnimation from "../../../public/responsivo.json";
 
-const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/FBGwMYACSqjBQnIXZqZMdy";
-
 interface NavItem {
   label: string;
   icon: React.ReactNode;
@@ -187,58 +185,6 @@ export function Sidebar() {
           );
         })}
 
-        {/* WhatsApp Group Button */}
-        <a
-          href={WHATSAPP_GROUP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block mt-2"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02, x: 4 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg",
-              "backdrop-blur-lg border border-green-500/20",
-              "bg-gradient-to-tr from-black/60 to-black/40",
-              "shadow-lg hover:shadow-2xl hover:shadow-green-500/30",
-              "transition-all duration-300 ease-out",
-              "hover:border-green-500/50",
-              "hover:bg-gradient-to-tr hover:from-green-500/10 hover:to-black/40",
-              "overflow-hidden"
-            )}
-          >
-            {/* Shimmer effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out rounded-lg" />
-
-            {/* Content */}
-            <div className="relative z-10 flex items-center gap-3 flex-1 min-w-0">
-              {/* WhatsApp Icon */}
-              <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                <Image
-                  src="/whatsapp.svg"
-                  alt="WhatsApp"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5 text-green-500 group-hover:text-green-400 transition-colors duration-300"
-                />
-              </div>
-
-              <AnimatePresence>
-                {!isCollapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="text-sm font-medium text-green-400 group-hover:text-green-300 transition-colors duration-300 whitespace-nowrap overflow-hidden"
-                  >
-                    Grupo WhatsApp
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.button>
-        </a>
       </div>
 
       {/* Collapse button */}

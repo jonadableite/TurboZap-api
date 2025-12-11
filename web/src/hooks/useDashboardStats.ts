@@ -13,12 +13,6 @@ export function useDashboardStats() {
   return useQuery<MessageStats>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
-      // Don't make request if API key is not configured
-      if (isReady && !hasApiKey) {
-        // Return default values if API key is not configured
-        return { today: 0, total: 0 };
-      }
-
       try {
         const response = await api.get<{
           success: boolean;
@@ -46,8 +40,9 @@ export function useDashboardStats() {
         throw error;
       }
     },
-    enabled: isReady, // Only run query when config is ready
+    enabled: isReady && hasApiKey, // Only run query when config is ready AND API key is configured
     refetchInterval: 30000, // Refetch every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 }

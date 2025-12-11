@@ -1,13 +1,10 @@
 "use client";
 
+import { ActivityCard } from "@/components/dashboard/ActivityCard";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CreateInstanceModal } from "@/components/instances";
 import { Header } from "@/components/layout";
-import {
-  Badge,
-  Button,
-  LottieIcon,
-  Spinner,
-} from "@/components/ui";
+import { Badge, Button, LottieIcon, Spinner } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useInstances } from "@/hooks/useInstances";
@@ -23,8 +20,11 @@ import trendingAnimation from "../../../public/grafico-de-linha.json";
 import smartphoneAnimation from "../../../public/responsivo.json";
 import activityAnimation from "../../../public/wi-fi-global.json";
 
+type TabType = "all" | "events" | "content" | "news" | "offers";
+
 export default function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("all");
   const { data: instances = [], isLoading } = useInstances();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { hasApiKey } = useApiConfig();
@@ -39,12 +39,76 @@ export default function DashboardPage() {
   const messagesToday = stats?.today || 0;
   const messagesTotal = stats?.total || 0;
 
+  // Mock activities - em produção viria de um hook/API
+  const activities = [
+    {
+      id: "1",
+      title:
+        "ÚLTIMAS VAGAS! Imersão ao vivo inédita | Build & Automate: Desenvolvimento e Automação com IA",
+      description:
+        "Aprenda com especialistas de mercado a dominar IA aplicada, MCPs e agentes de automação para evoluir sua carreira com eficiência real.",
+      date: "13 DEZ",
+      time: "13:30",
+      location: "Online, Classroom do Discord",
+      recommendedLevel: "Intermediário - Avançado",
+      tags: ["ASSINANTES", "INTERMEDIÁRIO", "CARREIRA"],
+      status: "upcoming" as const,
+      actionButtons: {
+        primary: { label: "Garantir meu ingresso", onClick: () => {} },
+        secondary: { label: "Adicionar ao calendário", onClick: () => {} },
+      },
+    },
+    {
+      id: "2",
+      title: "Última Chance do ano - Cyber Week",
+      description:
+        "Aproveite a Cyber Week da TurboZap com 30% OFF e garanta acesso ilimitado por 12 meses a todas as funcionalidades premium...",
+      date: "01 - 10 DEZ",
+      status: "finished" as const,
+    },
+    {
+      id: "3",
+      title: "Nova Instância Criada com Sucesso",
+      description: `Você criou a instância "${
+        instances[0]?.name || "minha-instancia"
+      }" e ela está ${
+        instances[0]?.status === "connected"
+          ? "conectada"
+          : "aguardando conexão"
+      }.`,
+      date: (() => {
+        const now = new Date();
+        const day = now.getDate();
+        const month = now.toLocaleDateString("pt-BR", { month: "short" }).toUpperCase().replace(".", "");
+        return `${day} ${month}`;
+      })(),
+      tags:
+        instances[0]?.status === "connected" ? ["CONECTADO"] : ["AGUARDANDO"],
+      status:
+        instances[0]?.status === "connected" ? "active" : ("upcoming" as const),
+    },
+  ];
+
+  const tabs: { id: TabType; label: string }[] = [
+    { id: "all", label: "TODOS OS LEMBRETES" },
+    { id: "events", label: "EVENTOS" },
+    { id: "content", label: "CONTEÚDOS" },
+    { id: "news", label: "NOVIDADES DA PLATAFORMA" },
+    { id: "offers", label: "OFERTAS" },
+  ];
+
+  const filteredActivities = activities.filter((activity) => {
+    if (activeTab === "all") return true;
+    // Lógica de filtro baseada na tab
+    return true;
+  });
+
   return (
     <>
       <Header title="Dashboard" description="Visão geral do seu TurboZap" />
 
-      <div className="px-4 sm:px-8 lg:px-14 py-8 space-y-8 max-w-6xl mx-auto w-full">
-        {/* Welcome Section */}
+      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-7xl mx-auto w-full space-y-8">
+        {/* Welcome Banner Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -95,15 +159,15 @@ export default function DashboardPage() {
           {/* Android Image - Front Layer */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8, x: 50 }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1, 
-              x: 0
+            animate={{
+              opacity: 1,
+              scale: 1,
+              x: 0,
             }}
-            transition={{ 
-              delay: 0.3, 
-              duration: 0.6, 
-              ease: "easeOut"
+            transition={{
+              delay: 0.3,
+              duration: 0.6,
+              ease: "easeOut",
             }}
             className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-72 lg:h-72 xl:w-80 xl:h-80 2xl:w-96 2xl:h-96 z-20 pointer-events-none overflow-visible -mr-2 sm:mr-0"
           >
@@ -164,7 +228,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Large Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Instances */}
           <motion.div
@@ -324,81 +388,76 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Recent Instances */}
-        {instances.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-[var(--rocket-gray-50)]">
-                Instâncias recentes
-              </h3>
-              <Link href="/instances">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  rightIcon={
-                    <LottieIcon
-                      animationData={smartphoneAnimation}
-                      className="w-4 h-4"
-                    />
-                  }
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Content - Left Column */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Header Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h1 className="text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
+                Veja o que vem aí
+              </h1>
+              <p className="text-sm text-[var(--rocket-gray-400)] mb-6">
+                Descubra as novidades do TurboZap
+              </p>
+            </motion.div>
+
+            {/* Tabs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700/50 scrollbar-track-transparent"
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all",
+                    activeTab === tab.id
+                      ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple)] border border-[var(--rocket-purple)]/30"
+                      : "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-300)] hover:bg-[#29292e]"
+                  )}
                 >
-                  Ver todas
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {instances.slice(0, 3).map((instance, index) => (
-                <motion.div
-                  key={instance.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-4 group hover:border-[#29292e] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "w-9 h-9 rounded-lg flex items-center justify-center",
-                          instance.status === "connected"
-                            ? "bg-[var(--rocket-green)]/10"
-                            : "bg-[#29292e]"
-                        )}
-                      >
-                        <LottieIcon
-                          animationData={smartphoneAnimation}
-                          className={cn(
-                            "w-4 h-4",
-                            instance.status === "connected"
-                              ? "text-[var(--rocket-green)]"
-                              : "text-[var(--rocket-gray-400)]"
-                          )}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-[var(--rocket-gray-50)] truncate">
-                          {instance.profileName || instance.name}
-                        </h4>
-                        <p className="text-xs text-[var(--rocket-gray-400)]">
-                          {instance.status === "connected"
-                            ? "Conectado"
-                            : "Desconectado"}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          instance.status === "connected" ? "success" : "danger"
-                        }
-                        pulse={instance.status === "connected"}
-                      >
-                        {instance.status === "connected" ? "Online" : "Offline"}
-                      </Badge>
-                    </div>
-                  </div>
-                </motion.div>
+                  {tab.label}
+                </button>
+              ))}
+            </motion.div>
+
+            {/* Activities List */}
+            <div className="space-y-4">
+              {filteredActivities.map((activityItem, index) => (
+                <ActivityCard
+                  key={activityItem.id}
+                  {...activityItem}
+                  className="animate-in fade-in slide-in-from-bottom-4"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                />
               ))}
             </div>
+
+
+            {/* View More Link */}
+            <div className="pt-4">
+              <Link
+                href="/instances"
+                className="text-sm text-[var(--rocket-purple)] hover:text-[var(--rocket-purple)]/80 transition-colors inline-flex items-center gap-1"
+              >
+                Ver mais
+                <span>→</span>
+              </Link>
+            </div>
           </div>
-        )}
+
+          {/* Sidebar - Right Column */}
+          <div className="lg:col-span-4">
+            <DashboardSidebar />
+          </div>
+        </div>
       </div>
 
       {/* Create Instance Modal */}
