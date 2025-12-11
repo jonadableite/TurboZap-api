@@ -61,7 +61,8 @@
     /* Rocketseat-inspired Dark Theme converted to HSL for Shadcn compatibility */
 
     /* Background: #13131b */
-    --background: 240 5% 4%; /* #13131b */
+    --background: 240 5% 4%;
+    /* #13131b */
     /* Foreground: #e1e1e6 */
     --foreground: 240 5% 89%;
 
@@ -114,6 +115,7 @@
     --rocket-green-dark: #03a84e;
 
     --rocket-gray-900: #13131b;
+    --rocket-gray-850: #1a1a24;
     --rocket-gray-800: #121214;
     --rocket-gray-700: #202024;
     --rocket-gray-600: #29292e;

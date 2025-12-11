@@ -5,6 +5,8 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CreateInstanceModal } from "@/components/instances";
 import { Header } from "@/components/layout";
 import { Badge, Button, LottieIcon, Spinner } from "@/components/ui";
+import { ActivityDetailsModal } from "@/components/dashboard/modal/ActivityDetailsModal";
+import { ActivityCardProps } from "@/components/dashboard/ActivityCard";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useInstances } from "@/hooks/useInstances";
@@ -23,9 +25,14 @@ import activityAnimation from "../../../public/wi-fi-global.json";
 
 type TabType = "all" | "events" | "content" | "news" | "offers";
 
+
+
+
 export default function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("all");
+  const [selectedActivity, setSelectedActivity] = useState<ActivityCardProps | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { data: instances = [], isLoading } = useInstances();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: reminders = [], isLoading: remindersLoading } = useReminders();
@@ -47,12 +54,14 @@ export default function DashboardPage() {
       id: reminder.id,
       title: reminder.title,
       description: reminder.description,
+      banner_image: reminder.banner_image,
       date: reminder.date,
       time: reminder.time,
       location: reminder.location,
       recommendedLevel: reminder.recommendedLevel,
       tags: reminder.tags || [],
       status: reminder.status,
+      category: reminder.category,
       actionButtons: reminder.actionButtons
         ? {
             primary: reminder.actionButtons.primary
@@ -224,8 +233,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="h-full"
           >
-            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--rocket-gray-400)]">
                   Total Instâncias
@@ -260,8 +270,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="h-full"
           >
-            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--rocket-gray-400)]">
                   Conectadas
@@ -308,8 +319,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="h-full"
           >
-            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--rocket-gray-400)]">
                   Desconectadas
@@ -347,8 +359,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
+            className="h-full"
           >
-            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5">
+            <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--rocket-gray-400)]">
                   Mensagens Hoje
@@ -401,20 +414,38 @@ export default function DashboardPage() {
               transition={{ delay: 0.1 }}
               className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700/50 scrollbar-track-transparent"
             >
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all",
-                    activeTab === tab.id
-                      ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple)] border border-[var(--rocket-purple)]/30"
-                      : "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-300)] hover:bg-[#29292e]"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const getTabActiveStyles = (id: TabType) => {
+                  switch (id) {
+                    case "events":
+                      return "bg-pink-500/20 text-pink-500 border border-pink-500/30";
+                    case "content":
+                      return "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30";
+                    case "news":
+                      return "bg-blue-500/20 text-blue-500 border border-blue-500/30";
+                    case "offers":
+                      return "bg-[var(--rocket-green)]/20 text-[var(--rocket-green)] border border-[var(--rocket-green)]/30";
+                    case "all":
+                    default:
+                      return "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple)] border border-[var(--rocket-purple)]/30";
+                  }
+                };
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all",
+                      activeTab === tab.id
+                        ? getTabActiveStyles(tab.id)
+                        : "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-300)] hover:bg-[#29292e]"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </motion.div>
 
             {/* Activities List */}
@@ -425,6 +456,10 @@ export default function DashboardPage() {
                   {...activityItem}
                   className="animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${index * 0.1}s` }}
+                  onClick={() => {
+                    setSelectedActivity(activityItem as ActivityCardProps);
+                    setIsDetailsModalOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -454,6 +489,13 @@ export default function DashboardPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => setShowCreateModal(false)}
+      />
+
+      {/* NOVO MODAL DE DETALHE DAS NOTIFICAÇÃO */}
+      <ActivityDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        activity={selectedActivity}
       />
     </>
   );

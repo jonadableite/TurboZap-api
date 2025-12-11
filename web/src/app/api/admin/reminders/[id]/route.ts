@@ -31,6 +31,7 @@ export async function PUT(
     const {
       title,
       description,
+      banner_image,
       date,
       time,
       location,
@@ -53,8 +54,9 @@ export async function PUT(
         status = COALESCE($8, status),
         category = COALESCE($9, category),
         action_buttons = COALESCE($10, action_buttons),
+        banner_image = COALESCE($11, banner_image),
         updated_at = NOW()
-      WHERE id = $11
+      WHERE id = $12
       RETURNING *`,
       [
         title,
@@ -67,6 +69,7 @@ export async function PUT(
         status,
         category,
         actionButtons ? JSON.stringify(actionButtons) : null,
+        banner_image,
         id,
       ]
     );
@@ -84,6 +87,7 @@ export async function PUT(
         id: rows[0].id,
         title: rows[0].title,
         description: rows[0].description || undefined,
+        banner_image: rows[0].banner_image || undefined,
         date: rows[0].date,
         time: rows[0].time || undefined,
         location: rows[0].location || undefined,

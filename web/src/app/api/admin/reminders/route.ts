@@ -8,6 +8,7 @@ interface Reminder {
   id: string;
   title: string;
   description?: string;
+  banner_image?: string;
   date: string;
   time?: string;
   location?: string;
@@ -32,7 +33,7 @@ export async function GET() {
     try {
       const { rows } = await db.query<Reminder>(
         `SELECT 
-          id, title, description, date, time, location, 
+          id, title, description, banner_image, date, time, location, 
           tags, recommended_level, status, category,
           action_buttons, created_at, updated_at, created_by
         FROM reminders 
@@ -54,6 +55,7 @@ export async function GET() {
           id: row.id,
           title: row.title,
           description: row.description || undefined,
+          banner_image: row.banner_image || undefined,
           date: row.date,
           time: row.time || undefined,
           location: row.location || undefined,
@@ -125,6 +127,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       description,
+      banner_image,
       date,
       time,
       location,
@@ -148,15 +151,16 @@ export async function POST(request: NextRequest) {
     try {
       result = await db.query<Reminder>(
         `INSERT INTO reminders (
-          id, title, description, date, time, location, 
+          id, title, description, banner_image, date, time, location, 
           tags, recommended_level, status, category,
           action_buttons, created_by
         ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         ) RETURNING *`,
         [
           title,
           description || null,
+          banner_image || null,
           date,
           time || null,
           location || null,
@@ -192,6 +196,7 @@ export async function POST(request: NextRequest) {
         id: row.id,
         title: row.title,
         description: row.description || undefined,
+        banner_image: row.banner_image || undefined,
         date: row.date,
         time: row.time || undefined,
         location: row.location || undefined,

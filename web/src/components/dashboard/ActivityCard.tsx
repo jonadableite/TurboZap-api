@@ -9,9 +9,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import incendioAnimation from "../../../public/incendio.json";
+import { title } from "process";
 
 export interface ActivityCardProps {
   id: string;
+  banner_image?: string;
   title: string;
   description?: string;
   date: string; // Format: "11 DEZ" or "01 - 10 DEZ"
@@ -20,27 +22,26 @@ export interface ActivityCardProps {
   tags?: string[];
   recommendedLevel?: string; // Format: "B2 - C2..." or "A1 - B1..."
   status?: "active" | "finished" | "upcoming";
+  category?: "all" | "events" | "content" | "news" | "offers";
   actionButtons?: {
     primary?: { label: string; href?: string; onClick?: () => void };
     secondary?: { label: string; href?: string; onClick?: () => void };
   };
   className?: string;
+  style?: React.CSSProperties;
+  onClick?: () => void;
 }
 
-// Helper to parse date string and extract day, month
 function parseDate(dateStr: string): { day: string; month: string } {
-  // Handle formats like "11 DEZ" or "01 - 10 DEZ" or "11 DE DEZ"
+
   const parts = dateStr.trim().split(" ").filter(p => p);
   
   if (parts.length >= 2) {
-    // Get the first number (day)
     const day = parts[0];
-    // Get the last part which should be the month
     const month = parts[parts.length - 1];
     return { day, month };
   }
   
-  // Fallback: try to extract from formats like "11 DE DEZ"
   const match = dateStr.match(/(\d+)\s+(?:DE\s+)?([A-Z]+)/);
   if (match) {
     return { day: match[1], month: match[2] };
@@ -51,6 +52,7 @@ function parseDate(dateStr: string): { day: string; month: string } {
 
 // Helper to get tag icon
 function getTagIcon(tag: string) {
+ 
   const lowerTag = tag.toLowerCase();
   if (lowerTag.includes("intermediário") || lowerTag.includes("iniciante") || lowerTag.includes("avançado")) {
     return <BarChart3 className="w-3 h-3 text-[var(--rocket-green)]" />;
@@ -61,33 +63,57 @@ function getTagIcon(tag: string) {
   return null;
 }
 
+function getCategoryColor(category?: string) {
+  switch (category) {
+    case "events":
+      return "bg-pink-500";
+    case "content":
+      return "bg-yellow-500";
+    case "news":
+      return "bg-blue-500";
+    case "offers":
+      return "bg-green-800";
+    case "all":
+    default:
+      return "bg-[var(--rocket-purple)]";
+  }
+}
+
 export function ActivityCard({
   title,
   description,
   date,
+  banner_image,
   time,
   location,
   tags = [],
   recommendedLevel,
   status = "active",
+  category = "all",
   actionButtons,
   className,
+  onClick,
+  style,
 }: ActivityCardProps) {
   const isFinished = status === "finished";
   const { day, month } = parseDate(date);
+  const borderColorClass = getCategoryColor(category);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      onClick={onClick}
+      style={style}
       className={cn(
         "rounded-xl bg-[#1a1a24] border border-[#29292e] p-0 hover:border-[#29292e]/80 transition-all group relative overflow-hidden",
         isFinished && "opacity-60",
+        onClick && "cursor-pointer",
         className
       )}
     >
-      {/* Purple vertical border on the left */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]" />
+      {/* verifica a cores da categoria selecionada */}
+      <div className={cn("absolute left-0 top-0 bottom-0 w-1", borderColorClass)} />
 
       <div className="flex gap-0 min-h-[120px] sm:min-h-[140px]">
         {/* Left Section - Date and Time */}

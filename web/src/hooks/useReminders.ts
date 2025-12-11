@@ -7,6 +7,7 @@ export interface Reminder {
   id: string;
   title: string;
   description?: string;
+  banner_image?: string;
   date: string;
   time?: string;
   location?: string;
@@ -23,6 +24,7 @@ export interface Reminder {
 export interface CreateReminderInput {
   title: string;
   description?: string;
+  banner_image?: string;
   date: string;
   time?: string;
   location?: string;

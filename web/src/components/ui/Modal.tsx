@@ -12,8 +12,9 @@ interface ModalProps {
   title?: string;
   description?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showCloseButton?: boolean;
+  contentClassName?: string;
 }
 
 const sizes = {
@@ -21,6 +22,7 @@ const sizes = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  '2xl': 'max-w-5xl',
 };
 
 export function Modal({
@@ -31,6 +33,7 @@ export function Modal({
   children,
   size = 'md',
   showCloseButton = true,
+  contentClassName,
 }: ModalProps) {
   // Handle escape key
   const handleEscape = useCallback(
@@ -121,7 +124,7 @@ export function Modal({
               )}
 
               {/* Body - Scrollable */}
-              <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className={cn("p-6 overflow-y-auto flex-1 min-h-0", contentClassName)}>
                 {children}
               </div>
             </motion.div>

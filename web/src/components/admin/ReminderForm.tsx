@@ -13,6 +13,7 @@ import {
   Save,
   Tag,
   X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -30,6 +31,7 @@ export function ReminderForm({ reminder, onSuccess, onCancel }: ReminderFormProp
   const [formData, setFormData] = useState<CreateReminderInput>({
     title: reminder?.title || "",
     description: reminder?.description || "",
+    banner_image: reminder?.banner_image || "",
     date: reminder?.date || "",
     time: reminder?.time || "",
     location: reminder?.location || "",
@@ -133,6 +135,16 @@ export function ReminderForm({ reminder, onSuccess, onCancel }: ReminderFormProp
           )}
         />
       </div>
+
+      {/* IMAGE DE BANNER */}
+      <Input
+        label="URL da Imagem do Banner"
+        value={formData.banner_image || ""}
+        onChange={(e) => setFormData({ ...formData, banner_image: e.target.value })}
+        placeholder="https://exemplo.com/imagem.png"
+        leftIcon={<ImageIcon className="w-4 h-4" />}
+        helperText="Opcional. URL de uma imagem para o banner do modal."
+      />
 
       {/* Date and Time */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

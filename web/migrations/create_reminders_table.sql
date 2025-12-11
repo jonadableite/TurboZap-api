@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS reminders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(500) NOT NULL,
   description TEXT,
+  banner_image VARCHAR(1000),
   date VARCHAR(50) NOT NULL,
   time VARCHAR(10),
   location VARCHAR(200),

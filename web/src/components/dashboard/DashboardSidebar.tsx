@@ -55,7 +55,7 @@ export function DashboardSidebar() {
   const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
 
   return (
-    <div className="w-full lg:w-80 space-y-6">
+    <div className="w-full lg:w-full space-y-6">
       {/* Goal Card */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
