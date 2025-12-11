@@ -69,26 +69,27 @@ export function UserTable({
   };
 
   const getRoleBadge = (role?: string) => {
-    switch (role?.toUpperCase()) {
+    const normalized = role?.toUpperCase();
+    switch (normalized) {
       case "ADMIN":
         return (
           <Badge variant="purple" className="gap-1">
             <ShieldAlert className="w-3 h-3" />
-            Admin
+            Administrador
           </Badge>
         );
       case "DEVELOPER":
         return (
           <Badge variant="info" className="gap-1">
             <ShieldCheck className="w-3 h-3" />
-            Developer
+            Desenvolvedor
           </Badge>
         );
       default:
         return (
           <Badge variant="gray" className="gap-1">
             <Shield className="w-3 h-3" />
-            User
+            Usuário
           </Badge>
         );
     }
