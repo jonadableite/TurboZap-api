@@ -8,12 +8,13 @@ import { Badge, Button, LottieIcon, Spinner } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useInstances } from "@/hooks/useInstances";
+import { useReminders, type Reminder } from "@/hooks/useReminders";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
 import clockAnimation from "../../../public/desconectar.json";
 import trendingAnimation from "../../../public/grafico-de-linha.json";
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const { data: instances = [], isLoading } = useInstances();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: reminders = [], isLoading: remindersLoading } = useReminders();
   const { hasApiKey } = useApiConfig();
   const canCreateInstance = hasApiKey;
 
@@ -39,55 +41,40 @@ export default function DashboardPage() {
   const messagesToday = stats?.today || 0;
   const messagesTotal = stats?.total || 0;
 
-  // Mock activities - em produção viria de um hook/API
-  const activities = [
-    {
-      id: "1",
-      title:
-        "ÚLTIMAS VAGAS! Imersão ao vivo inédita | Build & Automate: Desenvolvimento e Automação com IA",
-      description:
-        "Aprenda com especialistas de mercado a dominar IA aplicada, MCPs e agentes de automação para evoluir sua carreira com eficiência real.",
-      date: "13 DEZ",
-      time: "13:30",
-      location: "Online, Classroom do Discord",
-      recommendedLevel: "Intermediário - Avançado",
-      tags: ["ASSINANTES", "INTERMEDIÁRIO", "CARREIRA"],
-      status: "upcoming" as const,
-      actionButtons: {
-        primary: { label: "Garantir meu ingresso", onClick: () => {} },
-        secondary: { label: "Adicionar ao calendário", onClick: () => {} },
-      },
-    },
-    {
-      id: "2",
-      title: "Última Chance do ano - Cyber Week",
-      description:
-        "Aproveite a Cyber Week da TurboZap com 30% OFF e garanta acesso ilimitado por 12 meses a todas as funcionalidades premium...",
-      date: "01 - 10 DEZ",
-      status: "finished" as const,
-    },
-    {
-      id: "3",
-      title: "Nova Instância Criada com Sucesso",
-      description: `Você criou a instância "${
-        instances[0]?.name || "minha-instancia"
-      }" e ela está ${
-        instances[0]?.status === "connected"
-          ? "conectada"
-          : "aguardando conexão"
-      }.`,
-      date: (() => {
-        const now = new Date();
-        const day = now.getDate();
-        const month = now.toLocaleDateString("pt-BR", { month: "short" }).toUpperCase().replace(".", "");
-        return `${day} ${month}`;
-      })(),
-      tags:
-        instances[0]?.status === "connected" ? ["CONECTADO"] : ["AGUARDANDO"],
-      status:
-        instances[0]?.status === "connected" ? "active" : ("upcoming" as const),
-    },
-  ];
+  // Use real reminders from API, with fallback to empty array
+  const activities = useMemo(() => {
+    return reminders.map((reminder: Reminder) => ({
+      id: reminder.id,
+      title: reminder.title,
+      description: reminder.description,
+      date: reminder.date,
+      time: reminder.time,
+      location: reminder.location,
+      recommendedLevel: reminder.recommendedLevel,
+      tags: reminder.tags || [],
+      status: reminder.status,
+      actionButtons: reminder.actionButtons
+        ? {
+            primary: reminder.actionButtons.primary
+              ? {
+                  label: reminder.actionButtons.primary.label,
+                  onClick: reminder.actionButtons.primary.href
+                    ? () => window.open(reminder.actionButtons!.primary!.href, "_blank")
+                    : undefined,
+                }
+              : undefined,
+            secondary: reminder.actionButtons.secondary
+              ? {
+                  label: reminder.actionButtons.secondary.label,
+                  onClick: reminder.actionButtons.secondary.href
+                    ? () => window.open(reminder.actionButtons!.secondary!.href, "_blank")
+                    : undefined,
+                }
+              : undefined,
+          }
+        : undefined,
+    }));
+  }, [reminders]);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "all", label: "TODOS OS LEMBRETES" },
@@ -97,11 +84,13 @@ export default function DashboardPage() {
     { id: "offers", label: "OFERTAS" },
   ];
 
-  const filteredActivities = activities.filter((activity) => {
-    if (activeTab === "all") return true;
-    // Lógica de filtro baseada na tab
-    return true;
-  });
+  const filteredActivities = useMemo(() => {
+    return activities.filter((activity) => {
+      if (activeTab === "all") return true;
+      const reminder = reminders.find((r) => r.id === activity.id);
+      return reminder?.category === activeTab;
+    });
+  }, [activities, activeTab, reminders]);
 
   return (
     <>

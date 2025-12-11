@@ -66,7 +66,9 @@ export function UserMenu() {
 
   if (isLoading) {
     return (
-      <div className="w-10 h-10 rounded-full bg-[#29292e] animate-pulse" />
+      <div className="relative">
+        <div className="w-10 h-10 rounded-full bg-[#29292e] animate-pulse" />
+      </div>
     );
   }
 

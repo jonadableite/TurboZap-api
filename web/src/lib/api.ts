@@ -46,17 +46,29 @@ const api = axios.create({
 // Request interceptor to add API key and dynamic base URL
 api.interceptors.request.use(
   (config) => {
-    // Always recalculate baseURL to get the most up-to-date value
-    // This ensures localStorage changes are picked up immediately
-    try {
-      const baseURL = getBaseURL();
-      config.baseURL = baseURL;
+    // Check if this is a Next.js API route (starts with /api/)
+    // These routes should be called relatively, not with the backend baseURL
+    const isNextJsApiRoute = config.url?.startsWith("/api/");
+    
+    if (isNextJsApiRoute) {
+      // For Next.js API routes, use relative URLs (no baseURL)
+      config.baseURL = "";
       
-      // Log for debugging (both dev and prod to help diagnose issues)
+      // Log for debugging
       if (config.url) {
-        console.log(`[API] Request to ${baseURL}${config.url}`);
+        console.log(`[API] Next.js API route: ${config.url}`);
       }
-    } catch (error) {
+    } else {
+      // For backend Go API routes, use the configured baseURL
+      try {
+        const baseURL = getBaseURL();
+        config.baseURL = baseURL;
+        
+        // Log for debugging (both dev and prod to help diagnose issues)
+        if (config.url) {
+          console.log(`[API] Backend API request to ${baseURL}${config.url}`);
+        }
+      } catch (error) {
       // In production, try to recover gracefully
       if (process.env.NODE_ENV === "production") {
         console.error("[API] Failed to get base URL:", error);
@@ -83,24 +95,28 @@ api.interceptors.request.use(
         // Development: throw error to catch configuration issues early
         throw error;
       }
+      }
     }
     
-    // Add API key from localStorage if available
-    if (typeof window !== "undefined") {
-      const apiKey = getFromStorage(API_KEY_STORAGE);
-      if (apiKey && apiKey.trim()) {
-        const headers = (config.headers || {}) as AxiosRequestHeaders;
-        headers["X-API-Key"] = apiKey.trim();
-        config.headers = headers;
-      } else {
-        // Log warning in development if API key is missing for non-public endpoints
-        // Some endpoints might be public (like health check), so we don't block the request
-        if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
-          console.warn(
-            "[API] No API key found in localStorage. " +
-            "Some endpoints may require authentication. " +
-            "Configure your API key in Settings or Header."
-          );
+    // Add API key from localStorage if available (only for backend API routes)
+    // Next.js API routes handle authentication via cookies/session
+    if (!isNextJsApiRoute) {
+      if (typeof window !== "undefined") {
+        const apiKey = getFromStorage(API_KEY_STORAGE);
+        if (apiKey && apiKey.trim()) {
+          const headers = (config.headers || {}) as AxiosRequestHeaders;
+          headers["X-API-Key"] = apiKey.trim();
+          config.headers = headers;
+        } else {
+          // Log warning in development if API key is missing for non-public endpoints
+          // Some endpoints might be public (like health check), so we don't block the request
+          if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
+            console.warn(
+              "[API] No API key found in localStorage. " +
+              "Some endpoints may require authentication. " +
+              "Configure your API key in Settings or Header."
+            );
+          }
         }
       }
     }
@@ -158,8 +174,19 @@ api.interceptors.response.use(
           "[API] Request error: API key is required. " +
           "Please configure your API key in Settings or Header."
         );
+      } else if (message.includes("Cannot GET") || message.includes("Cannot POST") || message.includes("Cannot PUT") || message.includes("Cannot DELETE")) {
+        // This usually means the Next.js route doesn't exist or isn't compiled
+        console.error(
+          `[API] Route not found: ${error.config?.method || "GET"} ${error.config?.url}. ` +
+          "Make sure the route exists and the Next.js server is running."
+        );
       } else {
         console.error("[API] Request error:", message);
+        // Log full error details in development
+        if (process.env.NODE_ENV === "development" && error.response) {
+          console.error("[API] Response data:", error.response.data);
+          console.error("[API] Response status:", error.response.status);
+        }
       }
     }
     
