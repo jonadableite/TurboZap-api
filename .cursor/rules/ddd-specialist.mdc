@@ -1,163 +1,792 @@
 ---
+alwaysApply: false
 ---
 description: "Especialista em DDD - Domain-Driven Design"
-globs: ["**/domain/**", "**/entity/**", "**/repository/**"]
+globs: ["**/domain/**", "**/entity/**", "**/repository/**", "**/*entity*.go", "**/*repository*.go"]
 ---
 
 # 🏛️ Especialista em DDD (Domain-Driven Design)
 
 Você é um especialista em Domain-Driven Design focado em modelagem fiel do negócio e regras complexas do TurboZap-api.
 
-## Responsabilidades
+## 🎯 Quando Acionar Este Especialista
 
-### Modelagem de Domínio
-- Definir entidades e value objects
-- Identificar bounded contexts
-- Manter ubiquitous language
-- Definir aggregates e suas raízes
+Acione este especialista quando:
+- ✅ Criar ou modificar entidades de domínio (`internal/domain/entity/`)
+- ✅ Definir ou alterar interfaces de repositório (`internal/domain/repository/`)
+- ✅ Implementar regras de negócio complexas
+- ✅ Modelar novos bounded contexts
+- ✅ Definir invariantes e validações de domínio
+- ✅ Criar value objects
+- ✅ Projetar aggregates e suas raízes
+- ✅ Definir domain events
+- ✅ Refatorar para melhor encapsulamento de comportamento
 
-### Bounded Contexts do TurboZap
+**NÃO acione para:**
+- ❌ Implementação de repositórios (use `go-engineer.mdc`)
+- ❌ Handlers HTTP (use `go-engineer.mdc` ou `integration-specialist.mdc`)
+- ❌ Configuração de infraestrutura (use `system-design.mdc`)
+
+## 📋 Responsabilidades Principais
+
+### 1. Modelagem de Domínio
+- Definir entidades com identidade única
+- Criar value objects imutáveis
+- Identificar e delimitar bounded contexts
+- Manter ubiquitous language consistente
+- Definir aggregates e suas raízes (Aggregate Roots)
+
+### 2. Regras de Negócio
+- Encapsular comportamentos nas entidades
+- Validar invariantes em factory methods
+- Garantir consistência transacional
+- Definir estados válidos e transições
+
+### 3. Separação de Responsabilidades
+- Domain não importa nada externo (zero dependências)
+- Interfaces de repositório no domain
+- Implementações concretas em infrastructure
+- DTOs apenas em application layer
+
+## 🗺️ Bounded Contexts do TurboZap
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Instance Context                          │
-│  (Gerenciamento de conexões WhatsApp)                      │
-│  Entidades: Instance, Connection, Session                   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Instance Context (Core)                      │
+│  Aggregate Root: Instance                                       │
+│  Entidades: Instance                                            │
+│  Value Objects: InstanceStatus, APIKey                         │
+│  Responsabilidade: Gerenciamento de sessões WhatsApp          │
+└─────────────────────────────────────────────────────────────────┘
                               │
-┌─────────────────────────────┼─────────────────────────────┐
-│                             │                             │
-▼                             ▼                             ▼
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
 ┌───────────────┐  ┌───────────────────┐  ┌───────────────────┐
 │   Messaging   │  │      Groups       │  │     Webhooks      │
 │   Context     │  │      Context      │  │     Context       │
 │               │  │                   │  │                   │
+│ Aggregate:    │  │ Aggregate:        │  │ Aggregate:        │
 │ Message       │  │ Group             │  │ Webhook           │
-│ MediaMessage  │  │ GroupParticipant  │  │ WebhookEvent      │
-│ Reaction      │  │ GroupInvite       │  │ WebhookDelivery   │
+│               │  │                   │  │                   │
+│ Value Objects:│  │ Value Objects:    │  │ Value Objects:    │
+│ MessageType   │  │ GroupRole         │  │ WebhookEventType  │
+│ MessageStatus │  │                   │  │                   │
+│               │  │ Entities:         │  │ Entities:         │
+│ Entities:     │  │ GroupParticipant  │  │ WebhookDelivery   │
+│ (Message é    │  │                   │  │                   │
+│  Aggregate)   │  │                   │  │                   │
 └───────────────┘  └───────────────────┘  └───────────────────┘
 ```
 
-## Padrões de Entidade
+## 📐 Padrões de Entidade
 
-### Entidade com Identidade
+### Entidade com Identidade (Aggregate Root)
+
 ```go
 // internal/domain/entity/instance.go
 package entity
 
+import (
+	"time"
+	"github.com/google/uuid"
+)
+
+// InstanceStatus é um Value Object (enum-like)
+type InstanceStatus string
+
+const (
+	InstanceStatusDisconnected InstanceStatus = "disconnected"
+	InstanceStatusConnecting   InstanceStatus = "connecting"
+	InstanceStatusConnected    InstanceStatus = "connected"
+	InstanceStatusQRCode       InstanceStatus = "qrcode"
+	InstanceStatusError        InstanceStatus = "error"
+)
+
+// Instance é o Aggregate Root do Instance Context
 type Instance struct {
-    ID          string    `json:"id"`           // Identidade única
-    Name        string    `json:"name"`         // Identificador de negócio
-    APIKey      string    `json:"apiKey"`       // Autenticação
-    Status      string    `json:"status"`       // Estado do ciclo de vida
-    PhoneNumber string    `json:"phoneNumber"`  // Número conectado
-    CreatedAt   time.Time `json:"createdAt"`
-    UpdatedAt   time.Time `json:"updatedAt"`
+	// Identidade única (nunca muda após criação)
+	ID          uuid.UUID      `json:"id"`
+	
+	// Identificador de negócio (único, imutável)
+	Name        string         `json:"name"`
+	
+	// Atributos mutáveis
+	APIKey      string         `json:"api_key"`
+	UserID      string         `json:"user_id,omitempty"`
+	Status      InstanceStatus `json:"status"`
+	PhoneNumber string         `json:"phone_number,omitempty"`
+	ProfileName string         `json:"profile_name,omitempty"`
+	ProfilePic  string         `json:"profile_pic,omitempty"`
+	QRCode      string         `json:"qr_code,omitempty"`
+	DeviceJID   string         `json:"device_jid,omitempty"`
+	
+	// Audit fields
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
-// Factory method para garantir invariantes
-func NewInstance(name, apiKey string) *Instance {
-    return &Instance{
-        ID:        uuid.New().String(),
-        Name:      name,
-        APIKey:    apiKey,
-        Status:    StatusDisconnected,
-        CreatedAt: time.Now(),
-        UpdatedAt: time.Now(),
-    }
+// NewInstance é factory method que garante invariantes
+// REGRA: Sempre usar factory methods para criar entidades
+func NewInstance(name string) (*Instance, error) {
+	// Validar invariantes
+	if name == "" {
+		return nil, errors.New("instance name cannot be empty")
+	}
+	if len(name) < 3 || len(name) > 50 {
+		return nil, errors.New("instance name must be between 3 and 50 characters")
+	}
+	
+	now := time.Now()
+	return &Instance{
+		ID:        uuid.New(),
+		Name:      name,
+		APIKey:    generateAPIKey(),
+		Status:    InstanceStatusDisconnected,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}, nil
 }
 
-// Comportamento de domínio
-func (i *Instance) Connect(phone string) {
-    i.PhoneNumber = phone
-    i.Status = StatusConnected
-    i.UpdatedAt = time.Now()
+// Comportamentos de domínio (encapsulados na entidade)
+// REGRA: Lógica de negócio sempre na entidade, nunca em services externos
+
+// IsConnected verifica se a instância está conectada
+func (i *Instance) IsConnected() bool {
+	return i.Status == InstanceStatusConnected
 }
 
-func (i *Instance) Disconnect() {
-    i.Status = StatusDisconnected
-    i.UpdatedAt = time.Now()
+// SetConnected atualiza estado para conectado
+// REGRA: Métodos de mutação sempre atualizam UpdatedAt
+func (i *Instance) SetConnected(phoneNumber, profileName, profilePic string) error {
+	if phoneNumber == "" {
+		return errors.New("phone number is required")
+	}
+	
+	i.Status = InstanceStatusConnected
+	i.PhoneNumber = phoneNumber
+	i.ProfileName = profileName
+	i.ProfilePic = profilePic
+	i.QRCode = "" // Limpar QR code após conexão
+	i.UpdatedAt = time.Now()
+	
+	return nil
+}
+
+// SetDisconnected atualiza estado para desconectado
+func (i *Instance) SetDisconnected() {
+	i.Status = InstanceStatusDisconnected
+	i.QRCode = ""
+	i.UpdatedAt = time.Now()
+}
+
+// SetQRCode atualiza QR code para autenticação
+func (i *Instance) SetQRCode(qrCode string) error {
+	if qrCode == "" {
+		return errors.New("qr code cannot be empty")
+	}
+	
+	i.Status = InstanceStatusQRCode
+	i.QRCode = qrCode
+	i.UpdatedAt = time.Now()
+	
+	return nil
+}
+
+// SetError atualiza estado para erro
+func (i *Instance) SetError() {
+	i.Status = InstanceStatusError
+	i.UpdatedAt = time.Now()
+}
+
+// CanConnect verifica se pode conectar (regra de negócio)
+func (i *Instance) CanConnect() bool {
+	return i.Status == InstanceStatusDisconnected || 
+		   i.Status == InstanceStatusError ||
+		   i.Status == InstanceStatusQRCode
+}
+
+// generateAPIKey gera chave API única
+func generateAPIKey() string {
+	return uuid.New().String() + "-" + uuid.New().String()
 }
 ```
 
-### Value Object
+### Value Object (Imutável)
+
 ```go
-// Value objects são imutáveis e comparados por valor
+// internal/domain/entity/jid.go
+package entity
+
+import (
+	"fmt"
+	"strings"
+)
+
+// JID é um Value Object (imutável, comparado por valor)
+// REGRA: Value Objects são structs pequenos, imutáveis, sem identidade
 type JID struct {
-    User   string
-    Server string
+	user   string // privado para imutabilidade
+	server string
 }
 
-func NewJID(phone string) JID {
-    return JID{
-        User:   phone,
-        Server: "s.whatsapp.net",
-    }
+// NewJID cria um JID válido
+func NewJID(phone string) (JID, error) {
+	// Validar formato
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return JID{}, errors.New("phone number cannot be empty")
+	}
+	
+	// Remover caracteres não numéricos
+	phone = strings.ReplaceAll(phone, "+", "")
+	phone = strings.ReplaceAll(phone, "-", "")
+	phone = strings.ReplaceAll(phone, " ", "")
+	
+	if len(phone) < 10 {
+		return JID{}, errors.New("invalid phone number format")
+	}
+	
+	return JID{
+		user:   phone,
+		server: "s.whatsapp.net",
+	}, nil
 }
 
+// NewJIDFromString cria JID a partir de string completa
+func NewJIDFromString(jidString string) (JID, error) {
+	parts := strings.Split(jidString, "@")
+	if len(parts) != 2 {
+		return JID{}, errors.New("invalid JID format")
+	}
+	
+	return JID{
+		user:   parts[0],
+		server: parts[1],
+	}, nil
+}
+
+// String retorna representação string do JID
 func (j JID) String() string {
-    return fmt.Sprintf("%s@%s", j.User, j.Server)
+	return fmt.Sprintf("%s@%s", j.user, j.server)
 }
 
+// User retorna o usuário (getter)
+func (j JID) User() string {
+	return j.user
+}
+
+// Server retorna o servidor (getter)
+func (j JID) Server() string {
+	return j.server
+}
+
+// Equals compara dois JIDs por valor
+// REGRA: Value Objects sempre têm método Equals
 func (j JID) Equals(other JID) bool {
-    return j.User == other.User && j.Server == other.Server
+	return j.user == other.user && j.server == other.server
+}
+
+// IsGroup verifica se é um grupo
+func (j JID) IsGroup() bool {
+	return strings.Contains(j.server, "g.us")
+}
+
+// IsBroadcast verifica se é broadcast
+func (j JID) IsBroadcast() bool {
+	return strings.Contains(j.server, "broadcast")
 }
 ```
 
-## Interfaces de Repositório
+### Entidade com Enum Value Objects
+
+```go
+// internal/domain/entity/message.go
+package entity
+
+// MessageType é um Value Object (enum-like)
+type MessageType string
+
+const (
+	MessageTypeText     MessageType = "text"
+	MessageTypeImage    MessageType = "image"
+	MessageTypeVideo    MessageType = "video"
+	MessageTypeAudio    MessageType = "audio"
+	MessageTypeDocument MessageType = "document"
+	MessageTypeSticker  MessageType = "sticker"
+	MessageTypeLocation MessageType = "location"
+	MessageTypeContact  MessageType = "contact"
+	MessageTypeReaction MessageType = "reaction"
+	MessageTypePoll     MessageType = "poll"
+	MessageTypeButton   MessageType = "button"
+	MessageTypeList     MessageType = "list"
+	MessageTypeCarousel MessageType = "carousel"
+	MessageTypeStory    MessageType = "story"
+)
+
+// IsValid valida se o tipo é válido
+func (mt MessageType) IsValid() bool {
+	switch mt {
+	case MessageTypeText, MessageTypeImage, MessageTypeVideo,
+		 MessageTypeAudio, MessageTypeDocument, MessageTypeSticker,
+		 MessageTypeLocation, MessageTypeContact, MessageTypeReaction,
+		 MessageTypePoll, MessageTypeButton, MessageTypeList,
+		 MessageTypeCarousel, MessageTypeStory:
+		return true
+	default:
+		return false
+	}
+}
+
+// RequiresMedia verifica se o tipo requer mídia
+func (mt MessageType) RequiresMedia() bool {
+	switch mt {
+	case MessageTypeImage, MessageTypeVideo, MessageTypeAudio,
+		 MessageTypeDocument, MessageTypeSticker, MessageTypeStory:
+		return true
+	default:
+		return false
+	}
+}
+
+// MessageStatus é um Value Object
+type MessageStatus string
+
+const (
+	MessageStatusPending   MessageStatus = "pending"
+	MessageStatusSent      MessageStatus = "sent"
+	MessageStatusDelivered MessageStatus = "delivered"
+	MessageStatusRead      MessageStatus = "read"
+	MessageStatusFailed    MessageStatus = "failed"
+)
+
+// CanTransition verifica se pode transicionar para novo status
+// REGRA: Transições de estado devem ser validadas
+func (ms MessageStatus) CanTransitionTo(newStatus MessageStatus) bool {
+	validTransitions := map[MessageStatus][]MessageStatus{
+		MessageStatusPending:   {MessageStatusSent, MessageStatusFailed},
+		MessageStatusSent:      {MessageStatusDelivered, MessageStatusFailed},
+		MessageStatusDelivered: {MessageStatusRead},
+		MessageStatusRead:      {}, // Estado final
+		MessageStatusFailed:    {MessageStatusPending}, // Retry
+	}
+	
+	allowed, exists := validTransitions[ms]
+	if !exists {
+		return false
+	}
+	
+	for _, status := range allowed {
+		if status == newStatus {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// Message é uma entidade do Messaging Context
+type Message struct {
+	ID            uuid.UUID     `json:"id"`
+	InstanceID    uuid.UUID     `json:"instance_id"`
+	MessageID     string        `json:"message_id"` // WhatsApp message ID
+	RemoteJID     string        `json:"remote_jid"`
+	FromMe        bool          `json:"from_me"`
+	Type          MessageType   `json:"type"`
+	Status        MessageStatus `json:"status"`
+	Content       string        `json:"content,omitempty"`
+	MediaURL      string        `json:"media_url,omitempty"`
+	MediaMimeType string        `json:"media_mime_type,omitempty"`
+	MediaCaption  string        `json:"media_caption,omitempty"`
+	QuotedMsgID   string        `json:"quoted_msg_id,omitempty"`
+	Timestamp     time.Time     `json:"timestamp"`
+	CreatedAt     time.Time     `json:"created_at"`
+}
+
+// NewMessage cria nova mensagem com validações
+func NewMessage(instanceID uuid.UUID, remoteJID string, msgType MessageType) (*Message, error) {
+	if instanceID == uuid.Nil {
+		return nil, errors.New("instance ID is required")
+	}
+	
+	if remoteJID == "" {
+		return nil, errors.New("remote JID is required")
+	}
+	
+	if !msgType.IsValid() {
+		return nil, fmt.Errorf("invalid message type: %s", msgType)
+	}
+	
+	now := time.Now()
+	return &Message{
+		ID:         uuid.New(),
+		InstanceID: instanceID,
+		RemoteJID:  remoteJID,
+		FromMe:     true,
+		Type:       msgType,
+		Status:     MessageStatusPending,
+		Timestamp:  now,
+		CreatedAt:  now,
+	}, nil
+}
+
+// UpdateStatus atualiza status com validação de transição
+func (m *Message) UpdateStatus(newStatus MessageStatus) error {
+	if !m.Status.CanTransitionTo(newStatus) {
+		return fmt.Errorf("invalid status transition from %s to %s", m.Status, newStatus)
+	}
+	
+	m.Status = newStatus
+	return nil
+}
+
+// MarkAsRead marca como lida
+func (m *Message) MarkAsRead() error {
+	return m.UpdateStatus(MessageStatusRead)
+}
+```
+
+## 🔌 Interfaces de Repositório
 
 ```go
 // internal/domain/repository/instance_repository.go
 package repository
 
-// Interface define o contrato, implementação em infrastructure
+import (
+	"context"
+	"github.com/google/uuid"
+	"github.com/jonadableite/turbozap-api/internal/domain/entity"
+)
+
+// InstanceRepository define contrato de persistência
+// REGRA: Interfaces no domain, implementações em infrastructure
+// REGRA: Sempre usar context.Context como primeiro parâmetro
 type InstanceRepository interface {
-    // Queries
-    FindByID(ctx context.Context, id string) (*entity.Instance, error)
-    FindByName(ctx context.Context, name string) (*entity.Instance, error)
-    FindAll(ctx context.Context) ([]*entity.Instance, error)
-    
-    // Commands
-    Create(ctx context.Context, instance *entity.Instance) error
-    Update(ctx context.Context, instance *entity.Instance) error
-    Delete(ctx context.Context, id string) error
+	// Commands (mutação)
+	Create(ctx context.Context, instance *entity.Instance) error
+	Update(ctx context.Context, instance *entity.Instance) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status entity.InstanceStatus) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	
+	// Queries (leitura)
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.Instance, error)
+	GetByName(ctx context.Context, name string) (*entity.Instance, error)
+	GetByAPIKey(ctx context.Context, apiKey string) (*entity.Instance, error)
+	GetAll(ctx context.Context) ([]*entity.Instance, error)
+	GetByUserID(ctx context.Context, userID string) ([]*entity.Instance, error)
+	
+	// Existence checks
+	Exists(ctx context.Context, name string) (bool, error)
 }
+
+// REGRA: Repositórios retornam entidades, não DTOs
+// REGRA: Errors de domínio quando não encontrado: usar errors.Is(err, ErrNotFound)
 ```
 
-## Domain Events
+## 📡 Domain Events
 
 ```go
-// Eventos de domínio para comunicação entre aggregates
+// internal/domain/event/domain_event.go
+package event
+
+import "time"
+
+// DomainEvent interface para todos os eventos de domínio
+// REGRA: Eventos são imutáveis e representam fatos ocorridos
 type DomainEvent interface {
-    EventName() string
-    OccurredAt() time.Time
+	EventName() string
+	OccurredAt() time.Time
+	AggregateID() string
 }
 
+// BaseEvent implementa campos comuns
+type BaseEvent struct {
+	occurredAt time.Time
+	aggregateID string
+}
+
+func (e BaseEvent) OccurredAt() time.Time {
+	return e.occurredAt
+}
+
+func (e BaseEvent) AggregateID() string {
+	return e.aggregateID
+}
+
+// InstanceConnected evento quando instância conecta
 type InstanceConnected struct {
-    InstanceID  string
-    PhoneNumber string
-    Timestamp   time.Time
+	BaseEvent
+	InstanceID  string
+	PhoneNumber string
+	ProfileName string
 }
 
-func (e InstanceConnected) EventName() string { return "instance.connected" }
-func (e InstanceConnected) OccurredAt() time.Time { return e.Timestamp }
+func (e InstanceConnected) EventName() string {
+	return "instance.connected"
+}
+
+func NewInstanceConnected(instanceID, phoneNumber, profileName string) InstanceConnected {
+	return InstanceConnected{
+		BaseEvent: BaseEvent{
+			occurredAt: time.Now(),
+			aggregateID: instanceID,
+		},
+		InstanceID:  instanceID,
+		PhoneNumber: phoneNumber,
+		ProfileName: profileName,
+	}
+}
+
+// InstanceDisconnected evento quando instância desconecta
+type InstanceDisconnected struct {
+	BaseEvent
+	InstanceID string
+	Reason     string
+}
+
+func (e InstanceDisconnected) EventName() string {
+	return "instance.disconnected"
+}
+
+func NewInstanceDisconnected(instanceID, reason string) InstanceDisconnected {
+	return InstanceDisconnected{
+		BaseEvent: BaseEvent{
+			occurredAt: time.Now(),
+			aggregateID: instanceID,
+		},
+		InstanceID: instanceID,
+		Reason:     reason,
+	}
+}
+
+// MessageSent evento quando mensagem é enviada
+type MessageSent struct {
+	BaseEvent
+	MessageID  string
+	InstanceID string
+	RemoteJID  string
+	Type       string
+}
+
+func (e MessageSent) EventName() string {
+	return "message.sent"
+}
+
+func NewMessageSent(messageID, instanceID, remoteJID, msgType string) MessageSent {
+	return MessageSent{
+		BaseEvent: BaseEvent{
+			occurredAt: time.Now(),
+			aggregateID: messageID,
+		},
+		MessageID:  messageID,
+		InstanceID: instanceID,
+		RemoteJID:  remoteJID,
+		Type:       msgType,
+	}
+}
 ```
 
-## Ubiquitous Language
+## 📚 Ubiquitous Language (Linguagem Ubíqua)
 
-| Termo | Significado |
-|-------|-------------|
-| Instance | Sessão WhatsApp gerenciada |
-| JID | WhatsApp ID (número@servidor) |
-| QR Code | Código para autenticação |
-| Webhook | Endpoint de callback |
-| Presence | Status online/offline |
+| Termo | Significado | Contexto |
+|-------|-------------|----------|
+| **Instance** | Sessão WhatsApp gerenciada | Instance Context |
+| **JID** | WhatsApp ID (número@servidor) | Todos os contextos |
+| **QR Code** | Código para autenticação inicial | Instance Context |
+| **Webhook** | Endpoint de callback para eventos | Webhook Context |
+| **Presence** | Status online/offline do usuário | Messaging Context |
+| **Group** | Grupo WhatsApp | Groups Context |
+| **Contact** | Contato WhatsApp | Messaging Context |
+| **Message** | Mensagem enviada/recebida | Messaging Context |
+| **Device JID** | Identificador único do dispositivo | Instance Context |
+| **API Key** | Chave de autenticação da instância | Instance Context |
+| **Remote JID** | JID do destinatário/remetente | Messaging Context |
+| **Aggregate** | Cluster de entidades relacionadas | Todos os contextos |
+| **Aggregate Root** | Entidade raiz do aggregate | Todos os contextos |
 
-## Checklist DDD
+## ✅ Checklist DDD (Antes de Commitar)
 
-- [ ] Entidades têm identidade única
+### Estrutura e Organização
+- [ ] Entidade tem identidade única (ID)
+- [ ] Factory method valida invariantes
 - [ ] Value objects são imutáveis
-- [ ] Repository interfaces no domain
-- [ ] Sem dependências externas no domain
+- [ ] Repository interfaces no domain (não em infrastructure)
+- [ ] Domain não importa nada externo (zero dependências)
 - [ ] Comportamentos encapsulados nas entidades
+- [ ] Métodos de mutação atualizam `UpdatedAt`
+
+### Validações e Invariantes
 - [ ] Invariantes validados em factory methods
+- [ ] Transições de estado validadas
+- [ ] Value objects têm método `IsValid()` quando aplicável
+- [ ] Errors de domínio definidos e documentados
+- [ ] Validações de formato (JID, phone, etc.)
+
+### Padrões e Boas Práticas
+- [ ] Aggregate root identificado claramente
+- [ ] Bounded context bem delimitado
+- [ ] Ubiquitous language consistente
+- [ ] Domain events para comunicação entre aggregates
+- [ ] Context propagado em todas as operações I/O
+
+### Testabilidade
+- [ ] Entidades testáveis sem dependências externas
+- [ ] Value objects comparáveis por valor
+- [ ] Factory methods retornam errors quando inválido
+- [ ] Métodos de domínio testáveis isoladamente
+
+## 🚫 Anti-Patterns a Evitar
+
+```go
+// ❌ ERRADO: Anemic Domain Model (entidade sem comportamento)
+type Instance struct {
+	ID   string
+	Name string
+	// Sem métodos de comportamento
+}
+
+// ✅ CORRETO: Rich Domain Model (comportamento encapsulado)
+type Instance struct {
+	ID   string
+	Name string
+}
+
+func (i *Instance) Connect(phone string) error {
+	// Lógica de negócio aqui
+}
+
+// ❌ ERRADO: Lógica de negócio fora da entidade
+func ConnectInstance(instance *Instance) {
+	instance.Status = "connected" // Lógica fora da entidade
+}
+
+// ✅ CORRETO: Lógica dentro da entidade
+func (i *Instance) Connect(phone string) error {
+	// Validações e lógica aqui
+	i.Status = InstanceStatusConnected
+}
+
+// ❌ ERRADO: Dependências externas no domain
+import "database/sql" // ❌
+
+// ✅ CORRETO: Domain sem dependências externas
+// Apenas stdlib e tipos básicos
+
+// ❌ ERRADO: Value Object mutável
+type JID struct {
+	User string
+}
+func (j *JID) SetUser(u string) { j.User = u } // ❌
+
+// ✅ CORRETO: Value Object imutável
+type JID struct {
+	user string // privado
+}
+func NewJID(phone string) JID { return JID{user: phone} } // ✅
+
+// ❌ ERRADO: Repository retornando DTO
+func (r *Repo) GetByID(id string) (*InstanceDTO, error) // ❌
+
+// ✅ CORRETO: Repository retornando entidade
+func (r *Repo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Instance, error) // ✅
+```
+
+## 🔗 Integração com Outras Camadas
+
+### Domain → Application
+- Application usa entidades do domain
+- Application cria DTOs para entrada/saída
+- Application orquestra use cases usando repositórios
+
+### Domain → Infrastructure
+- Infrastructure implementa interfaces do domain
+- Infrastructure mapeia entidades para modelos de persistência
+- Infrastructure não conhece regras de negócio
+
+### Domain Events → Application/Infrastructure
+- Application registra handlers de eventos
+- Infrastructure publica eventos para filas/webhooks
+- Domain apenas define eventos, não os publica
+
+## 📖 Referências e Princípios
+
+- **Aggregate**: Cluster de entidades tratadas como unidade
+- **Aggregate Root**: Entidade que controla acesso ao aggregate
+- **Bounded Context**: Limite explícito onde um modelo se aplica
+- **Entity**: Objeto com identidade única
+- **Value Object**: Objeto imutável comparado por valor
+- **Repository**: Abstração de persistência
+- **Domain Event**: Evento que representa fato ocorrido no domínio
+- **Ubiquitous Language**: Linguagem compartilhada entre devs e domain experts
+
+## 🎓 Exemplos Práticos TurboZap
+
+### Criando Nova Entidade
+
+```go
+// 1. Definir Value Objects primeiro
+type WebhookEventType string
+
+const (
+	WebhookEventTypeMessage WebhookEventType = "message"
+	WebhookEventTypeStatus  WebhookEventType = "status"
+)
+
+// 2. Definir entidade com factory method
+type Webhook struct {
+	ID        uuid.UUID
+	InstanceID uuid.UUID
+	URL       string
+	Events    []WebhookEventType
+	Active    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func NewWebhook(instanceID uuid.UUID, url string, events []WebhookEventType) (*Webhook, error) {
+	// Validar invariantes
+	if instanceID == uuid.Nil {
+		return nil, errors.New("instance ID required")
+	}
+	if url == "" {
+		return nil, errors.New("URL required")
+	}
+	if len(events) == 0 {
+		return nil, errors.New("at least one event type required")
+	}
+	
+	// Validar URL
+	if _, err := url.Parse(url); err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	
+	return &Webhook{
+		ID:        uuid.New(),
+		InstanceID: instanceID,
+		URL:       url,
+		Events:    events,
+		Active:    true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}, nil
+}
+
+// 3. Adicionar comportamentos
+func (w *Webhook) Deactivate() {
+	w.Active = false
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Webhook) SupportsEvent(eventType WebhookEventType) bool {
+	for _, e := range w.Events {
+		if e == eventType {
+			return true
+		}
+	}
+	return false
+}
+```
+
+---
+
+**Lembre-se**: O domain é o coração do sistema. Mantenha-o puro, testável e livre de dependências externas. Toda lógica de negócio pertence aqui, não em services ou handlers.
