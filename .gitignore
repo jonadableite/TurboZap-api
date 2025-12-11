@@ -28,3 +28,6 @@ go.work
 turbozap
 /api
 cmd/api/api
+
+# env files (can opt-in for committing if needed)
+.env

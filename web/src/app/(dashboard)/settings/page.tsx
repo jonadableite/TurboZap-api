@@ -1,21 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from 'framer-motion';
+import { Header } from "@/components/layout";
+import { ApiKeysSection } from "@/components/settings/ApiKeysSection";
+import { GlobalApiKeySection } from "@/components/settings/GlobalApiKeySection";
 import {
-  Key,
-  Server,
-  Save,
-  RefreshCw,
-  CheckCircle2,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+} from "@/components/ui";
+import { useApiConfig } from "@/hooks/useApiConfig";
+import { useAuth } from "@/hooks/useAuth";
+import { healthApi } from "@/lib/api";
+import { motion } from "framer-motion";
+import {
   AlertCircle,
+  CheckCircle2,
   Eye,
   EyeOff,
-} from 'lucide-react';
-import { Header } from '@/components/layout';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from '@/components/ui';
-import { healthApi } from '@/lib/api';
-import { useApiConfig } from '@/hooks/useApiConfig';
+  Key,
+  RefreshCw,
+  Save,
+  Server,
+} from "lucide-react";
+import { useState } from "react";
 
 // export default function SettingsPage() {
 //   const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
@@ -24,32 +36,32 @@ import { useApiConfig } from '@/hooks/useApiConfig';
 //   const [saved, setSaved] = useState(false);
 //   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 export default function SettingsPage() {
+  const { user } = useAuth();
   const { apiKey, apiUrl, updateConfig } = useApiConfig();
-
-  const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
-  const [apiUrlInput, setApiUrlInput] = useState(apiUrl || 'http://localhost:8080');
+  const [apiKeyInput, setApiKeyInput] = useState<string | null>(null);
+  const [apiUrlInput, setApiUrlInput] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-
-  //const { apiKey, apiUrl, updateConfig } = useApiConfig();
-
-  useEffect(() => {
-    checkApiHealth();
-  }, []);
+  const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">(
+    "checking"
+  );
 
   const checkApiHealth = async () => {
-    setApiStatus('checking');
+    setApiStatus("checking");
     try {
       const isOnline = await healthApi.check();
-      setApiStatus(isOnline ? 'online' : 'offline');
+      setApiStatus(isOnline ? "online" : "offline");
     } catch {
-      setApiStatus('offline');
+      setApiStatus("offline");
     }
   };
 
   const handleSave = () => {
-    updateConfig(apiKeyInput.trim() || undefined, apiUrlInput.trim() || undefined);
+    const keyToSave = (apiKeyInput ?? apiKey ?? "").trim() || undefined;
+    const urlToSave =
+      (apiUrlInput ?? apiUrl ?? "http://localhost:8080").trim() || undefined;
+
+    updateConfig(keyToSave, urlToSave);
     setSaved(true);
     const timeout = setTimeout(() => setSaved(false), 2000);
     checkApiHealth();
@@ -83,36 +95,39 @@ export default function SettingsPage() {
                 </div>
                 <Badge
                   variant={
-                    apiStatus === 'online'
-                      ? 'success'
-                      : apiStatus === 'offline'
-                      ? 'danger'
-                      : 'warning'
+                    apiStatus === "online"
+                      ? "success"
+                      : apiStatus === "offline"
+                      ? "danger"
+                      : "warning"
                   }
-                  pulse={apiStatus === 'checking'}
+                  pulse={apiStatus === "checking"}
                 >
-                  {apiStatus === 'online'
-                    ? 'Online'
-                    : apiStatus === 'offline'
-                    ? 'Offline'
-                    : 'Verificando...'}
+                  {apiStatus === "online"
+                    ? "Online"
+                    : apiStatus === "offline"
+                    ? "Offline"
+                    : "Verificando..."}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
-                  {apiStatus === 'online' && (
+                  {apiStatus === "online" && (
                     <div className="flex items-center gap-2 text-[var(--rocket-green)]">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-sm">API conectada e funcionando</span>
+                      <span className="text-sm">
+                        API conectada e funcionando
+                      </span>
                     </div>
                   )}
-                  {apiStatus === 'offline' && (
+                  {apiStatus === "offline" && (
                     <div className="flex items-center gap-2 text-[var(--rocket-danger)]">
                       <AlertCircle className="w-4 h-4" />
                       <span className="text-sm">
-                        Não foi possível conectar à API. Verifique se o servidor está rodando.
+                        Não foi possível conectar à API. Verifique se o servidor
+                        está rodando.
                       </span>
                     </div>
                   )}
@@ -149,7 +164,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <Input
                 label="URL da API"
-                value={apiUrlInput}
+                value={apiUrlInput ?? apiUrl ?? "http://localhost:8080"}
                 onChange={(e) => setApiUrlInput(e.target.value)}
                 placeholder="http://localhost:8080"
                 leftIcon={<Server className="w-4 h-4" />}
@@ -158,8 +173,8 @@ export default function SettingsPage() {
 
               <Input
                 label="API Key"
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKeyInput}
+                type={showApiKey ? "text" : "password"}
+                value={apiKeyInput ?? apiKey ?? ""}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder="Sua chave de API"
                 leftIcon={<Key className="w-4 h-4" />}
@@ -182,15 +197,40 @@ export default function SettingsPage() {
               <div className="pt-4">
                 <Button
                   onClick={handleSave}
-                  leftIcon={saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                  variant={saved ? 'secondary' : 'primary'}
+                  leftIcon={
+                    saved ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )
+                  }
+                  variant={saved ? "secondary" : "primary"}
                 >
-                  {saved ? 'Salvo!' : 'Salvar configurações'}
+                  {saved ? "Salvo!" : "Salvar configurações"}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* API Keys */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <ApiKeysSection />
+        </motion.div>
+
+        {user?.role === "ADMIN" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+          >
+            <GlobalApiKeySection />
+          </motion.div>
+        )}
 
         {/* Help */}
         <motion.div
@@ -204,9 +244,12 @@ export default function SettingsPage() {
                 💡 Dica
               </h3>
               <p className="text-sm text-[var(--rocket-gray-300)]">
-                Certifique-se de que o servidor TurboZap está rodando antes de usar o painel.
-                Execute <code className="px-1.5 py-0.5 bg-[var(--rocket-gray-800)] rounded text-[var(--rocket-purple-light)]">go run ./cmd/api</code> no
-                diretório do projeto para iniciar o servidor.
+                Certifique-se de que o servidor TurboZap está rodando antes de
+                usar o painel. Execute{" "}
+                <code className="px-1.5 py-0.5 bg-[var(--rocket-gray-800)] rounded text-[var(--rocket-purple-light)]">
+                  go run ./cmd/api
+                </code>{" "}
+                no diretório do projeto para iniciar o servidor.
               </p>
             </CardContent>
           </Card>
@@ -215,4 +258,3 @@ export default function SettingsPage() {
     </>
   );
 }
-

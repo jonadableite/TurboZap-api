@@ -1,21 +1,42 @@
-import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
 import type {
-  Instance,
+  ApiResponse,
   CreateInstanceRequest,
   CreateInstanceResponse,
+  Instance,
   InstanceListResponse,
+  InstanceStatus,
   InstanceStatusResponse,
   QRCodeResponse,
-  ApiResponse,
 } from "@/types";
+import axios, { AxiosError, type AxiosRequestHeaders } from "axios";
+import { getApiBaseUrl } from "./api-url";
 
-const DEFAULT_API_URL =  process.env.NEXT_PUBLIC_API_URL  ||  "http://localhost:8080";
+
 const API_KEY_STORAGE = "turbozap_api_key";
-const API_URL_STORAGE = "turbozap_api_url";
 
-// Create axios instance
+// Helper to safely get from localStorage (client-side only)
+const getFromStorage = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    // localStorage may be disabled or unavailable
+    if (process.env.NODE_ENV === "development") {
+      console.warn(`[API] Failed to access localStorage for key "${key}":`, error);
+    }
+    return null;
+  }
+};
+
+// Get base URL - uses shared utility
+function getBaseURL(): string {
+  return getApiBaseUrl();
+}
+
+// Create axios instance with undefined baseURL initially
+// It will be set dynamically in the request interceptor
 const api = axios.create({
-  baseURL: DEFAULT_API_URL,
+  baseURL: undefined, // Will be set in interceptor
   timeout: 15000,
   timeoutErrorMessage: "Request timed out",
   headers: {
@@ -23,29 +44,90 @@ const api = axios.create({
   },
 });
 
-const getFromStorage = (key: string) => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(key);
-};
-
 // Request interceptor to add API key and dynamic base URL
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const storedUrl = getFromStorage(API_URL_STORAGE);
-    if (storedUrl) {
-      config.baseURL = storedUrl;
+api.interceptors.request.use(
+  (config) => {
+    // Check if this is a Next.js API route (starts with /api/)
+    // These routes should be called relatively, not with the backend baseURL
+    const isNextJsApiRoute = config.url?.startsWith("/api/");
+    
+    if (isNextJsApiRoute) {
+      // For Next.js API routes, use relative URLs (no baseURL)
+      config.baseURL = "";
+      
+      // Log for debugging
+      if (config.url) {
+        console.log(`[API] Next.js API route: ${config.url}`);
+      }
+    } else {
+      // For backend Go API routes, use the configured baseURL
+      try {
+        const baseURL = getBaseURL();
+        config.baseURL = baseURL;
+        
+        // Log for debugging (both dev and prod to help diagnose issues)
+        if (config.url) {
+          console.log(`[API] Backend API request to ${baseURL}${config.url}`);
+        }
+      } catch (error) {
+      // In production, try to recover gracefully
+      if (process.env.NODE_ENV === "production") {
+        console.error("[API] Failed to get base URL:", error);
+        
+        // Try to use current origin as last resort (client-side only)
+        if (typeof window !== "undefined") {
+          const origin = window.location.origin;
+          
+          // Try to use the shared utility for inference
+          try {
+            const { getApiBaseUrl } = require("./api-url");
+            config.baseURL = getApiBaseUrl();
+            console.warn("[API] Using inferred URL as fallback:", config.baseURL);
+          } catch {
+            // If inference fails, use same origin
+            config.baseURL = origin;
+            console.warn("[API] Using same origin as fallback:", config.baseURL);
+          }
+        } else {
+          // SSR: can't recover, must have env var
+          throw error;
+        }
+      } else {
+        // Development: throw error to catch configuration issues early
+        throw error;
+      }
+      }
     }
-  }
+    
+    // Add API key from localStorage if available (only for backend API routes)
+    // Next.js API routes handle authentication via cookies/session
+    if (!isNextJsApiRoute) {
+      if (typeof window !== "undefined") {
+        const apiKey = getFromStorage(API_KEY_STORAGE);
+        if (apiKey && apiKey.trim()) {
+          const headers = (config.headers || {}) as AxiosRequestHeaders;
+          headers["X-API-Key"] = apiKey.trim();
+          config.headers = headers;
+        } else {
+          // Log warning in development if API key is missing for non-public endpoints
+          // Some endpoints might be public (like health check), so we don't block the request
+          if (process.env.NODE_ENV === "development" && config.url && !config.url.includes("/health")) {
+            console.warn(
+              "[API] No API key found in localStorage. " +
+              "Some endpoints may require authentication. " +
+              "Configure your API key in Settings or Header."
+            );
+          }
+        }
+      }
+    }
 
-  const apiKey = getFromStorage(API_KEY_STORAGE);
-  if (apiKey) {
-    const headers = (config.headers || {}) as AxiosRequestHeaders;
-    headers["X-API-Key"] = apiKey;
-    config.headers = headers;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-
-  return config;
-});
+);
 
 // Response interceptor for error handling
 const isTimeoutError = (error: AxiosError) =>
@@ -68,17 +150,47 @@ api.interceptors.response.use(
       );
     }
 
-    const message =
-      error.response?.data?.error?.message ||
-      error.message ||
-      "Erro desconhecido";
-
     // Don't log errors for optional endpoints like webhook events
     const isOptionalEndpoint = error.config?.url?.includes("/webhook/events");
 
     if (process.env.NODE_ENV !== "production" && !isOptionalEndpoint) {
-      console.error("API Error:", message);
+      const message =
+        error.response?.data?.error?.message ||
+        error.message ||
+        "Erro desconhecido";
+      
+      // Check if API key is configured before logging API key errors
+      const hasApiKey = typeof window !== "undefined" && getFromStorage(API_KEY_STORAGE)?.trim();
+      
+      // Provide helpful message for missing API key only if API key is actually missing
+      if ((message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) && !hasApiKey) {
+        // Don't log error if API key is not configured - this is expected behavior
+        // The hook should handle this gracefully by not making the request
+        return Promise.reject(error);
+      }
+      
+      // Log other errors normally
+      if (message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) {
+        console.error(
+          "[API] Request error: API key is required. " +
+          "Please configure your API key in Settings or Header."
+        );
+      } else if (message.includes("Cannot GET") || message.includes("Cannot POST") || message.includes("Cannot PUT") || message.includes("Cannot DELETE")) {
+        // This usually means the Next.js route doesn't exist or isn't compiled
+        console.error(
+          `[API] Route not found: ${error.config?.method || "GET"} ${error.config?.url}. ` +
+          "Make sure the route exists and the Next.js server is running."
+        );
+      } else {
+        console.error("[API] Request error:", message);
+        // Log full error details in development
+        if (process.env.NODE_ENV === "development" && error.response) {
+          console.error("[API] Response data:", error.response.data);
+          console.error("[API] Response status:", error.response.status);
+        }
+      }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -88,14 +200,24 @@ const getString = (value: unknown): string | undefined =>
 
 const normalizeInstance = (raw: unknown): Instance => {
   const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const statusRaw = getString(data.status) || getString(data.connection_status);
+  const status: InstanceStatus =
+    statusRaw === "connected" ||
+    statusRaw === "connecting" ||
+    statusRaw === "qr_code" ||
+    statusRaw === "disconnected"
+      ? statusRaw
+      : "disconnected";
+
   return {
     id: getString(data.id) || "",
     name: getString(data.name) || "",
     phone:
       getString(data.phone) ||
       getString(data.phone_number) ||
-      getString(data.msisdn) || undefined,
-    status: (getString(data.status) || getString(data.connection_status) || "unknown") as Instance["status"],
+      getString(data.msisdn) ||
+      undefined,
+    status,
     profileName:
       getString(data.profileName) ||
       getString(data.profile_name) ||
@@ -140,9 +262,21 @@ export const instanceApi = {
   create: async (
     data: CreateInstanceRequest
   ): Promise<CreateInstanceResponse> => {
+    // Ensure latest API key/URL are applied even if interceptor hasn't run yet
+    const overrideHeaders: Record<string, string> = {};
+    const storedKey = getFromStorage(API_KEY_STORAGE);
+    if (storedKey) {
+      overrideHeaders["X-API-Key"] = storedKey;
+    }
+    const finalUrl = getBaseURL();
+
     const response = await api.post<CreateInstanceResponse>(
       "/instance/create",
-      data
+      data,
+      {
+        baseURL: finalUrl,
+        headers: Object.keys(overrideHeaders).length ? overrideHeaders : undefined,
+      }
     );
     return response.data;
   },

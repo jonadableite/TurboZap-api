@@ -18,6 +18,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o turbozap ./cmd/api
 # Build create_db helper
 RUN CGO_ENABLED=0 GOOS=linux go build -o create_db ./scripts/create_db.go
 
+# Build database setup script
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o setup_db ./scripts/setup_db.go
+
+# Build seed script
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed_db ./scripts/seed.go
+
 # ============================================
 # Stage 2: Build Frontend (Next.js)
 # ============================================
@@ -40,10 +46,16 @@ RUN apk --no-cache add \
     ca-certificates \
     tzdata \
     nodejs \
-    npm \
     curl \
     bash \
-    postgresql-client
+    netcat-openbsd
+
+# Runtime defaults (can be overridden at deploy time)
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    FRONTEND_PORT=3000 \
+    BACKEND_PORT=8080
 
 RUN adduser -D -g '' appuser
 
@@ -53,58 +65,107 @@ WORKDIR /app
 COPY --from=backend-builder /app/turbozap /app/turbozap
 COPY --from=backend-builder /app/create_db /app/create_db
 
-# Copy frontend standalone build
+# Copy database setup scripts
+COPY --from=backend-builder /app/setup_db /app/setup_db
+COPY --from=backend-builder /app/seed_db /app/seed_db
+
+# Copy frontend standalone build from builder
+# Next.js standalone output includes only necessary files
 COPY --from=frontend-builder /app/web/.next/standalone /app/web/
 COPY --from=frontend-builder /app/web/.next/static /app/web/.next/static
 COPY --from=frontend-builder /app/web/public /app/web/public
 
-# ============================================
-# Startup Script (Banco + Backend + Frontend)
-# ============================================
-RUN printf '#!/bin/bash\n\
-set -e\n\
-\n\
-echo \"🚀 Starting TurboZap...\"\n\
-\n\
-# =======================\n\
-# Create database\n\
-# =======================\n\
-if [ -z \"$DATABASE_URL\" ]; then\n\
-  echo \"❌ ERROR: DATABASE_URL not set\"\n\
-  exit 1\n\
-fi\n\
-\n\
-echo \"🏦 Checking database...\"\n\
-/app/create_db || true\n\
-\n\
-# =======================\n\
-# Start Backend\n\
-# =======================\n\
-echo \"🚀 Starting Backend API...\"\n\
-/app/turbozap &\n\
-BACKEND_PID=$!\n\
-\n\
-sleep 2\n\
-\n\
-# =======================\n\
-# Start Frontend\n\
-# =======================\n\
-echo \"🌐 Starting Frontend...\"\n\
-cd /app/web\n\
-PORT=3000 node server.js &\n\
-FRONTEND_PID=$!\n\
-\n\
-cleanup() {\n\
-  echo \"🛑 Shutting down...\"\n\
-  kill $BACKEND_PID 2>/dev/null || true\n\
-  kill $FRONTEND_PID 2>/dev/null || true\n\
-  exit 0\n\
-}\n\
-trap cleanup SIGTERM SIGINT\n\
-\n\
-while true; do\n\
-  sleep 5\n\
-done\n' > /app/start.sh
+# Create startup script
+RUN cat <<'EOF' > /app/start.sh
+#!/bin/bash
+set -euo pipefail
+
+# Respect env overrides coming from the platform
+BACKEND_PORT="${BACKEND_PORT:-${SERVER_PORT:-8080}}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+
+export SERVER_HOST="${SERVER_HOST:-0.0.0.0}"
+export SERVER_PORT="${SERVER_PORT:-$BACKEND_PORT}"
+export PORT="${FRONTEND_PORT}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export NODE_ENV="${NODE_ENV:-production}"
+export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+
+# Wait for database to be ready (if using external DB)
+if [ -n "${DATABASE_URL:-}" ]; then
+  echo "⏳ Aguardando banco de dados estar pronto..."
+  max_attempts=30
+  attempt=0
+  
+  # Extract host and port from DATABASE_URL
+  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+  
+  if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
+    while [ $attempt -lt $max_attempts ]; do
+      if nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+        echo "✅ Banco de dados está pronto!"
+        break
+      fi
+      attempt=$((attempt + 1))
+      echo "  Tentativa $attempt/$max_attempts..."
+      sleep 2
+    done
+    
+    if [ $attempt -eq $max_attempts ]; then
+      echo "⚠️  Aviso: Não foi possível conectar ao banco após $max_attempts tentativas"
+      echo "   Continuando mesmo assim..."
+    fi
+  fi
+  
+  # Setup database (create, migrate, seed)
+  echo "🔧 Configurando banco de dados..."
+  if [ -f /app/setup_db ]; then
+    /app/setup_db || {
+      echo "⚠️  Aviso: Erro ao configurar banco de dados"
+      echo "   Continuando mesmo assim..."
+    }
+  else
+    echo "⚠️  Aviso: Script setup_db não encontrado"
+  fi
+fi
+
+echo "Starting TurboZap API (port: ${SERVER_PORT})..."
+/app/turbozap &
+BACKEND_PID=$!
+
+# Small delay for backend bootstrap
+sleep 2
+
+echo "Starting TurboZap Web (port: ${PORT})..."
+cd /app/web
+node server.js &
+FRONTEND_PID=$!
+
+cleanup() {
+  echo "Received shutdown signal, stopping services..."
+  kill $BACKEND_PID 2>/dev/null || true
+  kill $FRONTEND_PID 2>/dev/null || true
+  wait $BACKEND_PID 2>/dev/null || true
+  wait $FRONTEND_PID 2>/dev/null || true
+  echo "Services stopped"
+  exit 0
+}
+
+trap cleanup SIGTERM SIGINT
+
+while true; do
+  if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    echo "Backend process died, exiting..."
+    cleanup
+  fi
+  if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+    echo "Frontend process died, exiting..."
+    cleanup
+  fi
+  sleep 5
+done
+EOF
 
 RUN chmod +x /app/start.sh
 RUN chown -R appuser:appuser /app

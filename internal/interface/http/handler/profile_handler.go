@@ -44,6 +44,10 @@ func (h *ProfileHandler) getInstanceAndClient(c *fiber.Ctx) (*entity.Instance, *
 		return nil, nil, response.NotFound(c, "Instance not found")
 	}
 
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return nil, nil, err
+	}
+
 	client, exists := h.waManager.GetClient(instance.ID)
 	if !exists || client.WAClient == nil || !client.WAClient.IsConnected() {
 		return nil, nil, response.BadRequest(c, "Instance is not connected to WhatsApp")

@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  X,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import { Portal } from "./Portal";
 
 type ToastType = "success" | "error" | "info" | "warning";
@@ -20,7 +26,9 @@ interface ToastContextType {
   removeToast: (id: string) => void;
 }
 
-const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
+const ToastContext = React.createContext<ToastContextType | undefined>(
+  undefined
+);
 
 export function useToast() {
   const context = React.useContext(ToastContext);
@@ -34,7 +42,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
 
-  const showToast = (message: string, type: ToastType = "info", duration = 3000) => {
+  const showToast = (
+    message: string,
+    type: ToastType = "info",
+    duration = 3000
+  ) => {
     idRef.current += 1;
     const id = `toast-${idRef.current}`;
     setToasts((prev) => [...prev, { id, message, type, duration }]);
@@ -65,12 +77,27 @@ function ToastContainer({
   toasts: Toast[];
   removeToast: (id: string) => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <Portal>
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md">
         <AnimatePresence>
           {toasts.map((toast) => (
-            <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+            <ToastItem
+              key={toast.id}
+              toast={toast}
+              onClose={() => removeToast(toast.id)}
+            />
           ))}
         </AnimatePresence>
       </div>
@@ -87,10 +114,13 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   };
 
   const colors = {
-    success: "bg-[var(--rocket-green)]/20 border-[var(--rocket-green)]/30 text-[var(--rocket-green)]",
-    error: "bg-[var(--rocket-danger)]/20 border-[var(--rocket-danger)]/30 text-[var(--rocket-danger)]",
+    success:
+      "bg-[var(--rocket-green)]/20 border-[var(--rocket-green)]/30 text-[var(--rocket-green)]",
+    error:
+      "bg-[var(--rocket-danger)]/20 border-[var(--rocket-danger)]/30 text-[var(--rocket-danger)]",
     info: "bg-[var(--rocket-info)]/20 border-[var(--rocket-info)]/30 text-[var(--rocket-info)]",
-    warning: "bg-[var(--rocket-warning)]/20 border-[var(--rocket-warning)]/30 text-[var(--rocket-warning)]",
+    warning:
+      "bg-[var(--rocket-warning)]/20 border-[var(--rocket-warning)]/30 text-[var(--rocket-warning)]",
   };
 
   const Icon = icons[toast.type];
@@ -100,7 +130,9 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       initial={{ opacity: 0, y: -20, x: 100 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
       exit={{ opacity: 0, x: 100, transition: { duration: 0.2 } }}
-      className={`flex items-center gap-3 p-4 rounded-lg border backdrop-blur-sm ${colors[toast.type]}`}
+      className={`flex items-center gap-3 p-4 rounded-lg border backdrop-blur-sm ${
+        colors[toast.type]
+      }`}
     >
       <Icon className="w-5 h-5 flex-shrink-0" />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
@@ -113,4 +145,3 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     </motion.div>
   );
 }
-

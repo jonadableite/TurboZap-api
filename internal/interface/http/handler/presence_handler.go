@@ -7,8 +7,8 @@ import (
 	"github.com/jonadableite/turbozap-api/internal/infrastructure/whatsapp"
 	"github.com/jonadableite/turbozap-api/internal/interface/response"
 	"github.com/jonadableite/turbozap-api/pkg/validator"
-	"go.mau.fi/whatsmeow/types"
 	"github.com/sirupsen/logrus"
+	"go.mau.fi/whatsmeow/types"
 )
 
 // PresenceHandler handles presence-related requests
@@ -40,6 +40,10 @@ func (h *PresenceHandler) getInstanceAndClient(c *fiber.Ctx) (*entity.Instance, 
 	}
 	if instance == nil {
 		return nil, nil, response.NotFound(c, "Instance not found")
+	}
+
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return nil, nil, err
 	}
 
 	client, exists := h.waManager.GetClient(instance.ID)

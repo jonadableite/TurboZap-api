@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from "next/server";
+
+// Routes that don't require authentication
+const publicRoutes = [
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/docs",
+  "/api/auth",
+];
+
+// Routes that require authentication
+const protectedRoutes = [
+  "/",
+  "/instances",
+  "/settings",
+];
+
+// Routes that require specific roles
+const adminRoutes = [
+  "/admin",
+  "/users",
+];
+
+const developerRoutes = [
+  "/api-keys",
+  "/logs",
+];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware for static files and API routes (except auth check)
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Check if it's a public route
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  // Get session from cookie
+  // Better Auth em produção usa prefixo __Secure-
+  const sessionCookie =
+    request.cookies.get("__Secure-turbozap.session_token")?.value ||
+    request.cookies.get("turbozap.session_token")?.value;
+
+  // If no session and trying to access protected route, redirect to sign-in
+  if (!sessionCookie && !isPublicRoute) {
+    const signInUrl = new URL("/sign-in", request.url);
+    signInUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+
+  // If has session and trying to access auth pages, redirect to dashboard
+  if (sessionCookie && (pathname === "/sign-in" || pathname === "/sign-up")) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // For role-based routes, we need to verify the session server-side
+  // This is a basic check - full role verification happens in the API/pages
+  if (sessionCookie) {
+    const isAdminRoute = adminRoutes.some((route) =>
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
+    const isDeveloperRoute = developerRoutes.some((route) =>
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
+
+    // For admin/developer routes, add a header flag for server-side verification
+    if (isAdminRoute || isDeveloperRoute) {
+      const response = NextResponse.next();
+      response.headers.set("x-requires-role", isAdminRoute ? "ADMIN" : "DEVELOPER");
+      return response;
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
+

@@ -53,6 +53,9 @@ func (h *InstanceHandler) Create(c *fiber.Ctx) error {
 
 	// Create new instance
 	instance := entity.NewInstance(req.Name)
+	if userID, _ := c.Locals("userID").(string); userID != "" {
+		instance.UserID = userID
+	}
 
 	// Save to database
 	if err := h.instanceRepo.Create(c.Context(), instance); err != nil {
@@ -71,10 +74,36 @@ func (h *InstanceHandler) Create(c *fiber.Ctx) error {
 
 // List lists all instances
 func (h *InstanceHandler) List(c *fiber.Ctx) error {
-	instances, err := h.instanceRepo.GetAll(c.Context())
-	if err != nil {
-		h.logger.WithError(err).Error("Failed to list instances")
-		return response.InternalServerError(c, "Failed to list instances")
+	userID, _ := c.Locals("userID").(string)
+	isGlobal := c.Locals("isGlobalAdmin") == true
+	instance, _ := c.Locals("instance").(*entity.Instance)
+
+	var (
+		instances []*entity.Instance
+		err       error
+	)
+
+	// Always filter by userID if available (whether from user API key or instance API key)
+	if userID != "" && !isGlobal {
+		// Filter by userID - this ensures users only see their own instances
+		instances, err = h.instanceRepo.GetByUserID(c.Context(), userID)
+		if err != nil {
+			h.logger.WithError(err).Error("Failed to list instances")
+			return response.InternalServerError(c, "Failed to list instances")
+		}
+	} else if isGlobal {
+		// Global admin - return all instances
+		instances, err = h.instanceRepo.GetAll(c.Context())
+		if err != nil {
+			h.logger.WithError(err).Error("Failed to list instances")
+			return response.InternalServerError(c, "Failed to list instances")
+		}
+	} else if instance != nil {
+		// Using instance API key but no userID - return only that instance (legacy support)
+		instances = []*entity.Instance{instance}
+	} else {
+		// No valid authentication - return empty list
+		instances = []*entity.Instance{}
 	}
 
 	// Update status from WhatsApp Manager for each instance
@@ -93,6 +122,84 @@ func (h *InstanceHandler) List(c *fiber.Ctx) error {
 	return response.Success(c, dto.ToListInstancesResponse(instances))
 }
 
+// AuthorizeInstanceAccess is a helper function that can be used by other handlers
+// to validate instance access based on authentication context
+func AuthorizeInstanceAccess(c *fiber.Ctx, instance *entity.Instance) error {
+	if instance == nil {
+		return response.NotFound(c, "Instance not found")
+	}
+
+	// Global admin has access to everything
+	if c.Locals("isGlobalAdmin") == true {
+		return nil
+	}
+
+	// Check if using instance API key (legacy)
+	authInstance, _ := c.Locals("instance").(*entity.Instance)
+	if authInstance != nil {
+		// Using instance API key - can only access that specific instance
+		if authInstance.ID != instance.ID {
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		return nil
+	}
+
+	// Check if using user API key
+	userID, _ := c.Locals("userID").(string)
+	if userID != "" {
+		// User API key - can only access instances owned by this user
+		if instance.UserID == "" {
+			// Instance has no owner - deny access (legacy instances without userID)
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		if instance.UserID != userID {
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		return nil
+	}
+
+	// No valid authentication context
+	return response.Forbidden(c, "You don't have access to this instance")
+}
+
+func (h *InstanceHandler) authorizeInstanceAccess(c *fiber.Ctx, instance *entity.Instance) error {
+	if instance == nil {
+		return response.NotFound(c, "Instance not found")
+	}
+
+	// Global admin has access to everything
+	if c.Locals("isGlobalAdmin") == true {
+		return nil
+	}
+
+	// Check if using instance API key (legacy)
+	authInstance, _ := c.Locals("instance").(*entity.Instance)
+	if authInstance != nil {
+		// Using instance API key - can only access that specific instance
+		if authInstance.ID != instance.ID {
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		return nil
+	}
+
+	// Check if using user API key
+	userID, _ := c.Locals("userID").(string)
+	if userID != "" {
+		// User API key - can only access instances owned by this user
+		if instance.UserID == "" {
+			// Instance has no owner - deny access (legacy instances without userID)
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		if instance.UserID != userID {
+			return response.Forbidden(c, "You don't have access to this instance")
+		}
+		return nil
+	}
+
+	// No valid authentication context
+	return response.Forbidden(c, "You don't have access to this instance")
+}
+
 // Get gets a specific instance
 func (h *InstanceHandler) Get(c *fiber.Ctx) error {
 	name := c.Params("name")
@@ -107,6 +214,10 @@ func (h *InstanceHandler) Get(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	return response.Success(c, dto.ToInstanceResponse(instance))
@@ -126,6 +237,10 @@ func (h *InstanceHandler) GetStatus(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Update status from WhatsApp manager
@@ -152,6 +267,10 @@ func (h *InstanceHandler) GetQRCode(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Check if client exists, create if not
@@ -223,6 +342,10 @@ func (h *InstanceHandler) Connect(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Create client if not exists
 	if _, exists := h.waManager.GetClient(instance.ID); !exists {
 		if _, err := h.waManager.CreateClient(instance); err != nil {
@@ -260,6 +383,10 @@ func (h *InstanceHandler) Restart(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Disconnect
 	if err := h.waManager.Disconnect(instance.ID); err != nil {
 		h.logger.WithError(err).Warn("Failed to disconnect")
@@ -294,6 +421,10 @@ func (h *InstanceHandler) Logout(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Logout
 	if err := h.waManager.Logout(instance.ID); err != nil {
 		h.logger.WithError(err).Warn("Failed to logout")
@@ -326,6 +457,10 @@ func (h *InstanceHandler) Delete(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Delete WhatsApp client
@@ -370,6 +505,10 @@ func (h *InstanceHandler) UpdateName(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	if err := h.authorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	// Check if new name already exists (if different from current)

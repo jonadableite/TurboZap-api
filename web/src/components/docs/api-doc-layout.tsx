@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { ApiPlayground } from "./api-playground";
 import { CodeBlock } from "./terminal";
-import { cn } from "@/lib/utils";
 
 interface Param {
   name: string;
@@ -55,19 +55,19 @@ export function ApiDocLayout({
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-12 gap-8 lg:gap-10">
       {/* Left Column - Main Content */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-8 xl:col-span-9 space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold mb-2">{title}</h1>
+          <h1 className="text-3xl font-bold mb-3">{title}</h1>
           {description && (
-            <p className="text-muted-foreground mb-4">{description}</p>
+            <p className="text-muted-foreground mb-6 leading-relaxed">{description}</p>
           )}
         </div>
 
         {/* Endpoint */}
-        <div className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border">
+        <div className="flex items-center gap-4 px-6 py-4 bg-card rounded-xl border border-border">
           <span
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-bold border",
@@ -82,23 +82,25 @@ export function ApiDocLayout({
         </div>
 
         {/* Parameters */}
-        {(pathParams.length > 0 || queryParams.length > 0 || bodyParams.length > 0) && (
-          <div className="space-y-6">
+        {(pathParams.length > 0 ||
+          queryParams.length > 0 ||
+          bodyParams.length > 0) && (
+          <div className="space-y-8">
             {pathParams.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold mb-3">Path Parameters</h2>
-                <div className="space-y-3">
+                <h2 className="text-xl font-semibold mb-4">Path Parameters</h2>
+                <div className="space-y-4">
                   {pathParams.map((param) => (
                     <div
                       key={param.name}
-                      className="p-4 rounded-lg border border-border bg-card"
+                      className="px-5 py-4 rounded-lg border border-border bg-card"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono text-primary">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <code className="text-sm font-mono text-primary font-medium">
                             {param.name}
                           </code>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
                             {param.type}
                           </span>
                           {param.required && (
@@ -109,7 +111,7 @@ export function ApiDocLayout({
                         </div>
                       </div>
                       {param.description && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {param.description}
                         </p>
                       )}
@@ -121,19 +123,19 @@ export function ApiDocLayout({
 
             {queryParams.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold mb-3">Query Parameters</h2>
-                <div className="space-y-3">
+                <h2 className="text-xl font-semibold mb-4">Query Parameters</h2>
+                <div className="space-y-4">
                   {queryParams.map((param) => (
                     <div
                       key={param.name}
-                      className="p-4 rounded-lg border border-border bg-card"
+                      className="px-5 py-4 rounded-lg border border-border bg-card"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono text-primary">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <code className="text-sm font-mono text-primary font-medium">
                             {param.name}
                           </code>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
                             {param.type}
                           </span>
                           {param.required && (
@@ -144,7 +146,7 @@ export function ApiDocLayout({
                         </div>
                       </div>
                       {param.description && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {param.description}
                         </p>
                       )}
@@ -156,19 +158,19 @@ export function ApiDocLayout({
 
             {bodyParams.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold mb-3">Body Parameters</h2>
-                <div className="space-y-3">
+                <h2 className="text-xl font-semibold mb-4">Body Parameters</h2>
+                <div className="space-y-4">
                   {bodyParams.map((param) => (
                     <div
                       key={param.name}
-                      className="p-4 rounded-lg border border-border bg-card"
+                      className="px-5 py-4 rounded-lg border border-border bg-card"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono text-primary">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <code className="text-sm font-mono text-primary font-medium">
                             {param.name}
                           </code>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
                             {param.type}
                           </span>
                           {param.required && (
@@ -179,7 +181,7 @@ export function ApiDocLayout({
                         </div>
                       </div>
                       {param.description && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {param.description}
                         </p>
                       )}
@@ -194,37 +196,37 @@ export function ApiDocLayout({
         {/* Responses */}
         {responses.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-3">Response</h2>
-            <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-5">Response</h2>
+            <div className="space-y-6">
               {responses.map((response, idx) => (
-                <div key={idx} className="space-y-3">
-                  <div className="flex items-center gap-2">
+                <div key={idx} className="space-y-4">
+                  <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        "px-2 py-1 rounded text-xs font-bold",
+                        "px-3 py-1.5 rounded-md text-xs font-bold border",
                         response.status >= 200 && response.status < 300
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
+                          ? "bg-green-500/20 text-green-400 border-green-500/30"
+                          : "bg-red-500/20 text-red-400 border-red-500/30"
                       )}
                     >
                       {response.status}
                     </span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground leading-relaxed">
                       {response.description}
                     </span>
                   </div>
                   {response.fields && response.fields.length > 0 && (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-lg border border-border">
                       <table className="w-full text-sm">
-                        <thead>
+                        <thead className="bg-muted/50">
                           <tr className="border-b border-border">
-                            <th className="text-left py-2 px-3 font-semibold">
+                            <th className="text-left py-3 px-4 font-semibold">
                               Campo
                             </th>
-                            <th className="text-left py-2 px-3 font-semibold">
+                            <th className="text-left py-3 px-4 font-semibold">
                               Tipo
                             </th>
-                            <th className="text-left py-2 px-3 font-semibold">
+                            <th className="text-left py-3 px-4 font-semibold">
                               Descrição
                             </th>
                           </tr>
@@ -233,15 +235,17 @@ export function ApiDocLayout({
                           {response.fields.map((field) => (
                             <tr
                               key={field.name}
-                              className="border-b border-border"
+                              className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                             >
-                              <td className="py-2 px-3">
-                                <code className="text-primary">{field.name}</code>
+                              <td className="py-3 px-4">
+                                <code className="text-primary font-medium">
+                                  {field.name}
+                                </code>
                               </td>
-                              <td className="py-2 px-3 text-muted-foreground">
+                              <td className="py-3 px-4 text-muted-foreground">
                                 {field.type}
                               </td>
-                              <td className="py-2 px-3 text-muted-foreground">
+                              <td className="py-3 px-4 text-muted-foreground leading-relaxed">
                                 {field.description}
                               </td>
                             </tr>
@@ -250,14 +254,14 @@ export function ApiDocLayout({
                       </table>
                     </div>
                   )}
-                 {response.example !== undefined && response.example !== null && (
-  <CodeBlock
-    title={`${response.status} - application/json`}
-    language="json"
-    code={JSON.stringify(response.example, null, 2)}
-  />
-)}
-
+                  {response.example !== undefined &&
+                    response.example !== null && (
+                      <CodeBlock
+                        title={`${response.status} - application/json`}
+                        language="json"
+                        code={JSON.stringify(response.example, null, 2)}
+                      />
+                    )}
                 </div>
               ))}
             </div>
@@ -265,7 +269,7 @@ export function ApiDocLayout({
         )}
 
         {/* API Playground */}
-        <div className="pt-4">
+        <div className="pt-6">
           <ApiPlayground
             method={method}
             endpoint={endpoint}
@@ -278,24 +282,23 @@ export function ApiDocLayout({
       </div>
 
       {/* Right Column - Code Examples */}
-      <div className="lg:col-span-1 space-y-6">
-        <div className="sticky top-20">
-         {exampleResponse != null && (
-  <div>
-    <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">
-      Example Response
-    </h3>
-    <CodeBlock
-      title="200"
-      language="json"
-      code={JSON.stringify(exampleResponse, null, 2)}
-    />
-  </div>
-)}
-
+      <div className="lg:col-span-4 xl:col-span-3 space-y-6 min-w-0">
+        <div className="sticky top-24">
+          {exampleResponse !== undefined && exampleResponse !== null && (
+            <div>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">
+                Example Response
+              </h3>
+              <CodeBlock
+                title="200"
+                language="json"
+                code={JSON.stringify(exampleResponse, null, 2)}
+                className="min-w-[320px]"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-

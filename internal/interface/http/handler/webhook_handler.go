@@ -42,6 +42,11 @@ func (h *WebhookHandler) SetWebhook(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	var req dto.SetWebhookRequest
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -115,6 +120,11 @@ func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to get webhook")
@@ -150,6 +160,11 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	if err := h.webhookRepo.DeleteByInstance(c.Context(), instance.ID); err != nil {
 		h.logger.WithError(err).Error("Failed to delete webhook")
 		return response.InternalServerError(c, "Failed to delete webhook configuration")
@@ -174,6 +189,11 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)
@@ -211,6 +231,11 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 	}
 	if instance == nil {
 		return response.NotFound(c, "Instance not found")
+	}
+
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
 	}
 
 	webhook, err := h.webhookRepo.GetByInstance(c.Context(), instance.ID)

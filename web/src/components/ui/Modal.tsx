@@ -80,7 +80,7 @@ export function Modal({
                 bounce: 0.2,
               }}
               className={cn(
-                'relative w-full',
+                'relative w-full max-h-[90vh] flex flex-col',
                 'bg-[var(--rocket-gray-800)] rounded-xl',
                 'border border-[var(--rocket-gray-600)]',
                 'shadow-2xl shadow-black/50',
@@ -89,8 +89,8 @@ export function Modal({
             >
               {/* Header */}
               {(title || showCloseButton) && (
-                <div className="flex items-start justify-between p-6 pb-0">
-                  <div>
+                <div className="flex items-start justify-between p-6 pb-0 flex-shrink-0">
+                  <div className="flex-1 min-w-0 pr-4">
                     {title && (
                       <h2 className="text-xl font-semibold text-[var(--rocket-gray-50)]">
                         {title}
@@ -108,7 +108,7 @@ export function Modal({
                       whileTap={{ scale: 0.9 }}
                       onClick={onClose}
                       className={cn(
-                        'p-2 rounded-lg',
+                        'p-2 rounded-lg flex-shrink-0',
                         'text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-50)]',
                         'hover:bg-[var(--rocket-gray-700)]',
                         'transition-colors duration-200'
@@ -120,8 +120,10 @@ export function Modal({
                 </div>
               )}
 
-              {/* Body */}
-              <div className="p-6">{children}</div>
+              {/* Body - Scrollable */}
+              <div className="p-6 overflow-y-auto flex-1 min-h-0">
+                {children}
+              </div>
             </motion.div>
           </div>
         )}

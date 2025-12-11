@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const inter = Inter({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-plus-jakarta-sans",
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
   title: "TurboZap - WhatsApp Manager",
   description: "Gerencie suas instâncias do WhatsApp com facilidade",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/whatsapp.svg",
+    shortcut: "/whatsapp.svg",
+    apple: "/whatsapp.svg",
   },
 };
 
@@ -23,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
         <Providers>
           {children}
         </Providers>

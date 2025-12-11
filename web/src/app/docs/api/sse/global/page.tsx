@@ -5,7 +5,7 @@ import { CodeBlock } from "@/components/docs/terminal";
 
 export default function SSEGlobalPage() {
   return (
-    <div className="px-8 py-10 max-w-7xl">
+    <div className="px-8 py-10 max-w-[1600px] mx-auto">
       <div className="flex items-center gap-2 text-sm text-primary mb-6">
         <span>API</span>
         <span className="text-muted-foreground">/</span>

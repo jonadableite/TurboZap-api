@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Smartphone, Plus, AlertCircle } from 'lucide-react';
-import { Modal, ModalFooter, Button, Input } from '@/components/ui';
-import { QRCodeDisplay } from './QRCodeDisplay';
-import { useCreateInstance } from '@/hooks/useInstances';
+import { Button, Input, Modal, ModalFooter } from "@/components/ui";
+import { useCreateInstance } from "@/hooks/useInstances";
+import { motion } from "framer-motion";
+import { AlertCircle, Plus, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface CreateInstanceModalProps {
   isOpen: boolean;
@@ -13,64 +13,67 @@ interface CreateInstanceModalProps {
   onSuccess?: () => void;
 }
 
-type Step = 'form' | 'qrcode' | 'success';
+type Step = "form" | "qrcode" | "success";
 
 export function CreateInstanceModal({
   isOpen,
   onClose,
   onSuccess,
 }: CreateInstanceModalProps) {
-  const [step, setStep] = useState<Step>('form');
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
-  const [createdInstanceName, setCreatedInstanceName] = useState('');
+  const [step, setStep] = useState<Step>("form");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [createdInstanceName, setCreatedInstanceName] = useState("");
 
   const createMutation = useCreateInstance();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Validation
     if (!name.trim()) {
-      setError('Nome da instância é obrigatório');
+      setError("Nome da instância é obrigatório");
       return;
     }
 
     if (name.length < 3) {
-      setError('Nome deve ter pelo menos 3 caracteres');
+      setError("Nome deve ter pelo menos 3 caracteres");
       return;
     }
 
     if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      setError('Nome deve conter apenas letras, números, _ ou -');
+      setError("Nome deve conter apenas letras, números, _ ou -");
       return;
     }
 
     try {
       await createMutation.mutateAsync({ name: name.trim() });
       setCreatedInstanceName(name.trim());
-      setStep('qrcode');
+      setStep("qrcode");
     } catch (err: unknown) {
-      const message:any | undefined =
+      const maybeMessage =
         err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        (err as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message;
-      setError(message || 'Erro ao criar instância');
+        typeof err === "object" &&
+        "response" in err &&
+        (err as { response?: { data?: { error?: { message?: string } } } })
+          .response?.data?.error?.message;
+      const message =
+        typeof maybeMessage === "string" ? maybeMessage : undefined;
+      setError(message ?? "Erro ao criar instância");
     }
   };
 
   const handleClose = () => {
-    setStep('form');
-    setName('');
-    setError('');
-    setCreatedInstanceName('');
+    setStep("form");
+    setName("");
+    setError("");
+    setCreatedInstanceName("");
     onClose();
   };
 
   const handleConnected = () => {
-    setStep('success');
+    setStep("success");
     onSuccess?.();
     setTimeout(() => {
       handleClose();
@@ -81,24 +84,30 @@ export function CreateInstanceModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={step === 'form' ? 'Nova Instância' : step === 'qrcode' ? 'Conectar WhatsApp' : ''}
+      title={
+        step === "form"
+          ? "Nova Instância"
+          : step === "qrcode"
+          ? "Conectar WhatsApp"
+          : ""
+      }
       description={
-        step === 'form'
-          ? 'Crie uma nova instância para conectar ao WhatsApp'
-          : step === 'qrcode'
+        step === "form"
+          ? "Crie uma nova instância para conectar ao WhatsApp"
+          : step === "qrcode"
           ? `Escaneie o QR Code para conectar ${createdInstanceName}`
-          : ''
+          : ""
       }
       size="md"
     >
-      {step === 'form' && (
+      {step === "form" && (
         <form onSubmit={handleSubmit}>
           {/* Icon */}
           <div className="flex justify-center mb-6">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', bounce: 0.5 }}
+              transition={{ type: "spring", bounce: 0.5 }}
               className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--rocket-purple)] to-[var(--rocket-purple-dark)] flex items-center justify-center"
             >
               <Smartphone className="w-8 h-8 text-white" />
@@ -113,7 +122,7 @@ export function CreateInstanceModal({
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
-                setError('');
+                setError("");
               }}
               error={error}
               helperText="Use apenas letras, números, _ ou -"
@@ -126,9 +135,14 @@ export function CreateInstanceModal({
               <div className="flex gap-2">
                 <AlertCircle className="w-4 h-4 text-[var(--rocket-info)] flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-[var(--rocket-gray-300)]">
-                  <p className="font-medium text-[var(--rocket-gray-100)] mb-1">Dicas:</p>
+                  <p className="font-medium text-[var(--rocket-gray-100)] mb-1">
+                    Dicas:
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-[var(--rocket-gray-400)]">
-                    <li>Use nomes descritivos como &quot;vendas&quot; ou &quot;suporte&quot;</li>
+                    <li>
+                      Use nomes descritivos como &quot;vendas&quot; ou
+                      &quot;suporte&quot;
+                    </li>
                     <li>Cada instância conecta a um número de WhatsApp</li>
                     <li>Você poderá conectar após criar a instância</li>
                   </ul>
@@ -152,14 +166,14 @@ export function CreateInstanceModal({
         </form>
       )}
 
-      {step === 'qrcode' && createdInstanceName && (
+      {step === "qrcode" && createdInstanceName && (
         <QRCodeDisplay
           instanceName={createdInstanceName}
           onConnected={handleConnected}
         />
       )}
 
-      {step === 'success' && (
+      {step === "success" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -168,7 +182,7 @@ export function CreateInstanceModal({
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: 'spring', bounce: 0.5 }}
+            transition={{ type: "spring", bounce: 0.5 }}
             className="w-20 h-20 rounded-full bg-[var(--rocket-green)]/20 flex items-center justify-center mb-4"
           >
             <svg
@@ -188,9 +202,7 @@ export function CreateInstanceModal({
           <h3 className="text-xl font-semibold text-[var(--rocket-gray-50)] mb-2">
             Instância criada!
           </h3>
-          <p className="text-[var(--rocket-gray-400)]">
-            Redirecionando...
-          </p>
+          <p className="text-[var(--rocket-gray-400)]">Redirecionando...</p>
         </motion.div>
       )}
     </Modal>
@@ -198,4 +210,3 @@ export function CreateInstanceModal({
 }
 
 export default CreateInstanceModal;
-

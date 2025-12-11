@@ -172,6 +172,11 @@ func (h *SSEHandler) Stream(c *fiber.Ctx) error {
 		return response.NotFound(c, "Instance not found")
 	}
 
+	// Authorize access to this instance
+	if err := AuthorizeInstanceAccess(c, instance); err != nil {
+		return err
+	}
+
 	// Create client
 	client := &SSEClient{
 		ID:         uuid.New().String(),
@@ -316,6 +321,12 @@ func (h *SSEHandler) Info(c *fiber.Ctx) error {
 		if instance == nil {
 			return response.NotFound(c, "Instance not found")
 		}
+		
+		// Authorize access to this instance
+		if err := AuthorizeInstanceAccess(c, instance); err != nil {
+			return err
+		}
+		
 		clientCount = h.hub.GetClientCountByInstance(instance.ID)
 	} else {
 		clientCount = h.hub.GetClientCount()

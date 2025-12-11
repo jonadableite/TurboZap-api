@@ -1,31 +1,34 @@
 "use client";
 
+import { ActivityCard } from "@/components/dashboard/ActivityCard";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CreateInstanceModal } from "@/components/instances";
 import { Header } from "@/components/layout";
-import {
-  Badge,
-  Button,
-  LottieIcon,
-  Spinner,
-} from "@/components/ui";
+import { Badge, Button, LottieIcon, Spinner } from "@/components/ui";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useInstances } from "@/hooks/useInstances";
+import { useReminders, type Reminder } from "@/hooks/useReminders";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus, Zap } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import messageAnimation from "../../../public/balao-de-fala.json";
 import clockAnimation from "../../../public/desconectar.json";
 import trendingAnimation from "../../../public/grafico-de-linha.json";
 import smartphoneAnimation from "../../../public/responsivo.json";
 import activityAnimation from "../../../public/wi-fi-global.json";
 
+type TabType = "all" | "events" | "content" | "news" | "offers";
+
 export default function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("all");
   const { data: instances = [], isLoading } = useInstances();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: reminders = [], isLoading: remindersLoading } = useReminders();
   const { hasApiKey } = useApiConfig();
   const canCreateInstance = hasApiKey;
 
@@ -38,31 +41,82 @@ export default function DashboardPage() {
   const messagesToday = stats?.today || 0;
   const messagesTotal = stats?.total || 0;
 
+  // Use real reminders from API, with fallback to empty array
+  const activities = useMemo(() => {
+    return reminders.map((reminder: Reminder) => ({
+      id: reminder.id,
+      title: reminder.title,
+      description: reminder.description,
+      date: reminder.date,
+      time: reminder.time,
+      location: reminder.location,
+      recommendedLevel: reminder.recommendedLevel,
+      tags: reminder.tags || [],
+      status: reminder.status,
+      actionButtons: reminder.actionButtons
+        ? {
+            primary: reminder.actionButtons.primary
+              ? {
+                  label: reminder.actionButtons.primary.label,
+                  onClick: reminder.actionButtons.primary.href
+                    ? () => window.open(reminder.actionButtons!.primary!.href, "_blank")
+                    : undefined,
+                }
+              : undefined,
+            secondary: reminder.actionButtons.secondary
+              ? {
+                  label: reminder.actionButtons.secondary.label,
+                  onClick: reminder.actionButtons.secondary.href
+                    ? () => window.open(reminder.actionButtons!.secondary!.href, "_blank")
+                    : undefined,
+                }
+              : undefined,
+          }
+        : undefined,
+    }));
+  }, [reminders]);
+
+  const tabs: { id: TabType; label: string }[] = [
+    { id: "all", label: "TODOS OS LEMBRETES" },
+    { id: "events", label: "EVENTOS" },
+    { id: "content", label: "CONTEÚDOS" },
+    { id: "news", label: "NOVIDADES DA PLATAFORMA" },
+    { id: "offers", label: "OFERTAS" },
+  ];
+
+  const filteredActivities = useMemo(() => {
+    return activities.filter((activity) => {
+      if (activeTab === "all") return true;
+      const reminder = reminders.find((r) => r.id === activity.id);
+      return reminder?.category === activeTab;
+    });
+  }, [activities, activeTab, reminders]);
+
   return (
     <>
       <Header title="Dashboard" description="Visão geral do seu TurboZap" />
 
-      <div className="px-4 sm:px-8 lg:px-14 py-8 space-y-8 max-w-6xl mx-auto w-full">
-        {/* Welcome Section */}
+      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-7xl mx-auto w-full space-y-8">
+        {/* Welcome Banner Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--rocket-purple)]/20 via-[var(--rocket-purple)]/10 to-transparent border border-[var(--rocket-purple)]/30 p-8"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--rocket-purple)]/20 via-[var(--rocket-purple)]/10 to-transparent border border-[var(--rocket-purple)]/30 p-4 sm:p-6 md:p-8"
         >
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-6 h-6 text-[var(--rocket-purple)]" />
               <Badge variant="purple">TurboZap API</Badge>
             </div>
-            <h2 className="text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
               Bem-vindo ao TurboZap! 🚀
             </h2>
-            <p className="text-[var(--rocket-gray-300)] max-w-2xl mb-6">
+            <p className="text-[var(--rocket-gray-300)] max-w-2xl mb-6 pr-0 sm:pr-36 md:pr-52 lg:pr-64 xl:pr-72 2xl:pr-80">
               Gerencie suas instâncias do WhatsApp, envie mensagens em massa,
               configure webhooks e muito mais com nossa API poderosa e fácil de
               usar.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Button
                 onClick={() => canCreateInstance && setShowCreateModal(true)}
                 leftIcon={<Plus className="w-4 h-4" />}
@@ -91,8 +145,40 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-30">
+          {/* Android Image - Front Layer */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, x: 50 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              x: 0,
+            }}
+            transition={{
+              delay: 0.3,
+              duration: 0.6,
+              ease: "easeOut",
+            }}
+            className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-72 lg:h-72 xl:w-80 xl:h-80 2xl:w-96 2xl:h-96 z-20 pointer-events-none overflow-visible -mr-2 sm:mr-0"
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src="/bg_white-removebg-preview.png"
+                alt="Android Device"
+                fill
+                className="object-contain"
+                priority
+                sizes="(max-width: 640px) 96px, (max-width: 768px) 160px, (max-width: 1024px) 224px, (max-width: 1280px) 288px, (max-width: 1536px) 320px, 384px"
+                style={{
+                  filter: "drop-shadow(0 25px 50px rgba(139, 92, 246, 0.4)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.2))",
+                }}
+              />
+              {/* Static Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--rocket-purple)]/20 via-transparent to-transparent rounded-full blur-3xl" />
+            </div>
+          </motion.div>
+
+          {/* Decorative SVG elements - Back Layer */}
+          <div className="absolute top-0 right-0 w-64 h-64 opacity-20 z-10">
             <svg viewBox="0 0 200 200" className="w-full h-full">
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -131,7 +217,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Large Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Instances */}
           <motion.div
@@ -291,81 +377,76 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Recent Instances */}
-        {instances.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-[var(--rocket-gray-50)]">
-                Instâncias recentes
-              </h3>
-              <Link href="/instances">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  rightIcon={
-                    <LottieIcon
-                      animationData={smartphoneAnimation}
-                      className="w-4 h-4"
-                    />
-                  }
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Content - Left Column */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Header Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h1 className="text-2xl font-bold text-[var(--rocket-gray-50)] mb-2">
+                Veja o que vem aí
+              </h1>
+              <p className="text-sm text-[var(--rocket-gray-400)] mb-6">
+                Descubra as novidades do TurboZap
+              </p>
+            </motion.div>
+
+            {/* Tabs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700/50 scrollbar-track-transparent"
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all",
+                    activeTab === tab.id
+                      ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple)] border border-[var(--rocket-purple)]/30"
+                      : "text-[var(--rocket-gray-400)] hover:text-[var(--rocket-gray-300)] hover:bg-[#29292e]"
+                  )}
                 >
-                  Ver todas
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {instances.slice(0, 3).map((instance, index) => (
-                <motion.div
-                  key={instance.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <div className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-4 group hover:border-[#29292e] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "w-9 h-9 rounded-lg flex items-center justify-center",
-                          instance.status === "connected"
-                            ? "bg-[var(--rocket-green)]/10"
-                            : "bg-[#29292e]"
-                        )}
-                      >
-                        <LottieIcon
-                          animationData={smartphoneAnimation}
-                          className={cn(
-                            "w-4 h-4",
-                            instance.status === "connected"
-                              ? "text-[var(--rocket-green)]"
-                              : "text-[var(--rocket-gray-400)]"
-                          )}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-[var(--rocket-gray-50)] truncate">
-                          {instance.profileName || instance.name}
-                        </h4>
-                        <p className="text-xs text-[var(--rocket-gray-400)]">
-                          {instance.status === "connected"
-                            ? "Conectado"
-                            : "Desconectado"}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          instance.status === "connected" ? "success" : "danger"
-                        }
-                        pulse={instance.status === "connected"}
-                      >
-                        {instance.status === "connected" ? "Online" : "Offline"}
-                      </Badge>
-                    </div>
-                  </div>
-                </motion.div>
+                  {tab.label}
+                </button>
+              ))}
+            </motion.div>
+
+            {/* Activities List */}
+            <div className="space-y-4">
+              {filteredActivities.map((activityItem, index) => (
+                <ActivityCard
+                  key={activityItem.id}
+                  {...activityItem}
+                  className="animate-in fade-in slide-in-from-bottom-4"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                />
               ))}
             </div>
+
+
+            {/* View More Link */}
+            <div className="pt-4">
+              <Link
+                href="/instances"
+                className="text-sm text-[var(--rocket-purple)] hover:text-[var(--rocket-purple)]/80 transition-colors inline-flex items-center gap-1"
+              >
+                Ver mais
+                <span>→</span>
+              </Link>
+            </div>
           </div>
-        )}
+
+          {/* Sidebar - Right Column */}
+          <div className="lg:col-span-4">
+            <DashboardSidebar />
+          </div>
+        </div>
       </div>
 
       {/* Create Instance Modal */}

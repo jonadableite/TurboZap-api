@@ -29,7 +29,13 @@ export const webhookApi = {
         enabled: false,
       };
     }
-    const webhook = (payload.webhook as WebhookConfig | undefined) || (payload as unknown as WebhookConfig);
+    const maybeWebhook =
+      payload.webhook && typeof payload.webhook === "object"
+        ? (payload.webhook as WebhookConfig)
+        : undefined;
+    const fallbackWebhook =
+      typeof payload.url === "string" ? (payload as unknown as WebhookConfig) : undefined;
+    const webhook = maybeWebhook ?? fallbackWebhook;
     return {
       url: webhook?.url || "",
       events: webhook?.events || [],

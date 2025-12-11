@@ -226,7 +226,7 @@ export const Terminal = ({
         className
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/50 bg-[#161b22] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 bg-[#161b22] px-5 py-3.5">
         <div className="flex items-center gap-3">
           <div className="flex flex-row gap-x-2">
             <div className="h-3 w-3 rounded-full bg-[#ff5f57]"></div>
@@ -239,8 +239,8 @@ export const Terminal = ({
           </div>
         </div>
       </div>
-      <pre className="p-4 overflow-auto max-h-[400px]">
-        <code className="grid gap-y-1 text-gray-300 font-mono text-sm">
+      <pre className="p-5 lg:p-6 overflow-auto max-h-[400px]">
+        <code className="grid gap-y-1.5 text-gray-300 font-mono text-sm leading-relaxed">
           {wrappedChildren}
         </code>
       </pre>
@@ -289,7 +289,7 @@ export const CodeBlock = ({
         className
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/50 bg-[#161b22] px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border/50 bg-[#161b22] px-5 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-medium">
             {title || language}
@@ -297,7 +297,7 @@ export const CodeBlock = ({
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-white/5"
         >
           {copied ? (
             <>
@@ -312,8 +312,8 @@ export const CodeBlock = ({
           )}
         </button>
       </div>
-      <pre className="p-4 overflow-auto max-h-[500px]">
-        <code className="text-gray-300 font-mono text-sm">
+      <pre className="p-5 lg:p-6 overflow-auto max-h-[500px]">
+        <code className="text-gray-300 font-mono text-sm leading-relaxed">
           {showLineNumbers ? (
             lines.map((line, i) => (
               <div key={i} className="flex">
@@ -349,7 +349,7 @@ export const ApiEndpoint = ({ method, path, title }: ApiEndpointProps) => {
   };
 
   return (
-    <div className="flex items-center gap-3 p-4 bg-[#161b22] rounded-xl border border-border">
+    <div className="flex items-center gap-4 px-6 py-4 bg-[#161b22] rounded-xl border border-border">
       <span
         className={cn(
           "px-3 py-1.5 rounded-md text-xs font-bold border",
@@ -358,7 +358,7 @@ export const ApiEndpoint = ({ method, path, title }: ApiEndpointProps) => {
       >
         {method}
       </span>
-      <code className="text-sm text-gray-300 font-mono">{path}</code>
+      <code className="text-sm text-gray-300 font-mono flex-1">{path}</code>
       {title && (
         <span className="ml-auto text-xs text-muted-foreground">{title}</span>
       )}

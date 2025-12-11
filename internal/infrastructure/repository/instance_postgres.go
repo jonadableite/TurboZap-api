@@ -25,13 +25,19 @@ func NewInstancePostgresRepository(pool *pgxpool.Pool) repository.InstanceReposi
 // Create creates a new instance
 func (r *instancePostgresRepository) Create(ctx context.Context, instance *entity.Instance) error {
 	query := `
-		INSERT INTO instances (id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO instances (id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
+	var userID *string
+	if instance.UserID != "" {
+		userID = &instance.UserID
+	}
+
 	_, err := r.pool.Exec(ctx, query,
 		instance.ID,
 		instance.Name,
 		instance.APIKey,
+		userID,
 		string(instance.Status),
 		instance.PhoneNumber,
 		instance.ProfileName,
@@ -50,7 +56,7 @@ func (r *instancePostgresRepository) Create(ctx context.Context, instance *entit
 // GetByID retrieves an instance by ID
 func (r *instancePostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
+		SELECT id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE id = $1
 	`
 	return r.scanInstance(ctx, query, id)
@@ -59,7 +65,7 @@ func (r *instancePostgresRepository) GetByID(ctx context.Context, id uuid.UUID) 
 // GetByName retrieves an instance by name
 func (r *instancePostgresRepository) GetByName(ctx context.Context, name string) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
+		SELECT id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE name = $1
 	`
 	return r.scanInstance(ctx, query, name)
@@ -68,7 +74,7 @@ func (r *instancePostgresRepository) GetByName(ctx context.Context, name string)
 // GetByAPIKey retrieves an instance by API key
 func (r *instancePostgresRepository) GetByAPIKey(ctx context.Context, apiKey string) (*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
+		SELECT id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances WHERE api_key = $1
 	`
 	return r.scanInstance(ctx, query, apiKey)
@@ -77,7 +83,7 @@ func (r *instancePostgresRepository) GetByAPIKey(ctx context.Context, apiKey str
 // GetAll retrieves all instances
 func (r *instancePostgresRepository) GetAll(ctx context.Context) ([]*entity.Instance, error) {
 	query := `
-		SELECT id, name, api_key, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
+		SELECT id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
 		FROM instances ORDER BY created_at DESC
 	`
 	rows, err := r.pool.Query(ctx, query)
@@ -97,6 +103,36 @@ func (r *instancePostgresRepository) GetAll(ctx context.Context) ([]*entity.Inst
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating instances: %w", err)
+	}
+
+	return instances, nil
+}
+
+// GetByUserID retrieves instances owned by a specific user.
+func (r *instancePostgresRepository) GetByUserID(ctx context.Context, userID string) ([]*entity.Instance, error) {
+	query := `
+		SELECT id, name, api_key, user_id, status, phone_number, profile_name, profile_pic, qr_code, device_jid, created_at, updated_at
+		FROM instances
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query instances by user: %w", err)
+	}
+	defer rows.Close()
+
+	var instances []*entity.Instance
+	for rows.Next() {
+		instance, err := r.scanInstanceRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, instance)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating instances by user: %w", err)
 	}
 
 	return instances, nil
@@ -164,12 +200,13 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 
 	var instance entity.Instance
 	var status string
-	var phoneNumber, profileName, profilePic, qrCode, deviceJID *string
+	var phoneNumber, profileName, profilePic, qrCode, deviceJID, userID *string
 
 	err := row.Scan(
 		&instance.ID,
 		&instance.Name,
 		&instance.APIKey,
+		&userID,
 		&status,
 		&phoneNumber,
 		&profileName,
@@ -187,6 +224,9 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 	}
 
 	instance.Status = entity.InstanceStatus(status)
+	if userID != nil {
+		instance.UserID = *userID
+	}
 	if phoneNumber != nil {
 		instance.PhoneNumber = *phoneNumber
 	}
@@ -210,12 +250,13 @@ func (r *instancePostgresRepository) scanInstance(ctx context.Context, query str
 func (r *instancePostgresRepository) scanInstanceRow(rows pgx.Rows) (*entity.Instance, error) {
 	var instance entity.Instance
 	var status string
-	var phoneNumber, profileName, profilePic, qrCode, deviceJID *string
+	var phoneNumber, profileName, profilePic, qrCode, deviceJID, userID *string
 
 	err := rows.Scan(
 		&instance.ID,
 		&instance.Name,
 		&instance.APIKey,
+		&userID,
 		&status,
 		&phoneNumber,
 		&profileName,
@@ -230,6 +271,9 @@ func (r *instancePostgresRepository) scanInstanceRow(rows pgx.Rows) (*entity.Ins
 	}
 
 	instance.Status = entity.InstanceStatus(status)
+	if userID != nil {
+		instance.UserID = *userID
+	}
 	if phoneNumber != nil {
 		instance.PhoneNumber = *phoneNumber
 	}
