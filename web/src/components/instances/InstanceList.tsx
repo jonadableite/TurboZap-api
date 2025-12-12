@@ -1,6 +1,5 @@
 "use client";
 
-
 import {
   Button,
   Card,
@@ -13,10 +12,12 @@ import {
   LottieIcon,
   Spinner,
 } from "@/components/ui";
+import FancyButton from "@/components/ui/FancyButton";
 import { useApiConfig } from "@/hooks/useApiConfig";
 import { useInstances } from "@/hooks/useInstances";
 import { motion } from "framer-motion";
-import { Key, Plus, RefreshCw, Search } from "lucide-react";
+import { PrivateKeyAnimatedIcon } from "@/components/icons/PrivateKeyAnimatedIcon";
+import { Plus, RefreshCw, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import smartphoneAnimation from "../../../public/responsivo.json";
@@ -81,7 +82,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[var(--rocket-gray-50)]">
-            <Key className="w-5 h-5 text-[var(--rocket-purple)]" />
+            <PrivateKeyAnimatedIcon className="w-5 h-5" />
             Configure sua API Key
           </CardTitle>
           <CardDescription>
@@ -96,7 +97,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
           </p>
           <div className="flex flex-wrap gap-3">
             <Button
-              leftIcon={<Key className="w-4 h-4" />}
+              leftIcon={<PrivateKeyAnimatedIcon className="w-4 h-4" />}
               onClick={() => router.push("/settings")}
             >
               Abrir configurações
@@ -168,10 +169,7 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
               transition={{ delay: 0.05 * index }}
               className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-5 flex flex-col gap-2"
             >
-              <p
-                className="text-sm"
-                style={{ color: card.badgeColor }}
-              >
+              <p className="text-sm" style={{ color: card.badgeColor }}>
                 {card.label}
               </p>
               <p
@@ -203,13 +201,14 @@ export function InstanceList({ onCreateClick }: InstanceListProps) {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            leftIcon={
-              <RefreshCw className="w-4 h-4" />
-            }
+            leftIcon={<RefreshCw className="w-4 h-4" />}
           >
             Atualizar
           </Button>
-          <Button onClick={onCreateClick} leftIcon={<Plus className="w-4 h-4" />}>
+          <Button
+            onClick={onCreateClick}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
             Nova Instância
           </Button>
         </div>

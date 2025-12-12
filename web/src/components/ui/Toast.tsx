@@ -3,11 +3,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
-  AlertTriangle,
   CheckCircle2,
   Info,
   X,
 } from "lucide-react";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
 import React, { useEffect, useRef, useState } from "react";
 import { Portal } from "./Portal";
 
@@ -106,11 +106,11 @@ function ToastContainer({
 }
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
-  const icons = {
-    success: CheckCircle2,
-    error: AlertCircle,
-    info: Info,
-    warning: AlertTriangle,
+  const icons: Record<ToastType, React.ReactNode> = {
+    success: <CheckCircle2 className="w-5 h-5 flex-shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 flex-shrink-0" />,
+    info: <Info className="w-5 h-5 flex-shrink-0" />,
+    warning: <WarningAnimatedIcon className="w-5 h-5 flex-shrink-0" />,
   };
 
   const colors = {
@@ -123,8 +123,6 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       "bg-[var(--rocket-warning)]/20 border-[var(--rocket-warning)]/30 text-[var(--rocket-warning)]",
   };
 
-  const Icon = icons[toast.type];
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -20, x: 100 }}
@@ -134,7 +132,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
         colors[toast.type]
       }`}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
+      {icons[toast.type]}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={onClose}

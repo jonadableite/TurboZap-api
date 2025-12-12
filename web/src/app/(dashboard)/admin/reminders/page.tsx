@@ -12,10 +12,10 @@ import {
 } from "@/hooks/useReminders";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import {
   Edit,
   Plus,
-  Trash2,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -148,7 +148,7 @@ export default function AdminRemindersPage() {
                     disabled={deleteMutation.isPending && deletingId === reminder.id}
                     className="h-8 w-8 p-0 text-[var(--rocket-danger)] hover:text-[var(--rocket-danger)] hover:bg-[var(--rocket-danger)]/10"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <TrashAnimatedIcon className="w-4 h-4" />
                   </Button>
                 </div>
               </motion.div>

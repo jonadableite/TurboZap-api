@@ -1,10 +1,12 @@
 "use client";
 
+import { AlarmAnimatedIcon } from "@/components/icons/AlarmAnimatedIcon";
+import { TeamworkAnimatedIcon } from "@/components/icons/TeamworkAnimatedIcon";
 import { LottieIcon } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, ChevronLeft, ChevronRight, Shield, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -191,7 +193,7 @@ export function Sidebar() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <Users className="w-5 h-5 flex-shrink-0" />
+                <TeamworkAnimatedIcon className="w-5 h-5 flex-shrink-0" />
                 <AnimatePresence>
                   {!isCollapsed && (
                     <motion.span
@@ -227,7 +229,7 @@ export function Sidebar() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <Bell className="w-5 h-5 flex-shrink-0" />
+                <AlarmAnimatedIcon className="w-5 h-5 flex-shrink-0" />
                 <AnimatePresence>
                   {!isCollapsed && (
                     <motion.span
@@ -278,7 +280,6 @@ export function Sidebar() {
             </Link>
           );
         })}
-
       </div>
 
       {/* Collapse button */}

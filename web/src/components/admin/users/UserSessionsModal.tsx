@@ -3,14 +3,14 @@
 import { Badge, Button, Modal, Spinner } from "@/components/ui";
 import type { AdminUser, UserSession } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
+import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import {
   Clock,
   Globe,
-  LogOut,
   Monitor,
   MoreVertical,
   Smartphone,
-  Trash2,
   UserCog,
 } from "lucide-react";
 import { useState } from "react";
@@ -123,7 +123,7 @@ export function UserSessionsModal({
               variant="outline"
               onClick={() => onRevokeAllSessions(user.id)}
               disabled={isRevoking}
-              leftIcon={<Trash2 className="w-4 h-4" />}
+              leftIcon={<TrashAnimatedIcon className="w-4 h-4" />}
               className="text-[var(--rocket-danger)] hover:text-[var(--rocket-danger)]"
             >
               Revogar Todas
@@ -138,7 +138,9 @@ export function UserSessionsModal({
           </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-8">
-            <LogOut className="w-12 h-12 text-[var(--rocket-gray-400)] mx-auto mb-3" />
+            <div className="mx-auto mb-3 w-12 h-12 opacity-70">
+              <ExitAnimatedIcon className="w-12 h-12" />
+            </div>
             <p className="text-[var(--rocket-gray-400)]">
               Nenhuma sessão ativa
             </p>
@@ -226,7 +228,7 @@ export function UserSessionsModal({
                             disabled={isRevoking}
                             className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-danger)] hover:bg-[#29292e] flex items-center gap-2 disabled:opacity-50"
                           >
-                            <LogOut className="w-4 h-4" />
+                            <ExitAnimatedIcon className="w-4 h-4" />
                             Revogar Sessão
                           </button>
                         </motion.div>

@@ -7,7 +7,9 @@ import { useStopImpersonating } from "@/hooks/useAdminUsers";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Check, Copy, Eye, EyeOff, Key, LogOut, UserCog } from "lucide-react";
+import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
+import { PrivateKeyAnimatedIcon } from "@/components/icons/PrivateKeyAnimatedIcon";
+import { Check, Copy, Eye, EyeOff, UserCog } from "lucide-react";
 import { useState } from "react";
 
 interface HeaderProps {
@@ -81,7 +83,7 @@ export function Header({ title, description }: HeaderProps) {
                     onClick={handleStopImpersonating}
                     disabled={stopImpersonating.isPending}
                     className="h-7 px-2 text-[var(--rocket-warning)] hover:bg-[var(--rocket-warning)]/20"
-                    leftIcon={<LogOut className="w-3 h-3" />}
+                    leftIcon={<ExitAnimatedIcon className="w-3 h-3" />}
                   >
                     {stopImpersonating.isPending ? "..." : "Sair"}
                   </Button>
@@ -103,7 +105,7 @@ export function Header({ title, description }: HeaderProps) {
                     : "bg-[var(--rocket-warning)]/20 text-[var(--rocket-warning)] hover:bg-[var(--rocket-warning)]/30"
                 )}
               >
-                <Key className="w-4 h-4" />
+                <PrivateKeyAnimatedIcon className="w-4 h-4" />
                 <span className="text-sm font-medium hidden sm:inline">
                   {displayHasApiKey ? "API Key" : "Configurar API Key"}
                 </span>
@@ -131,7 +133,7 @@ export function Header({ title, description }: HeaderProps) {
             value={apiKeyInput}
             onChange={(e) => setApiKeyInput(e.target.value)}
             placeholder="Sua chave de API"
-            leftIcon={<Key className="w-4 h-4" />}
+            leftIcon={<PrivateKeyAnimatedIcon className="w-4 h-4" />}
             rightIcon={
               <button
                 type="button"

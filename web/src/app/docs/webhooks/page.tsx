@@ -2,7 +2,9 @@
 
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock, ApiEndpoint } from "@/components/docs/terminal";
-import { Webhook, Zap, Bell, AlertTriangle, Check } from "lucide-react";
+import { AlarmAnimatedIcon } from "@/components/icons/AlarmAnimatedIcon";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
+import { Webhook, Zap, Check } from "lucide-react";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
@@ -75,7 +77,7 @@ export default function WebhooksPage() {
         <section id="configurar" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Bell className="h-5 w-5 text-primary" />
+              <AlarmAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Configurar webhook</h2>
           </div>
@@ -264,7 +266,7 @@ export default function WebhooksPage() {
 
             <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <WarningAnimatedIcon className="h-5 w-5 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-yellow-500 mb-1">Timeout</h4>
                   <p className="text-sm text-muted-foreground">

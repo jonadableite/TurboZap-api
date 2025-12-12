@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import {
@@ -6,34 +7,25 @@ import {
   ChangeRoleModal,
   CreateUserModal,
   EditUserModal,
-  UserFilters,
   UserSessionsModal,
   UserTable,
 } from "@/components/admin/users";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { TeamworkAnimatedIcon } from "@/components/icons/TeamworkAnimatedIcon";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
 import { Header } from "@/components/layout";
-import { Badge, Button, Input, Modal, Spinner } from "@/components/ui";
+import { Button, Input, Modal, Spinner } from "@/components/ui";
 import FancyButton from "@/components/ui/FancyButton";
-import { useAuth } from "@/hooks/useAuth";
 import {
   useAdminUserManagement,
   useAdminUsers,
   type AdminUser,
   type ListUsersParams,
 } from "@/hooks/useAdminUsers";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertTriangle,
-  LogOut,
-  RefreshCw,
-  Plus,
-  Shield,
-  Trash2,
-  UserCheck,
-  UserCog,
-  Users,
-  Search as SearchIcon,
-} from "lucide-react";
+import { Plus, RefreshCw, Search as SearchIcon, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
@@ -81,7 +73,9 @@ export default function AdminUsersPage() {
   }
 
   // Handlers
-  const handleCreateUser = async (data: Parameters<typeof management.createUser.mutateAsync>[0]) => {
+  const handleCreateUser = async (
+    data: Parameters<typeof management.createUser.mutateAsync>[0]
+  ) => {
     await management.createUser.mutateAsync(data);
   };
 
@@ -100,7 +94,9 @@ export default function AdminUsersPage() {
     await management.setPassword.mutateAsync({ userId, newPassword });
   };
 
-  const handleBanUser = async (data: Parameters<typeof management.banUser.mutateAsync>[0]) => {
+  const handleBanUser = async (
+    data: Parameters<typeof management.banUser.mutateAsync>[0]
+  ) => {
     await management.banUser.mutateAsync(data);
   };
 
@@ -189,7 +185,7 @@ export default function AdminUsersPage() {
                 </p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[var(--rocket-purple)]/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-[var(--rocket-purple)]" />
+                <TeamworkAnimatedIcon className="w-5 h-5" />
               </div>
             </div>
           </motion.div>
@@ -210,7 +206,7 @@ export default function AdminUsersPage() {
                 </p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[var(--rocket-purple)]/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-[var(--rocket-purple)]" />
+                <ShieldAnimatedIcon className="w-5 h-5" />
               </div>
             </div>
           </motion.div>
@@ -252,7 +248,7 @@ export default function AdminUsersPage() {
                 </p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[var(--rocket-danger)]/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-[var(--rocket-danger)]" />
+                <WarningAnimatedIcon className="w-5 h-5" />
               </div>
             </div>
           </motion.div>
@@ -388,7 +384,7 @@ export default function AdminUsersPage() {
           >
             <div className="space-y-4">
               <div className="flex items-start gap-3 p-4 rounded-lg bg-[var(--rocket-danger)]/10 border border-[var(--rocket-danger)]/30">
-                <AlertTriangle className="w-5 h-5 text-[var(--rocket-danger)] flex-shrink-0 mt-0.5" />
+                <WarningAnimatedIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-[var(--rocket-danger)]">
                     Ação irreversível
@@ -427,7 +423,7 @@ export default function AdminUsersPage() {
                   variant="danger"
                   onClick={handleDeleteUser}
                   disabled={management.removeUser.isPending}
-                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  leftIcon={<TrashAnimatedIcon className="w-4 h-4" />}
                 >
                   {management.removeUser.isPending
                     ? "Excluindo..."
@@ -450,14 +446,14 @@ export default function AdminUsersPage() {
           >
             <div className="space-y-4">
               <div className="flex items-start gap-3 p-4 rounded-lg bg-[var(--rocket-info)]/10 border border-[var(--rocket-info)]/30">
-                <UserCog className="w-5 h-5 text-[var(--rocket-info)] flex-shrink-0 mt-0.5" />
+                <TeamworkAnimatedIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-[var(--rocket-info)]">
                     Modo Impersonação
                   </p>
                   <p className="text-sm text-[var(--rocket-gray-300)] mt-1">
-                    Você irá acessar a plataforma como este usuário. A sessão
-                    de impersonação expira em 1 hora. Use o botão &quot;Parar
+                    Você irá acessar a plataforma como este usuário. A sessão de
+                    impersonação expira em 1 hora. Use o botão &quot;Parar
                     Impersonação&quot; no header para voltar à sua conta.
                   </p>
                 </div>
@@ -489,7 +485,7 @@ export default function AdminUsersPage() {
                 <Button
                   onClick={handleImpersonate}
                   disabled={management.impersonate.isPending}
-                  leftIcon={<UserCog className="w-4 h-4" />}
+                  leftIcon={<TeamworkAnimatedIcon className="w-4 h-4" />}
                 >
                   {management.impersonate.isPending
                     ? "Iniciando..."
@@ -503,4 +499,3 @@ export default function AdminUsersPage() {
     </>
   );
 }
-

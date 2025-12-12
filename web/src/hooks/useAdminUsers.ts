@@ -75,6 +75,36 @@ export interface SetRoleInput {
   role: string | string[];
 }
 
+type BetterAuthRole = "user" | "admin" | "developer";
+
+function toBetterAuthRole(
+  input?: string | string[]
+): BetterAuthRole | BetterAuthRole[] | undefined {
+  if (!input) return undefined;
+
+  const values = Array.isArray(input)
+    ? input
+    : input
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+  const mapped = values
+    .map((v) => v.trim().toLowerCase())
+    .map((v) => {
+      if (v === "admin" || v === "administrator" || v === "administrador" || v === "adm") return "admin";
+      if (v === "developer" || v === "dev" || v === "desenvolvedor") return "developer";
+      if (v === "user" || v === "usuario" || v === "usuário") return "user";
+      // Uppercase variants (USER/ADMIN/DEVELOPER) normalize above, so only unknowns reach here.
+      return undefined;
+    })
+    .filter((v): v is BetterAuthRole => Boolean(v));
+
+  if (mapped.length === 0) return undefined;
+  if (mapped.length === 1) return mapped[0];
+  return mapped;
+}
+
 export interface SetPasswordInput {
   userId: string;
   newPassword: string;
@@ -93,31 +123,36 @@ export function useAdminUsers(params: ListUsersParams = {}) {
     queryKey: [...USERS_QUERY_KEY, params],
     queryFn: async () => {
       const response = await authClient.admin.listUsers({
-        searchValue: params.searchValue,
-        searchField: params.searchField,
-        searchOperator: params.searchOperator,
-        limit: params.limit ?? 10,
-        offset: params.offset ?? 0,
-        sortBy: params.sortBy,
-        sortDirection: params.sortDirection,
-        filterField: params.filterField,
-        filterValue: params.filterValue,
-        filterOperator: params.filterOperator,
+        query: {
+          searchValue: params.searchValue,
+          searchField: params.searchField,
+          searchOperator: params.searchOperator,
+          limit: params.limit ?? 10,
+          offset: params.offset ?? 0,
+          sortBy: params.sortBy,
+          sortDirection: params.sortDirection,
+          filterField: params.filterField,
+          filterValue: params.filterValue,
+          filterOperator: params.filterOperator,
+        },
       });
 
       if (response.error) {
         throw new Error(response.error.message || "Erro ao listar usuários");
       }
 
-      const payload =
-        response.data ??
-        (response as unknown as { users?: AdminUser[]; total?: number; limit?: number; offset?: number });
+      const payload = (response.data ?? (response as unknown)) as Partial<{
+        users: AdminUser[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>;
 
       return {
-        users: (payload?.users ?? []) as AdminUser[],
-        total: payload?.total ?? 0,
-        limit: payload?.limit,
-        offset: payload?.offset,
+        users: (payload.users ?? []) as AdminUser[],
+        total: payload.total ?? 0,
+        limit: payload.limit,
+        offset: payload.offset,
       };
     },
     staleTime: 30000,
@@ -140,11 +175,12 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (input: CreateUserInput) => {
+      const role = toBetterAuthRole(input.role);
       const response = await authClient.admin.createUser({
         email: input.email,
         password: input.password,
         name: input.name,
-        role: input.role,
+        role,
         data: input.data,
       });
 
@@ -193,9 +229,13 @@ export function useSetUserRole() {
 
   return useMutation({
     mutationFn: async ({ userId, role }: SetRoleInput) => {
+      const normalizedRole = toBetterAuthRole(role);
+      if (!normalizedRole) {
+        throw new Error("Role inválida");
+      }
       const response = await authClient.admin.setRole({
         userId,
-        role,
+        role: normalizedRole,
       });
 
       if (response.error) {

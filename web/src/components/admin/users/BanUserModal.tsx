@@ -3,7 +3,8 @@
 import { Button, Input, Modal } from "@/components/ui";
 import type { AdminUser, BanUserInput } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
-import { AlertTriangle, Ban } from "lucide-react";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
+import { Ban } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface BanUserModalProps {
@@ -73,7 +74,7 @@ export function BanUserModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Warning */}
         <div className="flex items-start gap-3 p-4 rounded-lg bg-[var(--rocket-warning)]/10 border border-[var(--rocket-warning)]/30">
-          <AlertTriangle className="w-5 h-5 text-[var(--rocket-warning)] flex-shrink-0 mt-0.5" />
+          <WarningAnimatedIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-[var(--rocket-warning)]">
               Atenção

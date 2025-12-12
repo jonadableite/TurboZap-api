@@ -3,7 +3,8 @@
 import { Button, Modal } from "@/components/ui";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
-import { Shield, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { Shield, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ChangeRoleModalProps {
@@ -19,21 +20,21 @@ const ROLES = [
     id: "USER",
     label: "Usuário",
     description: "Acesso básico à plataforma",
-    icon: Shield,
+    icon: <Shield className="w-5 h-5" />,
     color: "var(--rocket-gray-400)",
   },
   {
     id: "DEVELOPER",
     label: "Desenvolvedor",
     description: "Acesso estendido com visualização de logs",
-    icon: ShieldCheck,
+    icon: <ShieldCheck className="w-5 h-5" />,
     color: "var(--rocket-info)",
   },
   {
     id: "ADMIN",
     label: "Administrador",
     description: "Acesso total com gerenciamento de usuários",
-    icon: ShieldAlert,
+    icon: <ShieldAnimatedIcon className="w-5 h-5" />,
     color: "var(--rocket-purple)",
   },
 ];
@@ -103,7 +104,6 @@ export function ChangeRoleModal({
           </label>
           <div className="space-y-2">
             {ROLES.map((role) => {
-              const Icon = role.icon;
               const isSelected = selectedRole === role.id;
               const isCurrent = user.role === role.id;
 
@@ -123,7 +123,7 @@ export function ChangeRoleModal({
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: `${role.color}20` }}
                     >
-                      <Icon className="w-5 h-5" style={{ color: role.color }} />
+                      <div style={{ color: role.color }}>{role.icon}</div>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export function ChangeRoleModal({
           <Button
             type="submit"
             disabled={isLoading || !hasChanged}
-            leftIcon={<Shield className="w-4 h-4" />}
+            leftIcon={<ShieldAnimatedIcon className="w-4 h-4" />}
           >
             {isLoading ? "Alterando..." : "Alterar Role"}
           </Button>

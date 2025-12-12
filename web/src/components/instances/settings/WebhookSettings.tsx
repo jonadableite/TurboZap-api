@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@/components/ui";
-import { Save, Webhook, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
+import { Save, Webhook, Plus, CheckCircle2 } from "lucide-react";
 import { useWebhook, useSetWebhook, useWebhookEvents } from "@/hooks/useWebhook";
 import { useToast } from "@/components/ui";
 
@@ -271,7 +272,7 @@ export function WebhookSettings({ instanceName }: WebhookSettingsProps) {
                   onClick={() => removeHeader(index)}
                   className="text-[var(--rocket-danger)] hover:bg-[var(--rocket-danger)]/10 hover:text-[var(--rocket-danger)]"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <TrashAnimatedIcon className="w-4 h-4" />
                 </Button>
               </motion.div>
             ))}

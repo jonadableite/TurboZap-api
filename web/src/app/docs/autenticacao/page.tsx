@@ -2,7 +2,10 @@
 
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock } from "@/components/docs/terminal";
-import { Key, Shield, AlertTriangle, Check } from "lucide-react";
+import { PrivateKeyAnimatedIcon } from "@/components/icons/PrivateKeyAnimatedIcon";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
+import { Check } from "lucide-react";
 
 const tocItems = [
   { id: "visao-geral", title: "Visão geral", level: 2 },
@@ -31,7 +34,7 @@ export default function AuthPage() {
         <section id="visao-geral" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Visão geral</h2>
           </div>
@@ -45,7 +48,7 @@ export default function AuthPage() {
 
             <div className="p-4 rounded-xl border border-border bg-card">
               <div className="flex items-start gap-3">
-                <Key className="h-5 w-5 text-primary mt-0.5" />
+                <PrivateKeyAnimatedIcon className="h-5 w-5 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-foreground mb-1">API Key por Instância</h4>
                   <p className="text-sm">
@@ -62,7 +65,7 @@ export default function AuthPage() {
         <section id="api-key" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Key className="h-5 w-5 text-primary" />
+              <PrivateKeyAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Usando a API Key</h2>
           </div>
@@ -91,7 +94,7 @@ export default function AuthPage() {
 
           <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+              <WarningAnimatedIcon className="h-5 w-5 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-yellow-500 mb-1">Importante</h4>
                 <p className="text-sm text-muted-foreground">
@@ -108,7 +111,7 @@ export default function AuthPage() {
         <section id="headers" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Headers de autenticação</h2>
           </div>
@@ -150,7 +153,7 @@ export default function AuthPage() {
         <section id="erros" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <WarningAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Erros de autenticação</h2>
           </div>

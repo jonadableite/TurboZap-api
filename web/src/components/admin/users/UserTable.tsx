@@ -1,6 +1,10 @@
 "use client";
 
-import { Badge, Button, Spinner, Portal } from "@/components/ui";
+import { TeamworkAnimatedIcon } from "@/components/icons/TeamworkAnimatedIcon";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { PrivateKeyAnimatedIcon } from "@/components/icons/PrivateKeyAnimatedIcon";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
+import { Badge, Button, Portal, Spinner } from "@/components/ui";
 import type { AdminUser, ListUsersParams } from "@/hooks/useAdminUsers";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -9,17 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
-  Key,
   MoreHorizontal,
   Shield,
-  ShieldAlert,
   ShieldCheck,
-  Trash2,
   UserCheck,
   UserX,
-  Users,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UserTableProps {
   users: AdminUser[];
@@ -55,7 +55,10 @@ export function UserTable({
   currentUserId,
 }: UserTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   // Close menu on scroll or resize
@@ -67,12 +70,12 @@ export function UserTable({
       setMenuPosition(null);
     };
 
-    window.addEventListener('scroll', handleClose, true);
-    window.addEventListener('resize', handleClose);
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
 
     return () => {
-      window.removeEventListener('scroll', handleClose, true);
-      window.removeEventListener('resize', handleClose);
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
     };
   }, [openMenuId]);
 
@@ -94,7 +97,7 @@ export function UserTable({
       case "ADMIN":
         return (
           <Badge variant="purple" className="gap-1">
-            <ShieldAlert className="w-3 h-3" />
+            <ShieldAnimatedIcon className="w-3 h-3" />
             Administrador
           </Badge>
         );
@@ -107,7 +110,7 @@ export function UserTable({
         );
       default:
         return (
-          <Badge variant="gray" className="gap-1">
+          <Badge variant="default" className="gap-1">
             <Shield className="w-3 h-3" />
             Usuário
           </Badge>
@@ -157,7 +160,9 @@ export function UserTable({
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl bg-[#1a1a24] border border-[#29292e] p-12 text-center"
       >
-        <Users className="w-12 h-12 text-[var(--rocket-gray-400)] mx-auto mb-4" />
+        <div className="mx-auto mb-4 w-12 h-12 opacity-70">
+          <TeamworkAnimatedIcon className="w-12 h-12" />
+        </div>
         <p className="text-[var(--rocket-gray-400)]">
           Nenhum usuário encontrado
         </p>
@@ -172,233 +177,242 @@ export function UserTable({
         <div className="overflow-x-auto">
           <div className="min-w-[800px]">
             <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#29292e] bg-[#0f0f14]">
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
-                  Usuário
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
-                  Criado em
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#29292e]">
-              {users.map((user, index) => (
-                <motion.tr
-                  key={user.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                  className={cn(
-                    "hover:bg-[#29292e]/30 transition-colors",
-                    user.id === currentUserId && "bg-[var(--rocket-purple)]/5"
-                  )}
-                >
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--rocket-purple)] to-[var(--rocket-info)] flex items-center justify-center text-white font-medium text-sm">
-                        {user.name?.charAt(0)?.toUpperCase() ||
-                          user.email?.charAt(0)?.toUpperCase()}
+              <thead>
+                <tr className="border-b border-[#29292e] bg-[#0f0f14]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
+                    Usuário
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
+                    Criado em
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-[var(--rocket-gray-400)] uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#29292e]">
+                {users.map((user, index) => (
+                  <motion.tr
+                    key={user.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className={cn(
+                      "hover:bg-[#29292e]/30 transition-colors",
+                      user.id === currentUserId && "bg-[var(--rocket-purple)]/5"
+                    )}
+                  >
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--rocket-purple)] to-[var(--rocket-info)] flex items-center justify-center text-white font-medium text-sm">
+                          {user.name?.charAt(0)?.toUpperCase() ||
+                            user.email?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--rocket-gray-100)]">
+                            {user.name}
+                            {user.id === currentUserId && (
+                              <span className="ml-2 text-xs text-[var(--rocket-purple)]">
+                                (você)
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-sm text-[var(--rocket-gray-400)]">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-[var(--rocket-gray-100)]">
-                          {user.name}
-                          {user.id === currentUserId && (
-                            <span className="ml-2 text-xs text-[var(--rocket-purple)]">
-                              (você)
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-sm text-[var(--rocket-gray-400)]">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">{getRoleBadge(user.role)}</td>
-                  <td className="px-4 py-4">
-                    <div className="space-y-1">
-                      {getStatusBadge(user)}
-                      {user.banned && user.banReason && (
-                        <p className="text-xs text-[var(--rocket-gray-400)]">
-                          Motivo: {user.banReason}
-                        </p>
-                      )}
-                      {user.banned && user.banExpires && (
-                        <p className="text-xs text-[var(--rocket-gray-400)]">
-                          Expira: {formatDate(user.banExpires)}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="text-sm text-[var(--rocket-gray-300)]">
-                      {formatDate(user.createdAt)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      {/* Quick Actions */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(user)}
-                        className="h-8 w-8 p-0"
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-
-                      {/* More Actions Menu */}
-                      <div className="relative">
-                        <Button
-                          ref={(el) => {
-                            buttonRefs.current[user.id] = el;
-                          }}
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            const button = e.currentTarget;
-                            const rect = button.getBoundingClientRect();
-                            setMenuPosition({
-                              top: rect.bottom + 4,
-                              right: window.innerWidth - rect.right,
-                            });
-                            setOpenMenuId(openMenuId === user.id ? null : user.id);
-                          }}
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-
-                        {openMenuId === user.id && menuPosition && (
-                          <Portal>
-                            <>
-                              {/* Backdrop */}
-                              <div
-                                className="fixed inset-0 z-[100]"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  setMenuPosition(null);
-                                }}
-                              />
-
-                              {/* Menu - Rendered via Portal */}
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                className="fixed z-[101] w-48 rounded-lg bg-[#1a1a24] border border-[#29292e] shadow-xl py-1"
-                                style={{
-                                  top: `${menuPosition.top}px`,
-                                  right: `${menuPosition.right}px`,
-                                }}
-                              >
-                              <button
-                                onClick={() => {
-                                  onChangeRole(user);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
-                              >
-                                <Shield className="w-4 h-4" />
-                                Alterar Role
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  onChangePassword(user);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
-                              >
-                                <Key className="w-4 h-4" />
-                                Alterar Senha
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  onViewSessions(user);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
-                              >
-                                <Users className="w-4 h-4" />
-                                Ver Sessões
-                              </button>
-
-                              {user.id !== currentUserId && (
-                                <>
-                                  <div className="border-t border-[#29292e] my-1" />
-
-                                  <button
-                                    onClick={() => {
-                                      onImpersonate(user);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-info)] hover:bg-[#29292e] flex items-center gap-2"
-                                  >
-                                    <UserCheck className="w-4 h-4" />
-                                    Impersonar
-                                  </button>
-
-                                  {user.banned ? (
-                                    <button
-                                      onClick={() => {
-                                        onUnban(user);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-green)] hover:bg-[#29292e] flex items-center gap-2"
-                                    >
-                                      <UserCheck className="w-4 h-4" />
-                                      Desbanir
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        onBan(user);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-warning)] hover:bg-[#29292e] flex items-center gap-2"
-                                    >
-                                      <Ban className="w-4 h-4" />
-                                      Banir
-                                    </button>
-                                  )}
-
-                                  <div className="border-t border-[#29292e] my-1" />
-
-                                  <button
-                                    onClick={() => {
-                                      onDelete(user);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-danger)] hover:bg-[#29292e] flex items-center gap-2"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Excluir
-                                  </button>
-                                </>
-                              )}
-                              </motion.div>
-                            </>
-                          </Portal>
+                    </td>
+                    <td className="px-4 py-4">{getRoleBadge(user.role)}</td>
+                    <td className="px-4 py-4">
+                      <div className="space-y-1">
+                        {getStatusBadge(user)}
+                        {user.banned && user.banReason && (
+                          <p className="text-xs text-[var(--rocket-gray-400)]">
+                            Motivo: {user.banReason}
+                          </p>
+                        )}
+                        {user.banned && user.banExpires && (
+                          <p className="text-xs text-[var(--rocket-gray-400)]">
+                            Expira: {formatDate(user.banExpires)}
+                          </p>
                         )}
                       </div>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-[var(--rocket-gray-300)]">
+                        {formatDate(user.createdAt)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Quick Actions */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onEdit(user)}
+                          className="h-8 w-8 p-0"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+
+                        {/* More Actions Menu */}
+                        <div className="relative">
+                          <Button
+                            ref={(el) => {
+                              buttonRefs.current[user.id] = el;
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              const button = e.currentTarget;
+                              const rect = button.getBoundingClientRect();
+                              setMenuPosition({
+                                top: rect.bottom + 4,
+                                right: window.innerWidth - rect.right,
+                              });
+                              setOpenMenuId(
+                                openMenuId === user.id ? null : user.id
+                              );
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+
+                          {openMenuId === user.id && menuPosition && (
+                            <Portal>
+                              <>
+                                {/* Backdrop */}
+                                <div
+                                  className="fixed inset-0 z-[100]"
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setMenuPosition(null);
+                                  }}
+                                />
+
+                                {/* Menu - Rendered via Portal */}
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  className="fixed z-[101] w-48 rounded-lg bg-[#1a1a24] border border-[#29292e] shadow-xl py-1"
+                                  style={{
+                                    top: `${menuPosition.top}px`,
+                                    right: `${menuPosition.right}px`,
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      onChangeRole(user);
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
+                                  >
+                                    <Shield className="w-4 h-4" />
+                                    Alterar Role
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      onChangePassword(user);
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
+                                  >
+                                    <PrivateKeyAnimatedIcon className="w-4 h-4" />
+                                    Alterar Senha
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      onViewSessions(user);
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-gray-100)] hover:bg-[#29292e] flex items-center gap-2"
+                                  >
+                                    <TeamworkAnimatedIcon className="w-4 h-4" />
+                                    Ver Sessões
+                                  </button>
+
+                                  {user.id !== currentUserId && (
+                                    <>
+                                      <div className="border-t border-[#29292e] my-1" />
+
+                                      <button
+                                        onClick={() => {
+                                          onImpersonate(user);
+                                          setOpenMenuId(null);
+                                          setMenuPosition(null);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-info)] hover:bg-[#29292e] flex items-center gap-2"
+                                      >
+                                        <UserCheck className="w-4 h-4" />
+                                        Impersonar
+                                      </button>
+
+                                      {user.banned ? (
+                                        <button
+                                          onClick={() => {
+                                            onUnban(user);
+                                            setOpenMenuId(null);
+                                            setMenuPosition(null);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-green)] hover:bg-[#29292e] flex items-center gap-2"
+                                        >
+                                          <UserCheck className="w-4 h-4" />
+                                          Desbanir
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            onBan(user);
+                                            setOpenMenuId(null);
+                                            setMenuPosition(null);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-warning)] hover:bg-[#29292e] flex items-center gap-2"
+                                        >
+                                          <Ban className="w-4 h-4" />
+                                          Banir
+                                        </button>
+                                      )}
+
+                                      <div className="border-t border-[#29292e] my-1" />
+
+                                      <button
+                                        onClick={() => {
+                                          onDelete(user);
+                                          setOpenMenuId(null);
+                                          setMenuPosition(null);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-[var(--rocket-danger)] hover:bg-[#29292e] flex items-center gap-2"
+                                      >
+                                    <TrashAnimatedIcon className="w-4 h-4" />
+                                        Excluir
+                                      </button>
+                                    </>
+                                  )}
+                                </motion.div>
+                              </>
+                            </Portal>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -407,8 +421,8 @@ export function UserTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2">
           <p className="text-sm text-[var(--rocket-gray-400)]">
-            Mostrando {offset + 1} - {Math.min(offset + limit, total)} de {total}{" "}
-            usuários
+            Mostrando {offset + 1} - {Math.min(offset + limit, total)} de{" "}
+            {total} usuários
           </p>
 
           <div className="flex items-center gap-2">
@@ -465,4 +479,3 @@ export function UserTable({
     </div>
   );
 }
-

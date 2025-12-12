@@ -3,7 +3,8 @@
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock } from "@/components/docs/terminal";
 import { ShineBorder } from "@/components/ui";
-import { Code2, Server, Zap, Shield, Globe } from "lucide-react";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { Code2, Server, Zap, Globe } from "lucide-react";
 import Link from "next/link";
 
 const tocItems = [
@@ -61,7 +62,7 @@ export default function ApiReferencePage() {
               </div>
               <div className="p-4 rounded-xl border border-border bg-card">
                 <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-4 w-4 text-primary" />
+                  <ShieldAnimatedIcon className="h-4 w-4" />
                   <h4 className="font-semibold text-foreground">Segura</h4>
                 </div>
                 <p className="text-sm">Autenticação via API Key por instância</p>
@@ -94,7 +95,7 @@ export default function ApiReferencePage() {
         <section id="autenticacao" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Autenticação</h2>
           </div>

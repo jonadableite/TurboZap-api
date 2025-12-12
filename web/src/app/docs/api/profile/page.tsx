@@ -1,7 +1,7 @@
 "use client";
 
 import { OnThisPage } from "@/components/docs/on-this-page";
-import { Shield } from "lucide-react";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
 import Link from "next/link";
 
 const tocItems = [
@@ -34,7 +34,7 @@ export default function ProfileReferencePage() {
         <section id="visao-geral" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Visão geral</h2>
           </div>
@@ -67,7 +67,7 @@ export default function ProfileReferencePage() {
         <section id="endpoints" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Endpoints</h2>
           </div>

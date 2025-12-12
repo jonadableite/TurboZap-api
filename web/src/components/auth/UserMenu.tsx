@@ -2,12 +2,12 @@
 
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
+import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
 import {
   ChevronDown,
   Code,
-  LogOut,
   Settings,
-  Shield,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,22 +15,22 @@ import { useEffect, useRef, useState } from "react";
 
 const roleConfig: Record<
   UserRole,
-  { label: string; color: string; icon: typeof Shield }
+  { label: string; color: string; icon: React.ReactNode }
 > = {
   USER: {
     label: "Usuário",
     color: "bg-[#8257e5]/20 text-[#8257e5]",
-    icon: User,
+    icon: <User className="w-3.5 h-3.5" />,
   },
   DEVELOPER: {
     label: "Developer",
     color: "bg-[#04d361]/20 text-[#04d361]",
-    icon: Code,
+    icon: <Code className="w-3.5 h-3.5" />,
   },
   ADMIN: {
     label: "Admin",
     color: "bg-[#f75a68]/20 text-[#f75a68]",
-    icon: Shield,
+    icon: <ShieldAnimatedIcon className="w-3.5 h-3.5" />,
   },
 };
 
@@ -82,7 +82,6 @@ export function UserMenu() {
   }
 
   const roleInfo = roleConfig[user.role];
-  const RoleIcon = roleInfo.icon;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -172,7 +171,7 @@ export function UserMenu() {
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${roleInfo.color} border border-white/10`}
                     >
-                      <RoleIcon className="w-3.5 h-3.5" />
+                      {roleInfo.icon}
                       {roleInfo.label}
                     </span>
                   </div>
@@ -208,7 +207,7 @@ export function UserMenu() {
                   className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all hover:bg-white/12 active:scale-[0.99] text-[var(--rocket-danger)]"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--rocket-danger)]/16 border border-[var(--rocket-danger)]/28 shadow-[0_12px_36px_rgba(247,90,104,0.28)]">
-                    <LogOut className="w-5 h-5" />
+                    <ExitAnimatedIcon className="w-5 h-5" />
                   </span>
                   <div className="flex-1 text-left">
                     <div className="font-semibold">Sair</div>

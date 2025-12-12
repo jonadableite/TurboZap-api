@@ -1,8 +1,9 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import { ApiKey } from "@/hooks/useApiKeys";
 import { cn } from "@/lib/utils";
-import { Copy, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
 type Props = {
@@ -96,7 +97,7 @@ export function ApiKeyCard({ apiKey, onCopy, onRevoke }: Props) {
           variant="ghost"
           size="sm"
           onClick={onRevoke}
-          leftIcon={<Trash2 className="w-4 h-4" />}
+          leftIcon={<TrashAnimatedIcon className="w-4 h-4" />}
           disabled={!!apiKey.revoked_at}
         >
           Revogar

@@ -2,7 +2,9 @@
 
 import { OnThisPage } from "@/components/docs/on-this-page";
 import { CodeBlock } from "@/components/docs/terminal";
-import { Rocket, Shield, Server, Database, AlertTriangle, Check } from "lucide-react";
+import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
+import { Rocket, Server, Database, Check } from "lucide-react";
 
 const tocItems = [
   { id: "checklist", title: "Checklist de produção", level: 2 },
@@ -152,7 +154,7 @@ volumes:
         <section id="seguranca" className="mb-16 scroll-mt-20">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+              <ShieldAnimatedIcon className="h-5 w-5" />
             </div>
             <h2 className="text-2xl font-bold">Segurança</h2>
           </div>
@@ -184,7 +186,7 @@ volumes:
 
             <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <WarningAnimatedIcon className="h-5 w-5 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-yellow-500 mb-1">Aviso importante</h4>
                   <p className="text-sm text-muted-foreground">

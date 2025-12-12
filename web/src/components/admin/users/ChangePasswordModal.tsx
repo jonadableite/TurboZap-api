@@ -1,9 +1,10 @@
 "use client";
 
 import { Button, Input, Modal } from "@/components/ui";
+import { PrivateKeyAnimatedIcon } from "@/components/icons/PrivateKeyAnimatedIcon";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Key } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ChangePasswordModalProps {
@@ -180,7 +181,7 @@ export function ChangePasswordModal({
           <Button
             type="submit"
             disabled={isLoading}
-            leftIcon={<Key className="w-4 h-4" />}
+            leftIcon={<PrivateKeyAnimatedIcon className="w-4 h-4" />}
           >
             {isLoading ? "Alterando..." : "Alterar Senha"}
           </Button>

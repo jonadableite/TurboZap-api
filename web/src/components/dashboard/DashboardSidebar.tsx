@@ -1,15 +1,10 @@
 "use client";
 
+import { TeamworkAnimatedIcon } from "@/components/icons/TeamworkAnimatedIcon";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Gift,
-  ShoppingBag,
-  Users,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Gift, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 
 interface BoostDay {
@@ -158,9 +153,13 @@ export function DashboardSidebar() {
         <Button
           variant="outline"
           className="w-full justify-start"
-          leftIcon={<Users className="w-4 h-4" />}
+          leftIcon={<TeamworkAnimatedIcon className="w-4 h-4" />}
           onClick={() => {
-            window.open("https://chat.whatsapp.com/FBGwMYACSqjBQnIXZqZMdy", "_blank", "noopener,noreferrer");
+            window.open(
+              "https://chat.whatsapp.com/FBGwMYACSqjBQnIXZqZMdy",
+              "_blank",
+              "noopener,noreferrer"
+            );
           }}
         >
           Comunidade
@@ -237,5 +236,3 @@ export function DashboardSidebar() {
     </div>
   );
 }
-
-

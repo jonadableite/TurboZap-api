@@ -8,6 +8,8 @@ import {
   Modal,
   ModalFooter,
 } from "@/components/ui";
+import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import FancyButton from "@/components/ui/FancyButton";
 import {
   useConnectInstance,
@@ -21,13 +23,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   Copy,
-  LogOut,
   MoreVertical,
   QrCode,
   RefreshCw,
   Settings,
   Smartphone,
-  Trash2,
   Wifi,
 } from "lucide-react";
 import Image from "next/image";
@@ -303,10 +303,10 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
                               <Settings className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
                             )}
                             {item.key === "disconnect" && (
-                              <LogOut className="w-4 h-4 opacity-80 text-[var(--rocket-purple-light)]" />
+                              <ExitAnimatedIcon className="w-4 h-4 opacity-80" />
                             )}
                             {item.tone === "danger" && (
-                              <Trash2 className="w-4 h-4 opacity-70" />
+                              <TrashAnimatedIcon className="w-4 h-4 opacity-80" />
                             )}
                           </button>
                         </div>
@@ -386,7 +386,7 @@ export function InstanceCard({ instance, onRefresh }: InstanceCardProps) {
             variant="danger"
             onClick={handleDelete}
             isLoading={deleteMutation.isPending}
-            leftIcon={<Trash2 className="w-4 h-4" />}
+            leftIcon={<TrashAnimatedIcon className="w-4 h-4" />}
           >
             Excluir
           </Button>
