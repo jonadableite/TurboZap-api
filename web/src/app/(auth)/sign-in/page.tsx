@@ -102,7 +102,7 @@ export default function SignInPage() {
 
       if (data) {
         // Redirect to dashboard on success
-        router.push("/");
+        router.push("/app");
         router.refresh();
         return;
       }

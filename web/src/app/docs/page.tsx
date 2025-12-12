@@ -528,7 +528,7 @@ ENVIRONMENT=production`}
               </li>
               <li className="flex items-start gap-2">
                 <ArrowRight className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <span>Acesse o <Link href="/instances" className="text-primary hover:underline">Dashboard</Link> para gerenciar suas instâncias</span>
+                <span>Acesse o <Link href="/app/instances" className="text-primary hover:underline">Dashboard</Link> para gerenciar suas instâncias</span>
               </li>
             </ul>
           </div>
@@ -587,7 +587,7 @@ ENVIRONMENT=production`}
                 Ver documentação
               </Link>
               <Link
-                href="/instances"
+                href="/app/instances"
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2"
               >
                 Ir para Dashboard

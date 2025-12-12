@@ -1,15 +1,10 @@
 "use client";
 
-import { useAuth, UserRole } from "@/hooks/useAuth";
-import { AnimatePresence, motion } from "framer-motion";
 import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
 import { ShieldAnimatedIcon } from "@/components/icons/ShieldAnimatedIcon";
-import {
-  ChevronDown,
-  Code,
-  Settings,
-  User,
-} from "lucide-react";
+import { useAuth, UserRole } from "@/hooks/useAuth";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, Code, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -181,7 +176,7 @@ export function UserMenu() {
 
                 {/* Menu Items */}
                 <Link
-                  href="/settings"
+                  href="/app/settings"
                   onClick={() => setIsOpen(false)}
                   className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 rounded-xl transition-all hover:bg-white/12 active:scale-[0.99] text-[var(--rocket-purple-light)]"
                 >

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Routes that don't require authentication
+// Routes that don't require authentication (public)
 const publicRoutes = [
+  "/",           // Landing page (marketing)
   "/sign-in",
   "/sign-up",
   "/forgot-password",
@@ -11,13 +12,13 @@ const publicRoutes = [
   "/api/auth",
 ];
 
-// Routes that require authentication
-const protectedRoutes = ["/", "/instances", "/settings"];
+// Routes that require authentication (protected)
+const protectedRoutes = ["/app", "/app/instances", "/app/settings"];
 
 // Routes that require specific roles
-const adminRoutes = ["/admin", "/users"];
+const adminRoutes = ["/app/admin"];
 
-const developerRoutes = ["/api-keys", "/logs"];
+const developerRoutes = ["/app/api-keys", "/app/logs"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -26,15 +27,19 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
+    pathname.startsWith("/landing") ||
     pathname.includes(".")
   ) {
     return NextResponse.next();
   }
 
-  // Check if it's a public route
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
+  // Check if it's a public route - exact match for "/" and prefix match for others
+  const isPublicRoute = publicRoutes.some((route) => {
+    if (route === "/") {
+      return pathname === "/" || pathname === "";
+    }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
 
   // Get session from cookie
   // Better Auth em produção usa prefixo __Secure-
@@ -42,20 +47,20 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("__Secure-turbozap.session_token")?.value ||
     request.cookies.get("turbozap.session_token")?.value;
 
-  // If no session and trying to access protected route, redirect to sign-in
-  if (!sessionCookie && !isPublicRoute) {
+  // If no session and trying to access protected route (/app/*), redirect to sign-in
+  if (!sessionCookie && !isPublicRoute && pathname.startsWith("/app")) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
   }
 
-  // If has session and trying to access auth pages, redirect to dashboard
+  // If has session and trying to access auth pages, redirect to app dashboard
   if (sessionCookie && (pathname === "/sign-in" || pathname === "/sign-up")) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/app", request.url));
   }
 
   // For role-based routes, add a header flag for server-side verification
-  if (sessionCookie) {
+  if (sessionCookie && pathname.startsWith("/app")) {
     const isAdminRoute = adminRoutes.some(
       (route) => pathname === route || pathname.startsWith(`${route}/`)
     );
@@ -85,8 +90,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json)$).*)",
   ],
 };
-
-

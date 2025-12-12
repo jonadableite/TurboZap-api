@@ -1,9 +1,9 @@
 "use client";
 
+import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
 import { Button, Input, Modal } from "@/components/ui";
 import type { AdminUser, BanUserInput } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
-import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
 import { Ban } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -56,32 +56,23 @@ export function BanUserModal({
       });
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erro ao banir usuário"
-      );
+      setError(err instanceof Error ? err.message : "Erro ao banir usuário");
     }
   };
 
   if (!user) return null;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Banir Usuário"
-      size="md"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Banir Usuário" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Warning */}
         <div className="flex items-start gap-3 p-4 rounded-lg bg-[var(--rocket-warning)]/10 border border-[var(--rocket-warning)]/30">
           <WarningAnimatedIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-[var(--rocket-warning)]">
-              Atenção
-            </p>
+            <p className="font-medium text-[var(--rocket-warning)]">Atenção</p>
             <p className="text-sm text-[var(--rocket-gray-300)] mt-1">
-              Ao banir este usuário, ele não poderá fazer login e todas as
-              suas sessões ativas serão revogadas.
+              Ao banir este usuário, ele não poderá fazer login e todas as suas
+              sessões ativas serão revogadas.
             </p>
           </div>
         </div>
@@ -96,7 +87,9 @@ export function BanUserModal({
             <p className="font-medium text-[var(--rocket-gray-100)]">
               {user.name}
             </p>
-            <p className="text-sm text-[var(--rocket-gray-400)]">{user.email}</p>
+            <p className="text-sm text-[var(--rocket-gray-400)]">
+              {user.email}
+            </p>
           </div>
         </div>
 
@@ -177,4 +170,3 @@ export function BanUserModal({
     </Modal>
   );
 }
-

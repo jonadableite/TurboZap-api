@@ -67,6 +67,7 @@ func RunMigrations(pool *pgxpool.Pool) error {
 		{5, migrationV5AddDeviceJID},
 		{6, migrationV6AddWebhookOptions},
 		{7, migrationV7InitAuth},
+		{8, migrationV8CreateReminders},
 	}
 
 	for _, m := range migrations {
@@ -349,4 +350,47 @@ DO $$ BEGIN
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+`
+
+const migrationV8CreateReminders = `
+-- Create reminders table
+CREATE TABLE IF NOT EXISTS reminders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(500) NOT NULL,
+  description TEXT,
+  banner_image VARCHAR(1000),
+  date VARCHAR(50) NOT NULL,
+  time VARCHAR(10),
+  location VARCHAR(200),
+  tags TEXT[],
+  recommended_level VARCHAR(100),
+  status VARCHAR(20) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('active', 'finished', 'upcoming')),
+  category VARCHAR(20) DEFAULT 'all' CHECK (category IN ('all', 'events', 'content', 'news', 'offers')),
+  action_buttons JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE
+);
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS idx_reminders_status ON reminders(status);
+CREATE INDEX IF NOT EXISTS idx_reminders_category ON reminders(category);
+CREATE INDEX IF NOT EXISTS idx_reminders_date ON reminders(date);
+CREATE INDEX IF NOT EXISTS idx_reminders_created_at ON reminders(created_at DESC);
+
+-- Create trigger to update updated_at
+CREATE OR REPLACE FUNCTION update_reminders_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_reminders_updated_at ON reminders;
+
+CREATE TRIGGER update_reminders_updated_at
+  BEFORE UPDATE ON reminders
+  FOR EACH ROW
+  EXECUTE FUNCTION update_reminders_updated_at();
 `

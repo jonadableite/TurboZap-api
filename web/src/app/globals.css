@@ -241,9 +241,86 @@
   animation: shine var(--duration, 14s) infinite linear;
 }
 
+/* Marquee Animation */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
 /* Utility Classes */
 .glass {
   background: rgba(18, 18, 20, 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(130, 87, 229, 0.1);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-vertical,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .animate-shine {
+    animation: none;
+  }
+}
+
+/* Glow badge animations */
+@keyframes border-glow-translate {
+  0% {
+    transform: translateX(-20%);
+  }
+  100% {
+    transform: translateX(20%);
+  }
+}
+
+@keyframes border-glow-scale {
+  0% {
+    transform: translateX(-50%) scale(0.8);
+  }
+  100% {
+    transform: translateX(-50%) scale(1.2);
+  }
+}
+
+@keyframes star-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes star-shine {
+  0% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
 }

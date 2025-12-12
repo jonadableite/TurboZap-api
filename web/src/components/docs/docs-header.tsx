@@ -98,7 +98,7 @@ export const DocsHeader = () => {
           </Link>
 
           <Link
-            href="/instances"
+            href="/app/instances"
             className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             Dashboard
@@ -135,7 +135,7 @@ export const DocsHeader = () => {
             ))}
             <hr className="my-2 border-border" />
             <Link
-              href="/instances"
+              href="/app/instances"
               onClick={() => setMobileMenuOpen(false)}
               className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground"
             >

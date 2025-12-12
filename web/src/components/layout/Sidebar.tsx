@@ -26,12 +26,12 @@ const navItems: NavItem[] = [
   {
     label: "Dashboard",
     icon: <LottieIcon animationData={dashboardAnimation} className="w-5 h-5" />,
-    href: "/",
+    href: "/app",
   },
   {
     label: "Instâncias",
     icon: <LottieIcon animationData={instanceAnimation} className="w-5 h-5" />,
-    href: "/instances",
+    href: "/app/instances",
   },
 ];
 
@@ -61,7 +61,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-[#29292e]">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/app" className="flex items-center gap-3">
           <motion.div
             whileHover={{ rotate: 15 }}
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -98,11 +98,11 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          // For dashboard (root path), match exactly "/" or ""
+          // For dashboard (app root path), match exactly "/app" or "/app/"
           // For other routes, match exact path or if pathname starts with the href
           const isActive =
-            item.href === "/"
-              ? pathname === "/" || pathname === ""
+            item.href === "/app"
+              ? pathname === "/app" || pathname === "/app/"
               : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href}>
@@ -174,18 +174,18 @@ export function Sidebar() {
             </div>
 
             {/* Admin Users */}
-            <Link href="/admin/users">
+            <Link href="/app/admin/users">
               <motion.div
                 whileHover={{ x: 4 }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
                   "relative overflow-hidden group",
-                  pathname === "/admin/users"
+                  pathname === "/app/admin/users"
                     ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
                     : "text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
                 )}
               >
-                {pathname === "/admin/users" && (
+                {pathname === "/app/admin/users" && (
                   <motion.div
                     layoutId="sidebar-admin-active"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]"
@@ -210,18 +210,18 @@ export function Sidebar() {
             </Link>
 
             {/* Admin Reminders */}
-            <Link href="/admin/reminders">
+            <Link href="/app/admin/reminders">
               <motion.div
                 whileHover={{ x: 4 }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
                   "relative overflow-hidden group",
-                  pathname === "/admin/reminders"
+                  pathname === "/app/admin/reminders"
                     ? "bg-[var(--rocket-purple)]/20 text-[var(--rocket-purple-light)]"
                     : "text-[var(--rocket-gray-300)] hover:bg-[var(--rocket-gray-700)] hover:text-[var(--rocket-gray-50)]"
                 )}
               >
-                {pathname === "/admin/reminders" && (
+                {pathname === "/app/admin/reminders" && (
                   <motion.div
                     layoutId="sidebar-admin-reminders"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--rocket-purple)]"

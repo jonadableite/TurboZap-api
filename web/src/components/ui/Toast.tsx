@@ -1,13 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Info,
-  X,
-} from "lucide-react";
 import { WarningAnimatedIcon } from "@/components/icons/WarningAnimatedIcon";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { Portal } from "./Portal";
 

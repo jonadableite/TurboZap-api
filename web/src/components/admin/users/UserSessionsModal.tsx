@@ -1,10 +1,10 @@
 "use client";
 
+import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import { Badge, Button, Modal, Spinner } from "@/components/ui";
 import type { AdminUser, UserSession } from "@/hooks/useAdminUsers";
 import { motion } from "framer-motion";
-import { ExitAnimatedIcon } from "@/components/icons/ExitAnimatedIcon";
-import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import {
   Clock,
   Globe,
@@ -71,7 +71,8 @@ export function UserSessionsModal({
     let browser = "Navegador";
     if (ua.includes("chrome") && !ua.includes("edg")) browser = "Chrome";
     else if (ua.includes("firefox")) browser = "Firefox";
-    else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
+    else if (ua.includes("safari") && !ua.includes("chrome"))
+      browser = "Safari";
     else if (ua.includes("edg")) browser = "Edge";
     else if (ua.includes("opera") || ua.includes("opr")) browser = "Opera";
 
@@ -251,4 +252,3 @@ export function UserSessionsModal({
     </Modal>
   );
 }
-

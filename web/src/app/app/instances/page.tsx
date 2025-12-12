@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Header } from '@/components/layout';
-import { InstanceList, CreateInstanceModal } from '@/components/instances';
+import { CreateInstanceModal, InstanceList } from "@/components/instances";
+import { Header } from "@/components/layout";
+import { useState } from "react";
 
 export default function InstancesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -11,10 +11,10 @@ export default function InstancesPage() {
     <>
       <Header
         title="Instâncias"
-        description="Gerencie suas conexões WhatsApp"
+        description="Gerencie suas instâncias WhatsApp"
       />
 
-      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-6xl mx-auto w-full">
+      <div className="px-4 sm:px-8 lg:px-14 py-8 max-w-7xl mx-auto w-full">
         <InstanceList onCreateClick={() => setShowCreateModal(true)} />
       </div>
 

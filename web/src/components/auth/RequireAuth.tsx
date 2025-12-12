@@ -75,7 +75,7 @@ export function RequireAuth({
             administrador se acredita que isso é um erro.
           </p>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/app")}
             className="px-6 py-3 bg-[#8257e5] text-white rounded-lg hover:bg-[#996dff] transition-colors font-medium"
           >
             Voltar ao Dashboard

@@ -68,7 +68,7 @@ export default function AdminUsersPage() {
 
   // Redirect if not admin
   if (!authLoading && !isAdmin) {
-    router.push("/");
+    router.push("/app");
     return null;
   }
 

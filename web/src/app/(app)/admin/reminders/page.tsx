@@ -2,7 +2,6 @@
 
 import { ReminderForm } from "@/components/admin/ReminderForm";
 import { ActivityCard } from "@/components/dashboard/ActivityCard";
-import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
 import { Header } from "@/components/layout";
 import { Button, Modal, Spinner } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,8 +10,14 @@ import {
   useReminders,
   type Reminder,
 } from "@/hooks/useReminders";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Edit, Plus } from "lucide-react";
+import { TrashAnimatedIcon } from "@/components/icons/TrashAnimatedIcon";
+import {
+  Edit,
+  Plus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -27,7 +32,7 @@ export default function AdminRemindersPage() {
 
   // Redirect if not admin
   if (!authLoading && !isAdmin) {
-    router.push("/");
+    router.push("/app");
     return null;
   }
 
@@ -112,10 +117,7 @@ export default function AdminRemindersPage() {
             <p className="text-[var(--rocket-gray-400)] mb-4">
               Nenhum lembrete criado ainda
             </p>
-            <Button
-              onClick={handleCreate}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
+            <Button onClick={handleCreate} leftIcon={<Plus className="w-4 h-4" />}>
               Criar Primeiro Lembrete
             </Button>
           </motion.div>
@@ -143,9 +145,7 @@ export default function AdminRemindersPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDelete(reminder.id)}
-                    disabled={
-                      deleteMutation.isPending && deletingId === reminder.id
-                    }
+                    disabled={deleteMutation.isPending && deletingId === reminder.id}
                     className="h-8 w-8 p-0 text-[var(--rocket-danger)] hover:text-[var(--rocket-danger)] hover:bg-[var(--rocket-danger)]/10"
                   >
                     <TrashAnimatedIcon className="w-4 h-4" />
@@ -177,3 +177,4 @@ export default function AdminRemindersPage() {
     </>
   );
 }
+

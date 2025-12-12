@@ -138,7 +138,7 @@ export default function DashboardPage() {
               >
                 Nova instância
               </Button>
-              <Link href="/instances">
+              <Link href="/app/instances">
                 <Button
                   variant="outline"
                   rightIcon={
@@ -341,7 +341,7 @@ export default function DashboardPage() {
                 </p>
               )}
               {disconnectedCount > 0 && (
-                <Link href="/instances">
+                <Link href="/app/instances">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -468,7 +468,7 @@ export default function DashboardPage() {
             {/* View More Link */}
             <div className="pt-4">
               <Link
-                href="/instances"
+                href="/app/instances"
                 className="text-sm text-[var(--rocket-purple)] hover:text-[var(--rocket-purple)]/80 transition-colors inline-flex items-center gap-1"
               >
                 Ver mais
